@@ -12,21 +12,21 @@ function Navbar() {
         </a>
 
         {/* Center: Navigation Links */}
-        <nav className="hidden md:flex items-center gap-8">
-          <a href="#" className="text-gray-300 hover:text-white text-xl font-medium transition-colors font-['Inter']">Players</a>
-          <a href="#" className="text-gray-300 hover:text-white text-xl font-medium transition-colors font-['Inter']">Opportunities</a>
-          <a href="#" className="text-gray-300 hover:text-white text-xl font-medium transition-colors font-['Inter']">Tournaments</a>
-          <a href="#" className="text-gray-300 hover:text-white text-xl font-medium transition-colors font-['Inter']">Scrims</a>
+        <nav className="hidden md:flex items-center gap-20">
+          <a href="#" className="text-gray-300 hover:text-white text-xl font-bold transition-colors font-['Inter']">Players</a>
+          <a href="#" className="text-gray-300 hover:text-white text-xl font-bold transition-colors font-['Inter']">Opportunities</a>
+          <a href="#" className="text-gray-300 hover:text-white text-xl font-bold transition-colors font-['Inter']">Tournaments</a>
+          <a href="#" className="text-gray-300 hover:text-white text-xl font-bold transition-colors font-['Inter']">Scrims</a>
         </nav>
 
         {/* Right Side: Buttons */}
         <div className="hidden md:flex items-center gap-4">
           {/* Secondary Button (Login) */}
-          <button className="font-['Judson'] font-bold text-white text-xl px-6 py-3 rounded-lg bg-[#FF4500] hover:bg-[#120E0E] transition-colors">
+          <button className="font-['Judson'] font-bold text-white text-xl px-6 py-3 rounded-lg bg-[#FF4500] hover:bg-[#120E0E] transition-colors hover:cursor-pointer">
             Sign Up
           </button>
           {/* Primary Button (Sign Up) */}
-          <button className="font-['Judson'] font-bold text-white text-xl px-6 py-3 rounded-lg border-2 border-[#FF4500] hover:bg-[#FF4500] transition-colors">
+          <button className="font-['Judson'] font-bold text-white text-xl px-6 py-3 rounded-lg border-2 border-[#FF4500] hover:bg-[#FF4500] transition-colors hover:cursor-pointer">
             Login
           </button>
         </div>

@@ -2,7 +2,6 @@
 
 import React from 'react';
 import stageImage from '../assets/esports_stage.png';
-import GlowingButton from './GlowingButton';
 
 function Hero() {
   return (
@@ -21,7 +20,6 @@ function Hero() {
           The ultimate platform to showcase verified skills, find teams, and build a pro career.
         </p>
 
-        {/* Use the reusable GradientButton component here */}
         <div className="mt-8 flex justify-center gap-20">
           <button id='blueButton' className='rounded-full p-5'>
             Create Profile
