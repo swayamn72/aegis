@@ -49,7 +49,7 @@ const FeaturesComponent = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 relative overflow-hidden">
+    <div id="features-section" className="min-h-screen bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 relative overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 opacity-30">
         {[...Array(50)].map((_, i) => (
