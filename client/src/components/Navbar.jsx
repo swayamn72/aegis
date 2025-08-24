@@ -53,12 +53,12 @@ const Navbar = () => {
 
         {/* Right Side: Desktop Buttons (Your original colors) */}
         <div className="hidden md:flex items-center gap-4">
-          <button className="font-bold text-white text-lg px-6 py-2 rounded-lg border-2 border-[#FF4500] hover:bg-[#FF4500]/20 transition-colors duration-300">
+          <NavLink to="/login" className="font-bold text-white text-lg px-6 py-2 rounded-lg border-2 border-[#FF4500] hover:bg-[#FF4500]/20 transition-colors duration-300">
             Login
-          </button>
-          <button className="font-bold text-white text-lg px-6 py-2 rounded-lg bg-[#FF4500] hover:bg-orange-600 transition-colors duration-300">
+          </NavLink>
+          <NavLink to="/signup" className="font-bold text-white text-lg px-6 py-2 rounded-lg bg-[#FF4500] hover:bg-orange-600 transition-colors duration-300">
             Sign Up
-          </button>
+          </NavLink>
         </div>
 
         {/* Mobile Menu Button */}
@@ -75,12 +75,12 @@ const Navbar = () => {
           <nav className="flex flex-col items-center gap-4 py-6">
             {navLinks.map(link => <MobileNavLink key={link.text} {...link} />)}
             <div className="flex flex-col items-center gap-4 mt-4 w-full px-6">
-              <button className="w-full font-bold text-white text-lg px-6 py-3 rounded-lg border-2 border-[#FF4500] hover:bg-[#FF4500]/20 transition-colors duration-300">
+              <NavLink to="/login" onClick={() => setIsOpen(false)} className="w-full font-bold text-white text-lg px-6 py-3 rounded-lg border-2 border-[#FF4500] hover:bg-[#FF4500]/20 transition-colors duration-300">
                 Login
-              </button>
-              <button className="w-full font-bold text-white text-lg px-6 py-3 rounded-lg bg-[#FF4500] hover:bg-orange-600 transition-colors duration-300">
+              </NavLink>
+              <NavLink to="/signup" onClick={() => setIsOpen(false)} className="w-full font-bold text-white text-lg px-6 py-3 rounded-lg bg-[#FF4500] hover:bg-orange-600 transition-colors duration-300">
                 Sign Up
-              </button>
+              </NavLink>
             </div>
           </nav>
         </div>
