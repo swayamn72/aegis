@@ -9,7 +9,7 @@ import LoginPage from './pages/LoginPage'
 import PlayersPage from './pages/PlayersPage';
 import OpportunitiesPage from './pages/OpportunitiesPage';
 import ScrimsPage from './pages/ScrimsPage';
-
+import ProfilePlayer from './pages/ProfilePlayer';
 function App() {
   return (
     <div className="bg-slate-900 font-sans min-h-screen">
@@ -21,6 +21,7 @@ function App() {
         <Route path='/players' element={<PlayersPage />} />
         <Route path='/opportunities' element={<OpportunitiesPage />} />
         <Route path='/scrims' element={<ScrimsPage />} />
+        <Route path='/profile' element={<ProfilePlayer/>} />
       </Routes>
     </div>
   );
