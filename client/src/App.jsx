@@ -10,6 +10,7 @@ import PlayersPage from './pages/PlayersPage';
 import OpportunitiesPage from './pages/OpportunitiesPage';
 import ScrimsPage from './pages/ScrimsPage';
 import ProfilePlayer from './pages/ProfilePlayer';
+import DetailedPlayerProfile from './components/DetailedPlayerProfile';
 function App() {
   return (
     <div className="bg-slate-900 font-sans min-h-screen">
@@ -22,6 +23,7 @@ function App() {
         <Route path='/opportunities' element={<OpportunitiesPage />} />
         <Route path='/scrims' element={<ScrimsPage />} />
         <Route path='/profile' element={<ProfilePlayer/>} />
+        <Route path='/detailed' element={<DetailedPlayerProfile/>} />
       </Routes>
     </div>
   );
