@@ -4,6 +4,8 @@ import Hero from '../components/Hero';
 import Features from '../components/Features';
 import Carousel from '../components/Carousel';
 import Footer from '../components/Footer';
+import DetailedPlayerProfile from '../components/DetailedPlayerProfile';
+import DetailedMatchInfo from '../components/DetailedMatchInfo';
 
 
 function HomePage() {
@@ -16,6 +18,8 @@ function HomePage() {
         <Carousel/>
       </main>
       <Footer />
+      <DetailedPlayerProfile/>
+      <DetailedMatchInfo/>
     </>
   );
 }
