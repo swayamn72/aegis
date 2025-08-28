@@ -10,7 +10,9 @@ import PlayersPage from './pages/PlayersPage';
 import OpportunitiesPage from './pages/OpportunitiesPage';
 import ScrimsPage from './pages/ScrimsPage';
 import ProfilePlayer from './pages/ProfilePlayer';
-import DetailedPlayerProfile from './components/DetailedPlayerProfile';
+import DetailedPlayerProfileDN from './pages/DetailedPlayerProfileDN';
+import DetailedMatchInfoDN from './pages/DetailedMatchInfoDN';
+import DetailedOrgInfoDN from './pages/DetailedOrgInfoDN';
 function App() {
   return (
     <div className="bg-slate-900 font-sans min-h-screen">
@@ -23,7 +25,9 @@ function App() {
         <Route path='/opportunities' element={<OpportunitiesPage />} />
         <Route path='/scrims' element={<ScrimsPage />} />
         <Route path='/profile' element={<ProfilePlayer/>} />
-        <Route path='/detailed' element={<DetailedPlayerProfile/>} />
+        <Route path='/detailed' element={<DetailedPlayerProfileDN/>} />
+        <Route path='/match' element={<DetailedMatchInfoDN/>} />
+        <Route path='/org' element={<DetailedOrgInfoDN/>} />
       </Routes>
     </div>
   );

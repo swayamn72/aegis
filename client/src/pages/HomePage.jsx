@@ -6,6 +6,7 @@ import Carousel from '../components/Carousel';
 import Footer from '../components/Footer';
 import DetailedPlayerProfile from '../components/DetailedPlayerProfile';
 import DetailedMatchInfo from '../components/DetailedMatchInfo';
+import DetailedOrgInfo from '../components/DetailedOrgInfo';
 
 
 function HomePage() {
@@ -20,6 +21,8 @@ function HomePage() {
       <Footer />
       <DetailedPlayerProfile/>
       <DetailedMatchInfo/>
+      <DetailedOrgInfo/>c
+      
     </>
   );
 }

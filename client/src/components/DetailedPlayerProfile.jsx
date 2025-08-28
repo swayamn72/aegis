@@ -166,7 +166,7 @@ const DetailedPlayerProfile = () => {
   );
 
   return (
-    <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans">
+    <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans mt-[100px]">
       <div className="container mx-auto px-6 py-8">
         
         {/* Header Section */}
