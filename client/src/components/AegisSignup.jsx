@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Gamepad2, Shield, CheckCircle, AlertCircle, ArrowRight, Building2 } from 'lucide-react';
+import axios from 'axios';
 
 const AegisSignup = () => {
   const [formData, setFormData] = useState({
     role: '',
+    username: '',
     email: '',
     password: ''
   });
@@ -77,6 +79,12 @@ const AegisSignup = () => {
       newErrors.role = 'Please select your role';
     }
     
+    if (!formData.username.trim()) {
+      newErrors.username = 'Username is required';
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'Username must be at least 3 characters';
+    }
+    
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -98,11 +106,29 @@ const AegisSignup = () => {
       setErrors(newErrors);
       return;
     }
-    
+
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsLoading(false);
-    alert('Account created successfully!');
+    try {
+      const response = await axios.post("http://localhost:5000/api/players/signup", {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+      }, {
+        withCredentials: true,
+      });
+
+      console.log("Signup response:", response.data);
+      alert("✅ Account created successfully!");
+      
+      // TODO: redirect to profile completion page or dashboard
+      // navigate("/complete-profile");
+
+    } catch (error) {
+      console.error("Signup error:", error.response?.data || error.message);
+      alert(`❌ Signup failed: ${error.response?.data?.message || "Server error"}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSocialLogin = (provider) => {
@@ -213,6 +239,30 @@ const AegisSignup = () => {
                   <div className="flex items-center mt-2 text-red-400 text-sm bg-red-500/10 px-4 py-2 rounded-lg border border-red-500/20">
                     <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
                     {errors.role}
+                  </div>
+                )}
+              </div>
+
+              <div className="relative group">
+                <div className="absolute left-6 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-orange-400 transition-colors duration-200">
+                  <User className="w-6 h-6" />
+                </div>
+                <input
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  placeholder="Choose a username"
+                  className={`w-full pl-16 pr-6 py-5 bg-gray-900/30 backdrop-blur-sm border-2 rounded-2xl text-white text-lg placeholder-gray-400 focus:outline-none focus:ring-4 transition-all duration-300 ${
+                    errors.username 
+                      ? 'border-red-500/50 focus:ring-red-500/20 focus:border-red-400' 
+                      : 'border-gray-600/50 focus:ring-orange-500/20 focus:border-orange-400 hover:border-gray-500/70'
+                  }`}
+                />
+                {errors.username && (
+                  <div className="flex items-center mt-3 text-red-400 text-sm bg-red-500/10 px-4 py-2 rounded-lg border border-red-500/20">
+                    <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
+                    {errors.username}
                   </div>
                 )}
               </div>
