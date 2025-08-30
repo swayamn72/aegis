@@ -6,7 +6,7 @@ import {
   Medal, Crown, ChevronRight, ExternalLink, Copy,
   BarChart3, PieChart, LineChart, Hash, Globe
 } from 'lucide-react';
-
+import Navbar from './Navbar';
 const DetailedPlayerProfile = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [ratingPeriod, setRatingPeriod] = useState('6months');
@@ -166,9 +166,11 @@ const DetailedPlayerProfile = () => {
   );
 
   return (
+    
+   
     <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans">
       <div className="container mx-auto px-6 py-8">
-        
+       
         {/* Header Section */}
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-8 mb-8">
           <div className="flex flex-col lg:flex-row gap-8">
@@ -628,6 +630,7 @@ const DetailedPlayerProfile = () => {
         </div>
       </div>
     </div>
+    
   );
 };
 
