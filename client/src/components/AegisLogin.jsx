@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, Shield, CheckCircle, ArrowRight, UserCheck } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const AegisLogin = () => {
   const [formData, setFormData] = useState({
@@ -11,6 +12,9 @@ const AegisLogin = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const AegisLoginMascot = () => (
     <div className="relative">
@@ -70,9 +74,16 @@ const AegisLogin = () => {
       return;
     }
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const result = await login(formData.email, formData.password);
+
     setIsLoading(false);
-    alert('Login successful!');
+
+    if (result.success) {
+      navigate('/');
+    } else {
+      setErrors({ general: result.message });
+    }
   };
 
   const handleForgotPassword = () => {
@@ -185,6 +196,12 @@ const AegisLogin = () => {
                   {showPassword ? <EyeOff className="w-6 h-6" /> : <Eye className="w-6 h-6" />}
                 </button>
               </div>
+
+              {errors.general && (
+                <div className="text-red-400 text-sm text-center">
+                  {errors.general}
+                </div>
+              )}
 
               <div className="flex items-center justify-between">
                 <label className="flex items-center space-x-3 cursor-pointer group">
