@@ -2,10 +2,13 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom'; // Import NavLink and useLocation
 import { Menu, X } from 'lucide-react';
 import logo from '../assets/logo.png';
+import { useAuth } from '../context/AuthContext';
+import ProfileDropdown from './ProfileDropdown';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = React.useState(false);
   const location = useLocation(); // This hook gets the current URL path
+  const { isAuthenticated, user, logout } = useAuth();
 
   // I've updated your links to use "to" for routing instead of "href"
   const navLinks = [
@@ -53,12 +56,18 @@ const Navbar = () => {
 
         {/* Right Side: Desktop Buttons (Your original colors) */}
         <div className="hidden md:flex items-center gap-4">
-          <NavLink to="/login" className="font-bold text-white text-lg px-6 py-2 rounded-lg border-2 border-[#FF4500] hover:bg-[#FF4500]/20 transition-colors duration-300">
-            Login
-          </NavLink>
-          <NavLink to="/signup" className="font-bold text-white text-lg px-6 py-2 rounded-lg bg-[#FF4500] hover:bg-orange-600 transition-colors duration-300">
-            Sign Up
-          </NavLink>
+          {!isAuthenticated ? (
+            <>
+              <NavLink to="/login" className="font-bold text-white text-lg px-6 py-2 rounded-lg border-2 border-[#FF4500] hover:bg-[#FF4500]/20 transition-colors duration-300">
+                Login
+              </NavLink>
+              <NavLink to="/signup" className="font-bold text-white text-lg px-6 py-2 rounded-lg bg-[#FF4500] hover:bg-orange-600 transition-colors duration-300">
+                Sign Up
+              </NavLink>
+            </>
+          ) : (
+            <ProfileDropdown user={user} logout={logout} />
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -75,12 +84,20 @@ const Navbar = () => {
           <nav className="flex flex-col items-center gap-4 py-6">
             {navLinks.map(link => <MobileNavLink key={link.text} {...link} />)}
             <div className="flex flex-col items-center gap-4 mt-4 w-full px-6">
-              <NavLink to="/login" onClick={() => setIsOpen(false)} className="w-full font-bold text-white text-lg px-6 py-3 rounded-lg border-2 border-[#FF4500] hover:bg-[#FF4500]/20 transition-colors duration-300">
-                Login
-              </NavLink>
-              <NavLink to="/signup" onClick={() => setIsOpen(false)} className="w-full font-bold text-white text-lg px-6 py-3 rounded-lg bg-[#FF4500] hover:bg-orange-600 transition-colors duration-300">
-                Sign Up
-              </NavLink>
+              {!isAuthenticated ? (
+                <>
+                  <NavLink to="/login" onClick={() => setIsOpen(false)} className="w-full font-bold text-white text-lg px-6 py-3 rounded-lg border-2 border-[#FF4500] hover:bg-[#FF4500]/20 transition-colors duration-300">
+                    Login
+                  </NavLink>
+                  <NavLink to="/signup" onClick={() => setIsOpen(false)} className="w-full font-bold text-white text-lg px-6 py-3 rounded-lg bg-[#FF4500] hover:bg-orange-600 transition-colors duration-300">
+                    Sign Up
+                  </NavLink>
+                </>
+              ) : (
+                <div className="w-full flex justify-center">
+                  <ProfileDropdown user={user} logout={() => { logout(); setIsOpen(false); }} />
+                </div>
+              )}
             </div>
           </nav>
         </div>

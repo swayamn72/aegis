@@ -1,5 +1,3 @@
-// server/models/player.model.js
-
 import mongoose from 'mongoose';
 
 const playerSchema = new mongoose.Schema(
@@ -33,36 +31,130 @@ const playerSchema = new mongoose.Schema(
       default: false,
     },
 
-    // --- BGMI Specific Info (filled later in profile completion) ---
+    // --- Personal Info (Step 1 from AegisProfileCompletion) ---
+    realName: {
+      type: String,
+      trim: true,
+    },
+    age: {
+      type: Number,
+      min: 13,
+      max: 99,
+    },
+    location: {
+      type: String,
+      trim: true,
+    },
+    country: {
+      type: String,
+      trim: true,
+    },
+    bio: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    languages: [
+      {
+        type: String,
+        enum: ['English', 'Hindi', 'Marathi', 'Tamil', 'Telugu', 'Bengali', 'Gujarati', 'Punjabi'],
+      },
+    ],
+
+    // --- Gaming Info (Step 2 from AegisProfileCompletion) ---
     inGameName: {
       type: String,
       unique: true,
       trim: true,
-      sparse: true, // allows multiple nulls until set later
+      sparse: true, // Allows multiple nulls until set later
     },
-    game: {
+    primaryGame: {
       type: String,
-      default: 'BGMI', // Defaults to BGMI for this version of the app
+      enum: ['BGMI', 'PUBG Mobile', 'Free Fire', 'Call of Duty Mobile', 'Valorant Mobile'],
+      default: 'BGMI',
     },
-    roles: [
+    experienceYears: {
+      type: Number,
+      min: 0,
+    },
+    earnings: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    qualifiedEvents: {
+      type: String,
+      enum: ['yes', 'no'],
+      default: 'no',
+    },
+    qualifiedEventsDetails: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    inGameRole: [
       {
         type: String,
-        enum: [
-          'Entry Fragger',
-          'Supporter',
-          'IGL', // In-Game Leader
-          'Flanker',
-          'Scouter',
-        ],
+        enum: ['Aggressive', 'Passive', 'Balanced', 'Sniper', 'Rusher', 'Support', 'Leader', 'Flex'],
       },
     ],
 
-    // Future stats can be added here
-    // stats: {
-    //   kdRatio: { type: Number, default: 0 },
-    //   winRate: { type: Number, default: 0 },
-    //   avgSurvivalTime: { type: String, default: '0m' }
-    // }
+    // --- Team & Goals (Step 3 from AegisProfileCompletion) ---
+    teamStatus: {
+      type: String,
+      enum: ['Looking for Team', 'In a Team', 'Team Captain', 'Solo Player', 'Open to Offers'],
+    },
+    lookingFor: [
+      {
+        type: String,
+        enum: [
+          'Competitive Team',
+          'Casual Gaming',
+          'Tournament Play',
+          'Rank Climbing',
+          'Coaching/Mentoring',
+          'Content Creation',
+          'Practice Partners',
+          'Community Building',
+        ],
+      },
+    ],
+    availability: {
+      type: String,
+      enum: ['Weekends Only', 'Evenings (6-11 PM)', 'Flexible Schedule', 'Full-time Available', 'Part-time (20+ hrs/week)'],
+    },
+    competitiveGoals: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    // --- Social & Contact (Step 4 from AegisProfileCompletion) ---
+    discordTag: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    twitterHandle: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    twitchChannel: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    youtubeChannel: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    profileVisibility: {
+      type: String,
+      enum: ['public', 'friends', 'private'],
+      default: 'public',
+    },
   },
   {
     timestamps: true, // Automatically adds 'createdAt' and 'updatedAt' fields

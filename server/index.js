@@ -22,6 +22,12 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+// Add this middleware to log all incoming requests for debugging
+app.use((req, res, next) => {
+  console.log(`Incoming request: ${req.method} ${req.url}`);
+  next();
+});
+
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ MongoDB connection established'))
   .catch((error) => console.error('❌ MongoDB connection failed:', error.message));
