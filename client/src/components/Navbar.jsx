@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom'; // Import NavLink and u
 import { Menu, X } from 'lucide-react';
 import logo from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
+import ProfileDropdown from './ProfileDropdown';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -65,20 +66,7 @@ const Navbar = () => {
               </NavLink>
             </>
           ) : (
-            <div className="flex items-center space-x-4">
-              <img
-                src={`https://ui-avatars.com/api/?name=${user.username}&background=FF4500&color=fff&rounded=true&size=40`}
-                alt="Profile"
-                className="w-10 h-10 rounded-full cursor-pointer"
-                title={user.username}
-              />
-              <button
-                onClick={logout}
-                className="font-bold text-white text-lg px-4 py-2 rounded-lg border-2 border-red-600 hover:bg-red-600 transition-colors duration-300"
-              >
-                Logout
-              </button>
-            </div>
+            <ProfileDropdown user={user} logout={logout} />
           )}
         </div>
 
@@ -106,22 +94,8 @@ const Navbar = () => {
                   </NavLink>
                 </>
               ) : (
-                <div className="flex items-center space-x-4 w-full justify-center">
-                  <img
-                    src={`https://ui-avatars.com/api/?name=${user.username}&background=FF4500&color=fff&rounded=true&size=40`}
-                    alt="Profile"
-                    className="w-10 h-10 rounded-full cursor-pointer"
-                    title={user.username}
-                  />
-                  <button
-                    onClick={() => {
-                      logout();
-                      setIsOpen(false);
-                    }}
-                    className="font-bold text-white text-lg px-4 py-2 rounded-lg border-2 border-red-600 hover:bg-red-600 transition-colors duration-300"
-                  >
-                    Logout
-                  </button>
+                <div className="w-full flex justify-center">
+                  <ProfileDropdown user={user} logout={() => { logout(); setIsOpen(false); }} />
                 </div>
               )}
             </div>
