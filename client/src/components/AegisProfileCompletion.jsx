@@ -1,37 +1,41 @@
 import React, { useState } from 'react';
-import { 
-  ChevronRight, ChevronLeft, User, Gamepad2, Trophy, MapPin, 
-  Calendar, Globe, Target, Users, Zap, Shield, Upload, 
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import {
+  ChevronRight, ChevronLeft, User, Gamepad2, Trophy, MapPin,
+  Calendar, Globe, Target, Users, Zap, Shield, Upload,
   Camera, CheckCircle, Star, Award, ArrowRight, Save,
   Clock, Activity, Hash, ExternalLink, Medal, Crown
 } from 'lucide-react';
 
 const AegisProfileCompletion = () => {
+  const { updateProfile } = useAuth();
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     // Personal Info (Step 1)
     realName: '',
-    age: '',
+    age: '0',
     location: '',
     country: '',
     bio: '',
     languages: [],
-    
+
     // Gaming Info (Step 2)
     primaryGame: '',
     experienceYears: '',
     earnings: '',
     qualifiedEvents: 'no',
     qualifiedEventsDetails: '',
-    playstyle: '',
-    
+    inGameRole: [], // Changed from playstyle to inGameRole (array)
+
     // Team & Goals (Step 3)
     teamStatus: '',
     lookingFor: [],
     availability: '',
     competitiveGoals: '',
     preferredGameModes: [],
-    
+
     // Social & Contact (Step 4)
     discordTag: '',
     twitterHandle: '',
@@ -135,11 +139,22 @@ const AegisProfileCompletion = () => {
       setErrors(stepErrors);
       return;
     }
-    
+
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsSubmitting(false);
-    alert('Profile completed successfully!');
+    try {
+      const result = await updateProfile(formData);
+      if (result.success) {
+        // Redirect to My Profile page
+        navigate('/my-profile');
+      } else {
+        alert(`Error: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Profile update error:', error);
+      alert('An error occurred while updating your profile. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const stepTitles = {
@@ -157,7 +172,7 @@ const AegisProfileCompletion = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-zinc-950 to-neutral-950 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-zinc-950 to-neutral-950 relative overflow-hidden mt-[100px]">
       
       {/* Background Effects */}
       <div className="absolute inset-0 opacity-20">
@@ -414,20 +429,20 @@ const AegisProfileCompletion = () => {
                 )}
 
                 <div>
-                  <label className="block text-white font-medium mb-3">Playstyle</label>
+                  <label className="block text-white font-medium mb-3">In-Game Role</label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {['Aggressive', 'Passive', 'Balanced', 'Sniper', 'Rusher', 'Support', 'Leader', 'Flex'].map(style => (
+                    {['Aggressive', 'Passive', 'Balanced', 'Sniper', 'Rusher', 'Support', 'Leader', 'Flex'].map(role => (
                       <button
-                        key={style}
+                        key={role}
                         type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, playstyle: style }))}
+                        onClick={() => handleArrayChange('inGameRole', role)}
                         className={`px-4 py-2 rounded-lg border transition-all ${
-                          formData.playstyle === style
+                          formData.inGameRole.includes(role)
                             ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400'
                             : 'bg-zinc-800/50 border-zinc-600 text-zinc-300 hover:border-zinc-500'
                         }`}
                       >
-                        {style}
+                        {role}
                       </button>
                     ))}
                   </div>
