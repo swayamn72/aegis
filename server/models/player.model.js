@@ -123,6 +123,12 @@ const playerSchema = new mongoose.Schema(
       type: String,
       enum: ['Weekends Only', 'Evenings (6-11 PM)', 'Flexible Schedule', 'Full-time Available', 'Part-time (20+ hrs/week)'],
     },
+    preferredGameModes: [
+      {
+        type: String,
+        enum: ['Classic', 'TDM', 'Domination', 'Payload', 'Arena', 'Custom Rooms', 'Tournament Mode', 'Arcade'],
+      },
+    ],
     competitiveGoals: {
       type: String,
       trim: true,

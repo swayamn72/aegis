@@ -80,7 +80,7 @@ const AegisLogin = () => {
     setIsLoading(false);
 
     if (result.success) {
-      navigate('/');
+      navigate('/complete-profile');
     } else {
       setErrors({ general: result.message });
     }

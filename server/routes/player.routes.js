@@ -137,4 +137,46 @@ router.post("/logout", (req, res) => {
   res.status(200).json({ message: "Logout successful" });
 });
 
+// --- Update Profile Route ---
+router.put("/update-profile", async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+
+    const updateData = req.body;
+
+    // Validate required fields if provided
+    if (updateData.age && (updateData.age < 13 || updateData.age > 99)) {
+      return res.status(400).json({ message: "Age must be between 13 and 99" });
+    }
+
+    // Update the player document
+    const updatedPlayer = await Player.findByIdAndUpdate(
+      userId,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!updatedPlayer) {
+      return res.status(404).json({ message: "Player not found" });
+    }
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      player: updatedPlayer
+    });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: "Validation error", errors: error.errors });
+    }
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 export default router;

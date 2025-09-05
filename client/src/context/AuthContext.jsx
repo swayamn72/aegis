@@ -85,12 +85,38 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateProfile = async (profileData) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/players/update-profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(profileData),
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData.player);
+        return { success: true };
+      } else {
+        const errorData = await response.json();
+        return { success: false, message: errorData.message };
+      }
+    } catch (error) {
+      console.error('Profile update failed:', error);
+      return { success: false, message: 'Network error' };
+    }
+  };
+
   const value = {
     isAuthenticated,
     user,
     loading,
     login,
     logout,
+    updateProfile,
   };
 
   return (
