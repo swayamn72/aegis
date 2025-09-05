@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
-  ChevronRight, ChevronLeft, User, Gamepad2, Trophy, MapPin,
+  User, Gamepad2, Trophy, MapPin,
   Calendar, Globe, Target, Users, Zap, Shield, Upload,
   Camera, CheckCircle, Star, Award, ArrowRight, Save,
   Clock, Activity, Hash, ExternalLink, Medal, Crown
@@ -11,44 +11,36 @@ import {
 const AegisProfileCompletion = () => {
   const { updateProfile } = useAuth();
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
-    // Personal Info (Step 1)
+    // Personal Info
     realName: '',
-    age: '0',
+    age: '',
     location: '',
     country: '',
     bio: '',
     languages: [],
 
-    // Gaming Info (Step 2)
+    // Gaming Info
+    inGameName: '',
     primaryGame: '',
-    experienceYears: '',
     earnings: '',
-    qualifiedEvents: 'no',
-    qualifiedEventsDetails: '',
-    inGameRole: [], // Changed from playstyle to inGameRole (array)
+    qualifiedEvents: false,
+    qualifiedEventDetails: [],
+    inGameRole: [],
 
-    // Team & Goals (Step 3)
+    // Team & Goals
     teamStatus: '',
-    lookingFor: [],
     availability: '',
-    competitiveGoals: '',
-    preferredGameModes: [],
 
-    // Social & Contact (Step 4)
+    // Social & Contact
     discordTag: '',
-    twitterHandle: '',
-    twitchChannel: '',
-    youtubeChannel: '',
+    twitch: '',
+    YouTube: '',
     profileVisibility: 'public'
   });
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const totalSteps = 4;
-  const progress = (currentStep / totalSteps) * 100;
 
   const AegisCompletionMascot = () => (
     <div className="relative">
@@ -87,56 +79,31 @@ const AegisProfileCompletion = () => {
   const handleArrayChange = (name, value) => {
     setFormData(prev => ({
       ...prev,
-      [name]: prev[name].includes(value) 
+      [name]: Array.isArray(prev[name]) ? (prev[name].includes(value)
         ? prev[name].filter(item => item !== value)
-        : [...prev[name], value]
+        : [...prev[name], value]) : [value]
     }));
   };
 
-  const validateStep = (step) => {
+  const validateForm = () => {
     const newErrors = {};
-    
-    switch(step) {
-      case 1:
-        if (!formData.realName.trim()) newErrors.realName = 'Real name is required';
-        if (!formData.age) newErrors.age = 'Age is required';
-        if (!formData.location.trim()) newErrors.location = 'Location is required';
-        if (!formData.country.trim()) newErrors.country = 'Country is required';
-        break;
-      case 2:
-        if (!formData.primaryGame) newErrors.primaryGame = 'Primary game is required';
-        if (!formData.experienceYears) newErrors.experienceYears = 'Experience is required';
-        break;
-      case 3:
-        if (!formData.teamStatus) newErrors.teamStatus = 'Team status is required';
-        if (!formData.availability) newErrors.availability = 'Availability is required';
-        break;
-      case 4:
-        // Optional step, no required fields
-        break;
-    }
-    
+
+    // Required fields validation
+    if (!formData.realName.trim()) newErrors.realName = 'Real name is required';
+    if (!formData.age) newErrors.age = 'Age is required';
+    if (!formData.location.trim()) newErrors.location = 'Location is required';
+    if (!formData.country.trim()) newErrors.country = 'Country is required';
+    if (!formData.primaryGame) newErrors.primaryGame = 'Primary game is required';
+    if (!formData.teamStatus) newErrors.teamStatus = 'Team status is required';
+    if (!formData.availability) newErrors.availability = 'Availability is required';
+
     return newErrors;
   };
 
-  const nextStep = () => {
-    const stepErrors = validateStep(currentStep);
-    if (Object.keys(stepErrors).length > 0) {
-      setErrors(stepErrors);
-      return;
-    }
-    setErrors({});
-    setCurrentStep(prev => Math.min(prev + 1, totalSteps));
-  };
-
-  const prevStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
-  };
-
   const handleSubmit = async () => {
-    const stepErrors = validateStep(currentStep);
-    if (Object.keys(stepErrors).length > 0) {
-      setErrors(stepErrors);
+    const formErrors = validateForm();
+    if (Object.keys(formErrors).length > 0) {
+      setErrors(formErrors);
       return;
     }
 
@@ -144,7 +111,6 @@ const AegisProfileCompletion = () => {
     try {
       const result = await updateProfile(formData);
       if (result.success) {
-        // Redirect to My Profile page
         navigate('/my-profile');
       } else {
         alert(`Error: ${result.message}`);
@@ -155,20 +121,6 @@ const AegisProfileCompletion = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const stepTitles = {
-    1: 'Personal Information',
-    2: 'Gaming Profile',
-    3: 'Team & Goals',
-    4: 'Social & Contact'
-  };
-
-  const stepDescriptions = {
-    1: 'Tell us about yourself',
-    2: 'Your gaming credentials',
-    3: 'What are you looking for?',
-    4: 'Connect with the community'
   };
 
   return (
@@ -209,31 +161,16 @@ const AegisProfileCompletion = () => {
             </p>
           </div>
 
-          {/* Progress Bar */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-zinc-400 text-sm">Step {currentStep} of {totalSteps}</span>
-              <span className="text-zinc-400 text-sm">{Math.round(progress)}% Complete</span>
-            </div>
-            <div className="w-full bg-zinc-800 rounded-full h-3 overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-
           {/* Form Container */}
           <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/50 rounded-3xl p-8 md:p-12">
             
-            {/* Step Header */}
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-white mb-2">{stepTitles[currentStep]}</h2>
-              <p className="text-zinc-400">{stepDescriptions[currentStep]}</p>
-            </div>
-
-            {/* Step 1: Personal Information */}
-            {currentStep === 1 && (
+            {/* Personal Information Section */}
+            <div className="mb-12">
+              <div className="flex items-center gap-3 mb-6">
+                <User className="w-6 h-6 text-cyan-400" />
+                <h2 className="text-2xl font-bold text-white">Personal Information</h2>
+              </div>
+              
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -343,12 +280,29 @@ const AegisProfileCompletion = () => {
                   </div>
                 </div>
               </div>
-            )}
+            </div>
 
-            {/* Step 2: Gaming Information */}
-            {currentStep === 2 && (
+            {/* Gaming Information Section */}
+            <div className="mb-12">
+              <div className="flex items-center gap-3 mb-6">
+                <Gamepad2 className="w-6 h-6 text-cyan-400" />
+                <h2 className="text-2xl font-bold text-white">Gaming Profile</h2>
+              </div>
+
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-white font-medium mb-2">In-Game Name</label>
+                    <input
+                      type="text"
+                      name="inGameName"
+                      value={formData.inGameName}
+                      onChange={handleInputChange}
+                      placeholder="Your in-game username"
+                      className="w-full px-4 py-3 bg-zinc-800/50 border border-zinc-600 rounded-xl text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400 transition-all"
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-white font-medium mb-2">Primary Game *</label>
                     <select
@@ -360,29 +314,11 @@ const AegisProfileCompletion = () => {
                       }`}
                     >
                       <option value="">Select Your Main Game</option>
-                      <option value="BGMI">BGMI (Battlegrounds Mobile India)</option>
-                      <option value="PUBG Mobile">PUBG Mobile</option>
-                      <option value="Free Fire">Free Fire</option>
-                      <option value="Call of Duty Mobile">Call of Duty Mobile</option>
-                      <option value="Valorant Mobile">Valorant Mobile</option>
+                      <option value="BGMI">BGMI</option>
+                      <option value="VALO">VALO</option>
+                      <option value="CS2">CS2</option>
                     </select>
                     {errors.primaryGame && <p className="text-red-400 text-sm mt-1">{errors.primaryGame}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-white font-medium mb-2">Experience (in years) *</label>
-                    <input
-                      type="number"
-                      name="experienceYears"
-                      value={formData.experienceYears}
-                      onChange={handleInputChange}
-                      placeholder="Years of experience"
-                      min="0"
-                      className={`w-full px-4 py-3 bg-zinc-800/50 border rounded-xl text-white placeholder-zinc-400 focus:outline-none focus:ring-2 transition-all ${
-                        errors.experienceYears ? 'border-red-500 focus:ring-red-500/20' : 'border-zinc-600 focus:ring-cyan-500/20 focus:border-cyan-400'
-                      }`}
-                    />
-                    {errors.experienceYears && <p className="text-red-400 text-sm mt-1">{errors.experienceYears}</p>}
                   </div>
                 </div>
 
@@ -402,42 +338,69 @@ const AegisProfileCompletion = () => {
 
                   <div>
                     <label className="block text-white font-medium mb-2">Qualified for Official Events?</label>
-                    <select
-                      name="qualifiedEvents"
-                      value={formData.qualifiedEvents}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-zinc-800/50 border border-zinc-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400 transition-all"
-                    >
-                      <option value="no">No</option>
-                      <option value="yes">Yes</option>
-                    </select>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="qualifiedEvents"
+                        checked={formData.qualifiedEvents}
+                        onChange={(e) => setFormData(prev => ({ ...prev, qualifiedEvents: e.target.checked }))}
+                        className="w-4 h-4 text-cyan-600 bg-zinc-800/50 border-zinc-600 rounded focus:ring-cyan-500/20 focus:ring-2"
+                      />
+                      <span className="ml-2 text-zinc-300">Yes, I have qualified for official events</span>
+                    </div>
                   </div>
                 </div>
 
-                {formData.qualifiedEvents === 'yes' && (
+                {formData.qualifiedEvents && (
                   <div>
                     <label className="block text-white font-medium mb-2">Details of Qualified Events</label>
-                    <textarea
-                      name="qualifiedEventsDetails"
-                      value={formData.qualifiedEventsDetails}
-                      onChange={handleInputChange}
-                      placeholder="Mention the official events you have qualified for (e.g., BGIS 2024, PMGC 2023)..."
-                      rows="4"
-                      className="w-full px-4 py-3 bg-zinc-800/50 border border-zinc-600 rounded-xl text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400 transition-all resize-none"
-                    />
+                    <div className="space-y-3">
+                      {formData.qualifiedEventDetails.map((event, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={event}
+                            onChange={(e) => {
+                              const newDetails = [...formData.qualifiedEventDetails];
+                              newDetails[index] = e.target.value;
+                              setFormData(prev => ({ ...prev, qualifiedEventDetails: newDetails }));
+                            }}
+                            placeholder="e.g., BGIS 2024"
+                            className="flex-1 px-4 py-2 bg-zinc-800/50 border border-zinc-600 rounded-xl text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400 transition-all"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newDetails = formData.qualifiedEventDetails.filter((_, i) => i !== index);
+                              setFormData(prev => ({ ...prev, qualifiedEventDetails: newDetails }));
+                            }}
+                            className="px-3 py-2 bg-red-500/20 border border-red-500/50 text-red-400 rounded-lg hover:bg-red-500/30 transition-all"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, qualifiedEventDetails: [...prev.qualifiedEventDetails, ''] }))}
+                        className="px-4 py-2 bg-cyan-500/20 border border-cyan-500/50 text-cyan-400 rounded-lg hover:bg-cyan-500/30 transition-all"
+                      >
+                        Add Event
+                      </button>
+                    </div>
                   </div>
                 )}
 
                 <div>
                   <label className="block text-white font-medium mb-3">In-Game Role</label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {['Aggressive', 'Passive', 'Balanced', 'Sniper', 'Rusher', 'Support', 'Leader', 'Flex'].map(role => (
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {['assaulter', 'IGL', 'support', 'filter', 'sniper'].map(role => (
                       <button
                         key={role}
                         type="button"
                         onClick={() => handleArrayChange('inGameRole', role)}
                         className={`px-4 py-2 rounded-lg border transition-all ${
-                          formData.inGameRole.includes(role)
+                          Array.isArray(formData.inGameRole) && formData.inGameRole.includes(role)
                             ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400'
                             : 'bg-zinc-800/50 border-zinc-600 text-zinc-300 hover:border-zinc-500'
                         }`}
@@ -448,10 +411,15 @@ const AegisProfileCompletion = () => {
                   </div>
                 </div>
               </div>
-            )}
+            </div>
 
-            {/* Step 3: Team & Goals */}
-            {currentStep === 3 && (
+            {/* Team & Goals Section */}
+            <div className="mb-12">
+              <div className="flex items-center gap-3 mb-6">
+                <Target className="w-6 h-6 text-cyan-400" />
+                <h2 className="text-2xl font-bold text-white">Team & Goals</h2>
+              </div>
+
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -465,11 +433,9 @@ const AegisProfileCompletion = () => {
                       }`}
                     >
                       <option value="">Select Status</option>
-                      <option value="Looking for Team">Looking for Team</option>
-                      <option value="In a Team">Currently in a Team</option>
-                      <option value="Team Captain">Team Captain/Leader</option>
-                      <option value="Solo Player">Solo Player</option>
-                      <option value="Open to Offers">Open to Team Offers</option>
+                      <option value="looking for a team">Looking for a team</option>
+                      <option value="in a team">In a team</option>
+                      <option value="open for offers">Open for offers</option>
                     </select>
                     {errors.teamStatus && <p className="text-red-400 text-sm mt-1">{errors.teamStatus}</p>}
                   </div>
@@ -485,117 +451,49 @@ const AegisProfileCompletion = () => {
                       }`}
                     >
                       <option value="">Select Availability</option>
-                      <option value="Weekends Only">Weekends Only</option>
-                      <option value="Evenings (6-11 PM)">Evenings (6-11 PM)</option>
-                      <option value="Flexible Schedule">Flexible Schedule</option>
-                      <option value="Full-time Available">Full-time Available</option>
-                      <option value="Part-time (20+ hrs/week)">Part-time (20+ hrs/week)</option>
+                      <option value="weekends only">Weekends only</option>
+                      <option value="evenings">Evenings</option>
+                      <option value="flexible">Flexible</option>
+                      <option value="full time">Full time</option>
                     </select>
                     {errors.availability && <p className="text-red-400 text-sm mt-1">{errors.availability}</p>}
                   </div>
                 </div>
-
-                <div>
-                  <label className="block text-white font-medium mb-3">What are you looking for?</label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {[
-                      'Competitive Team', 'Casual Gaming', 'Tournament Play', 'Rank Climbing',
-                      'Coaching/Mentoring', 'Content Creation', 'Practice Partners', 'Community Building'
-                    ].map(goal => (
-                      <button
-                        key={goal}
-                        type="button"
-                        onClick={() => handleArrayChange('lookingFor', goal)}
-                        className={`px-4 py-2 rounded-lg border transition-all text-left ${
-                          formData.lookingFor.includes(goal)
-                            ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400'
-                            : 'bg-zinc-800/50 border-zinc-600 text-zinc-300 hover:border-zinc-500'
-                        }`}
-                      >
-                        {goal}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-white font-medium mb-3">Preferred Game Modes</label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {['Classic', 'TDM', 'Domination', 'Payload', 'Arena', 'Custom Rooms', 'Tournament Mode', 'Arcade'].map(mode => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => handleArrayChange('preferredGameModes', mode)}
-                        className={`px-4 py-2 rounded-lg border transition-all ${
-                          formData.preferredGameModes.includes(mode)
-                            ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400'
-                            : 'bg-zinc-800/50 border-zinc-600 text-zinc-300 hover:border-zinc-500'
-                        }`}
-                      >
-                        {mode}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-white font-medium mb-2">Competitive Goals</label>
-                  <textarea
-                    name="competitiveGoals"
-                    value={formData.competitiveGoals}
-                    onChange={handleInputChange}
-                    placeholder="What are your competitive gaming goals? (e.g., reach Conqueror, join pro team, win tournaments...)"
-                    rows="3"
-                    className="w-full px-4 py-3 bg-zinc-800/50 border border-zinc-600 rounded-xl text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400 transition-all resize-none"
-                  />
-                </div>
               </div>
-            )}
+            </div>
 
-            {/* Step 4: Social & Contact */}
-            {currentStep === 4 && (
+            {/* Social & Contact Section */}
+            <div className="mb-12">
+              <div className="flex items-center gap-3 mb-6">
+                <Users className="w-6 h-6 text-cyan-400" />
+                <h2 className="text-2xl font-bold text-white">Social & Contact</h2>
+              </div>
+
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-white font-medium mb-2">Discord Tag</label>
-                    <div className="relative">
-                      <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
-                      <input
-                        type="text"
-                        name="discordTag"
-                        value={formData.discordTag}
-                        onChange={handleInputChange}
-                        placeholder="username#1234"
-                        className="w-full pl-12 pr-4 py-3 bg-zinc-800/50 border border-zinc-600 rounded-xl text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400 transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-white font-medium mb-2">Twitter Handle</label>
-                    <div className="relative">
-                      <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
-                      <input
-                        type="text"
-                        name="twitterHandle"
-                        value={formData.twitterHandle}
-                        onChange={handleInputChange}
-                        placeholder="@username"
-                        className="w-full pl-12 pr-4 py-3 bg-zinc-800/50 border border-zinc-600 rounded-xl text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400 transition-all"
-                      />
-                    </div>
+                <div>
+                  <label className="block text-white font-medium mb-2">Discord Tag</label>
+                  <div className="relative">
+                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
+                    <input
+                      type="text"
+                      name="discordTag"
+                      value={formData.discordTag}
+                      onChange={handleInputChange}
+                      placeholder="username#1234"
+                      className="w-full pl-12 pr-4 py-3 bg-zinc-800/50 border border-zinc-600 rounded-xl text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400 transition-all"
+                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-white font-medium mb-2">Twitch Channel</label>
+                    <label className="block text-white font-medium mb-2">Twitch</label>
                     <div className="relative">
                       <Activity className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
                       <input
                         type="text"
-                        name="twitchChannel"
-                        value={formData.twitchChannel}
+                        name="twitch"
+                        value={formData.twitch}
                         onChange={handleInputChange}
                         placeholder="twitch.tv/username"
                         className="w-full pl-12 pr-4 py-3 bg-zinc-800/50 border border-zinc-600 rounded-xl text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400 transition-all"
@@ -604,13 +502,13 @@ const AegisProfileCompletion = () => {
                   </div>
 
                   <div>
-                    <label className="block text-white font-medium mb-2">YouTube Channel</label>
+                    <label className="block text-white font-medium mb-2">YouTube</label>
                     <div className="relative">
                       <ExternalLink className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
                       <input
                         type="text"
-                        name="youtubeChannel"
-                        value={formData.youtubeChannel}
+                        name="YouTube"
+                        value={formData.YouTube}
                         onChange={handleInputChange}
                         placeholder="youtube.com/@username"
                         className="w-full pl-12 pr-4 py-3 bg-zinc-800/50 border border-zinc-600 rounded-xl text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400 transition-all"
@@ -658,71 +556,29 @@ const AegisProfileCompletion = () => {
                   </div>
                 </div>
               </div>
-            )}
+            </div>
 
-            {/* Navigation Buttons */}
-            <div className="flex items-center justify-between mt-12 pt-8 border-t border-zinc-700">
-              <div className="flex items-center gap-4">
-                {currentStep > 1 && (
-                  <button
-                    onClick={prevStep}
-                    className="flex items-center gap-2 px-6 py-3 bg-zinc-700/50 hover:bg-zinc-600/50 text-white font-medium rounded-xl transition-all duration-200"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                    Back
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-center gap-4">
-                {currentStep < totalSteps ? (
-                  <button
-                    onClick={nextStep}
-                    className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white font-bold px-8 py-3 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg shadow-cyan-500/30"
-                  >
-                    Continue
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
+            {/* Submit Button */}
+            <div className="flex flex-col items-center gap-6 mt-12 pt-8 border-t border-zinc-700">
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold px-12 py-4 rounded-xl transition-all duration-200 transform hover:scale-105 hover:shadow-lg hover:shadow-green-500/30 disabled:scale-100 disabled:shadow-none text-lg"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Completing Profile...
+                  </>
                 ) : (
-                  <button
-                    onClick={handleSubmit}
-                    disabled={isSubmitting}
-                    className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold px-8 py-3 rounded-xl transition-all duration-200 transform hover:scale-105 hover:shadow-lg hover:shadow-green-500/30 disabled:scale-100 disabled:shadow-none"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Completing...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-5 h-5" />
-                        Complete Profile
-                      </>
-                    )}
-                  </button>
+                  <>
+                    <Save className="w-6 h-6" />
+                    Complete Profile
+                  </>
                 )}
-              </div>
-            </div>
+              </button>
 
-            {/* Step Indicators */}
-            <div className="flex justify-center mt-8">
-              <div className="flex space-x-3">
-                {[1, 2, 3, 4].map(step => (
-                  <div
-                    key={step}
-                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                      step < currentStep ? 'bg-green-500' :
-                      step === currentStep ? 'bg-cyan-500 animate-pulse' :
-                      'bg-zinc-600'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Skip Option */}
-            <div className="text-center mt-6">
+              {/* Skip Option */}
               <button className="text-zinc-400 hover:text-zinc-300 text-sm font-medium transition-colors">
                 Skip for now, I'll complete this later
               </button>
