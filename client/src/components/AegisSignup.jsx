@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Gamepad2, Shield, CheckCircle, AlertCircle, ArrowRight, Building2 } from 'lucide-react';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 const AegisSignup = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     role: '',
     username: '',
@@ -118,14 +120,12 @@ const AegisSignup = () => {
       });
 
       console.log("Signup response:", response.data);
-      alert("✅ Account created successfully!");
-      
-      // TODO: redirect to profile completion page or dashboard
-      // navigate("/complete-profile");
+      toast.success("Account created successfully! Redirecting to login...");
+      setTimeout(() => navigate('/login'), 2000);
 
     } catch (error) {
       console.error("Signup error:", error.response?.data || error.message);
-      alert(`❌ Signup failed: ${error.response?.data?.message || "Server error"}`);
+      toast.error(`Signup failed: ${error.response?.data?.message || "Server error"}`);
     } finally {
       setIsLoading(false);
     }

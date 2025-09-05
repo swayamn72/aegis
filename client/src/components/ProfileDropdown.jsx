@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User, Users, Settings, LogOut, Trophy, Star, Bell, ChevronDown } from 'lucide-react';
 
 const ProfileDropdown = ({ user, logout }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -81,8 +83,10 @@ const ProfileDropdown = ({ user, logout }) => {
                     setIsOpen(false);
                     if (item.isLogout) {
                       logout();
+                    } else if (item.label === 'My Profile') {
+                      navigate('/my-profile');
                     } else {
-                      // Handle navigation here
+                      // Handle other navigation here
                       console.log(`Navigating to ${item.label}`);
                     }
                   }}
