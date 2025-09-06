@@ -16,6 +16,7 @@ import DetailedMatchInfoDN from './pages/DetailedMatchInfoDN';
 import DetailedOrgInfoDN from './pages/DetailedOrgInfoDN';
 import CompleteProfilePage from './pages/CompleteProfilePage';
 import MyProfilePage from './pages/MyProfilePage';
+import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
           <Route path='/org' element={<DetailedOrgInfoDN/>} />
           <Route path='/complete-profile' element={<ProtectedRoute><CompleteProfilePage/></ProtectedRoute>} />
           <Route path='/my-profile' element={<ProtectedRoute><MyProfilePage/></ProtectedRoute>} />
+          <Route path='/settings' element={<ProtectedRoute><SettingsPage/></ProtectedRoute>} />
         </Routes>
       </div>
     </AuthProvider>
