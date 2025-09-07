@@ -7,6 +7,7 @@ import Footer from '../components/Footer';
 import DetailedPlayerProfile from '../components/DetailedPlayerProfile';
 import DetailedMatchInfo from '../components/DetailedMatchInfo';
 import DetailedOrgInfo from '../components/DetailedOrgInfo';
+import AegisProfileCardBGMI from '../components/AegisProfileCardBGMI';
 
 
 function HomePage() {
@@ -19,9 +20,7 @@ function HomePage() {
         <Carousel/>
       </main>
       <Footer />
-      <DetailedPlayerProfile/>
-      <DetailedMatchInfo/>
-      <DetailedOrgInfo/>c
+      <AegisProfileCardBGMI/>l
       
     </>
   );

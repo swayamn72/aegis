@@ -137,6 +137,20 @@ router.post("/logout", (req, res) => {
   res.status(200).json({ message: "Logout successful" });
 });
 
+// --- Get All Players Route ---
+router.get("/all", async (req, res) => {
+  try {
+    const players = await Player.find({}).select("-password").sort({ createdAt: -1 });
+    res.status(200).json({
+      message: "Players retrieved successfully",
+      players: players
+    });
+  } catch (error) {
+    console.error("Get all players error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // --- Update Profile Route ---
 router.put("/update-profile", async (req, res) => {
   try {

@@ -74,6 +74,14 @@ const playerSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    tournamentsPlayed: {
+      type: Number,
+      default: 0,
+    },
+    matchesPlayed: {
+      type: Number,
+      default: 0,
+    },
     qualifiedEvents: {
       type: Boolean,
       default: false,
@@ -110,6 +118,11 @@ const playerSchema = new mongoose.Schema(
       type: String,
       enum: ['public', 'friends', 'private'],
       default: 'public',
+    },
+    cardTheme: {
+      type: String,
+      enum: ['orange', 'blue', 'purple', 'red', 'green', 'pink'],
+      default: 'orange',
     },
   },
   {

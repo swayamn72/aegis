@@ -42,7 +42,10 @@ const SettingsComponent = () => {
     discordTag: '',
     twitch: '',
     YouTube: '',
-    profileVisibility: 'public'
+    profileVisibility: 'public',
+
+    // Appearance
+    cardTheme: 'orange'
   });
 
   // Notification settings state
@@ -83,6 +86,11 @@ const SettingsComponent = () => {
     twitch: { connected: true, username: 'zyaxxxx_gaming' },
     youtube: { connected: false, username: '' },
     github: { connected: false, username: '' }
+  });
+
+  // Theme settings state
+  const [themeSettings, setThemeSettings] = useState({
+    cardTheme: 'orange', // Default theme
   });
 
   const AegisMascot = () => (
@@ -137,6 +145,7 @@ const SettingsComponent = () => {
             twitch: data.twitch || '',
             YouTube: data.YouTube || '',
             profileVisibility: data.profileVisibility || 'public',
+            cardTheme: data.cardTheme || 'orange',
           });
         } else {
           console.error('Failed to fetch profile');
@@ -167,8 +176,10 @@ const SettingsComponent = () => {
         setProfileSettings(prev => ({ ...prev, ...data.player }));
       } else {
         const errorData = await response.json();
-        showSaveMessage(`Error: ${errorData.message || 'Failed to save profile'}`);
-        toast.error(`Error: ${errorData.message || 'Failed to save profile'}`);
+        const errorMessage = errorData.message || 'Failed to save profile';
+        const validationErrors = errorData.errors ? Object.values(errorData.errors).map(e => e.message).join(', ') : '';
+        showSaveMessage(`Error: ${errorMessage}${validationErrors ? ' - ' + validationErrors : ''}`);
+        toast.error(`Error: ${errorMessage}${validationErrors ? ' - ' + validationErrors : ''}`);
       }
     } catch (error) {
       showSaveMessage('Error saving profile');
@@ -670,6 +681,22 @@ const SettingsComponent = () => {
                           </button>
                         ))}
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-zinc-300 font-medium mb-2">Card Theme</label>
+                      <select
+                        value={profileSettings.cardTheme}
+                        onChange={(e) => setProfileSettings({...profileSettings, cardTheme: e.target.value})}
+                        className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
+                      >
+                        <option value="orange">Orange (Default)</option>
+                        <option value="blue">Blue</option>
+                        <option value="purple">Purple</option>
+                        <option value="red">Red</option>
+                        <option value="green">Green</option>
+                        <option value="pink">Pink</option>
+                      </select>
                     </div>
                   </div>
 

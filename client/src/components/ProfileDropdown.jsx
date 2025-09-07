@@ -85,6 +85,8 @@ const ProfileDropdown = ({ user, logout }) => {
                       logout();
                     } else if (item.label === 'My Profile') {
                       navigate('/my-profile');
+                    } else if (item.label === 'Settings') {
+                      navigate('/settings');
                     } else {
                       // Handle other navigation here
                       console.log(`Navigating to ${item.label}`);

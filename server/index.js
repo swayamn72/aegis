@@ -1,14 +1,9 @@
-// server/index.js
-
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import playerRoutes from './routes/player.routes.js'; // 1. Import the new routes
 import cookieParser from "cookie-parser";
-
-
-
 
 dotenv.config();
 
