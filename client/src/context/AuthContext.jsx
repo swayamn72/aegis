@@ -47,6 +47,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
+      setLoading(true);
       const response = await fetch('http://localhost:5000/api/players/login', {
         method: 'POST',
         headers: {
@@ -57,16 +58,41 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (response.ok) {
-        const userData = await response.json();
-        setUser(userData.player);
-        setIsAuthenticated(true);
+        // After login, re-fetch user data to ensure fresh state
+        const checkAuth = async () => {
+          try {
+            const response = await fetch('http://localhost:5000/api/players/me', {
+              credentials: 'include',
+            });
+            if (response.ok) {
+              const userData = await response.json();
+              setUser(userData);
+              setIsAuthenticated(true);
+            } else if (response.status === 401) {
+              setUser(null);
+              setIsAuthenticated(false);
+            } else {
+              console.error('Auth check failed with status:', response.status);
+            }
+          } catch (error) {
+            if (!error.message?.includes('401')) {
+              console.error('Auth check network error:', error);
+            }
+          } finally {
+            setLoading(false);
+          }
+        };
+        await checkAuth();
+
         return { success: true };
       } else {
         const errorData = await response.json();
+        setLoading(false);
         return { success: false, message: errorData.message };
       }
     } catch (error) {
       console.error('Login failed:', error);
+      setLoading(false);
       return { success: false, message: 'Network error' };
     }
   };

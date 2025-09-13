@@ -8,8 +8,8 @@ const AegisProfileCardBGMI = ({ cardTheme = 'orange', playerData }) => {
 
   // Use provided playerData or fallback to sample data
   const data = playerData || {
-    realName: "Rahul Sharma",
-    inGameName: "BGMI_King",
+    realName: "Swayam Nakte",
+    inGameName: "Zyaxxxx",
     age: 21,
     location: "Delhi",
     game: "BGMI",
@@ -234,20 +234,20 @@ const AegisProfileCardBGMI = ({ cardTheme = 'orange', playerData }) => {
             <AegisMascot />
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-xl font-bold text-white">{playerData.realName}</h2>
-                {playerData.verified && (
+                <h2 className="text-xl font-bold text-white">{data.realName}</h2>
+                {data.verified && (
                   <div className={`bg-gradient-to-r ${colors.badgeFrom} ${colors.badgeTo} p-1 rounded-full shadow-lg ${colors.badgeShadow}`}>
                     <Check className="w-4 h-4 text-white" />
                   </div>
                 )}
               </div>
-              <p className="text-orange-400 font-medium">@{playerData.inGameName}</p>
+              <p className="text-orange-400 font-medium">@{data.inGameName}</p>
               <div className="flex items-center space-x-2 text-sm text-gray-400 mt-1">
                 <Calendar className="w-3 h-3" />
-                <span>{playerData.age} years old</span>
+                <span>{data.age} years old</span>
                 <span>•</span>
                 <MapPin className="w-3 h-3" />
-                <span>{playerData.location}</span>
+                <span>{data.location}</span>
               </div>
             </div>
           </div>
@@ -265,7 +265,7 @@ const AegisProfileCardBGMI = ({ cardTheme = 'orange', playerData }) => {
         {/* Status Badge */}
         <div className="inline-flex items-center px-3 py-1 bg-green-500/20 border border-green-500/30 rounded-full">
           <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse" />
-          <span className="text-green-400 text-sm font-medium">{playerData.status}</span>
+          <span className="text-green-400 text-sm font-medium">{data.status}</span>
         </div>
       </div>
 
@@ -277,7 +277,7 @@ const AegisProfileCardBGMI = ({ cardTheme = 'orange', playerData }) => {
               <Trophy className={`w-5 h-5 ${colors.ratingText}`} />
               <span className={`${colors.ratingText} font-semibold`}>Aegis Rating</span>
             </div>
-            <div className={`text-3xl font-bold text-white drop-shadow-lg`}>{playerData.aegisRating}</div>
+            <div className={`text-3xl font-bold text-white drop-shadow-lg`}>{data.aegisRating}</div>
           </div>
           <div className="text-right">
             <div className={`flex items-center space-x-1 ${colors.winRateText} text-sm`}>
@@ -297,12 +297,12 @@ const AegisProfileCardBGMI = ({ cardTheme = 'orange', playerData }) => {
               <img src={bgmiLogo} alt="BGMI Logo" />
             </div>
             <div>
-              <h3 className="text-white font-semibold">{playerData.game}</h3>
-              <p className="text-gray-400 text-sm">{playerData.role}</p>
+              <h3 className="text-white font-semibold">{data.game}</h3>
+              <p className="text-gray-400 text-sm">{data.role}</p>
             </div>
           </div>
           <div className="text-right flex items-center space-x-3">
-            <div className="text-white font-medium">{playerData.team}</div>
+            <div className="text-white font-medium">{data.team}</div>
             <img src={teamLogo} alt="Team Logo" className="w-8 h-8 rounded-full" />
           </div>
         </div>
@@ -310,15 +310,15 @@ const AegisProfileCardBGMI = ({ cardTheme = 'orange', playerData }) => {
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-gray-800/50 p-3 rounded-lg text-center border border-orange-400/30 shadow-sm shadow-orange-500/20">
-            <div className="text-lg font-bold text-white">{playerData.tournamentsPlayed}</div>
+            <div className="text-lg font-bold text-white">{data.tournamentsPlayed}</div>
             <div className="text-xs text-gray-400">Tournaments</div>
           </div>
           <div className="bg-gray-800/50 p-3 rounded-lg text-center border border-orange-400/30 shadow-sm shadow-orange-500/20">
-            <div className="text-lg font-bold text-orange-400">{playerData.winRate}%</div>
+            <div className="text-lg font-bold text-orange-400">{data.winRate}%</div>
             <div className="text-xs text-gray-400">Win Rate</div>
           </div>
           <div className="bg-gray-800/50 p-3 rounded-lg text-center border border-orange-400/30 shadow-sm shadow-orange-500/20">
-            <div className="text-lg font-bold text-amber-400">{playerData.avgKDA}</div>
+            <div className="text-lg font-bold text-amber-400">{data.avgKDA}</div>
             <div className="text-xs text-gray-400">Avg K/D/A</div>
           </div>
         </div>
@@ -353,7 +353,7 @@ const AegisProfileCardBGMI = ({ cardTheme = 'orange', playerData }) => {
 
         {/* Member Since */}
         <div className="text-center pt-2 border-t border-orange-400/20">
-          <span className="text-xs text-gray-400">Aegis member since {playerData.joinDate}</span>
+          <span className="text-xs text-gray-400">Aegis member since {data.joinDate}</span>
         </div>
       </div>
     </div>

@@ -20,7 +20,6 @@ function HomePage() {
         <Carousel/>
       </main>
       <Footer />
-      <AegisProfileCardBGMI/>l
       
     </>
   );

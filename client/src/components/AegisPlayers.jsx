@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, ChevronDown, MapPin, Gamepad2, Trophy, Calendar, Users, Star, TrendingUp, Award, Eye, Check } from 'lucide-react';
 import AegisProfileCardBGMI from './AegisProfileCardBGMI';
 
@@ -37,6 +38,8 @@ const FilterDropdown = ({ options, selected, onSelect, placeholder, icon: Icon }
 };
 
 const PlayerCard = ({ player }) => {
+    const navigate = useNavigate();
+
     const getStatusIndicator = () => {
         switch (player.teamStatus) {
             case 'in a team': return <div className="absolute top-4 right-4 flex items-center gap-2 text-green-400"><div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>In Team</div>;
@@ -239,7 +242,10 @@ const PlayerCard = ({ player }) => {
 
                 {/* Action Buttons */}
                 <div className="flex gap-3">
-                    <button className={`flex-1 bg-gradient-to-r ${themeColors.buttonBg} text-white py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg ${themeColors.buttonShadow}`}>
+                    <button
+                        onClick={() => navigate(`/detailed/${player._id}`)}
+                        className={`flex-1 bg-gradient-to-r ${themeColors.buttonBg} text-white py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg ${themeColors.buttonShadow}`}
+                    >
                         View Profile
                     </button>
                     <button className="px-4 bg-zinc-700 hover:bg-zinc-600 text-white py-2 rounded-lg transition-colors">

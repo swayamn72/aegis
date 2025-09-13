@@ -151,6 +151,21 @@ router.get("/all", async (req, res) => {
   }
 });
 
+// --- Get Player by ID Route ---
+router.get("/:id", async (req, res) => {
+  try {
+    const playerId = req.params.id;
+    const player = await Player.findById(playerId).select("-password");
+    if (!player) {
+      return res.status(404).json({ message: "Player not found" });
+    }
+    res.status(200).json({ player });
+  } catch (error) {
+    console.error("Get player by ID error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // --- Update Profile Route ---
 router.put("/update-profile", async (req, res) => {
   try {

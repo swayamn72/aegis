@@ -31,7 +31,7 @@ function App() {
           <Route path='/opportunities' element={<OpportunitiesPage />} />
           <Route path='/scrims' element={<ScrimsPage />} />
           <Route path='/profile' element={<ProfilePlayer/>} />
-          <Route path='/detailed' element={<DetailedPlayerProfileDN/>} />
+          <Route path='/detailed/:playerId' element={<DetailedPlayerProfileDN/>} />
           <Route path='/match' element={<DetailedMatchInfoDN/>} />
           <Route path='/org' element={<DetailedOrgInfoDN/>} />
           <Route path='/complete-profile' element={<ProtectedRoute><CompleteProfilePage/></ProtectedRoute>} />

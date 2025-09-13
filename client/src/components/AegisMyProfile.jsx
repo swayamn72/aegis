@@ -16,7 +16,10 @@ const AegisMyProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
-  if (!user) {
+  // Determine if user data is still loading based on key fields
+  const isLoading = !user || !user.username || !user.realName;
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-zinc-950 to-neutral-950 text-white">
         <div className="text-center">
@@ -27,7 +30,6 @@ const AegisMyProfile = () => {
     );
   }
 
-  // Map user data from schema
   const userData = {
     realName: user.realName || 'Not provided',
     username: user.username || '',
@@ -46,7 +48,6 @@ const AegisMyProfile = () => {
       day: 'numeric' 
     }) : 'Recently',
 
-    // Gaming data from schema
     primaryGame: user.primaryGame || 'Not selected',
     earnings: user.earnings || 0,
     qualifiedEvents: user.qualifiedEvents || false,

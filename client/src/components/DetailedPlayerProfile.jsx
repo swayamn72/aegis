@@ -1,48 +1,93 @@
-import React, { useState } from 'react';
-import { 
-  Check, Star, Trophy, Calendar, MapPin, Users, Target, TrendingUp, 
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import {
+  Check, Star, Trophy, Calendar, MapPin, Users, Target, TrendingUp,
   Award, Gamepad2, Eye, Settings, Share2, MessageCircle, UserPlus,
   ArrowUp, ArrowDown, Activity, Clock, Zap, Shield, Sword,
   Medal, Crown, ChevronRight, ExternalLink, Copy,
   BarChart3, PieChart, LineChart, Hash, Globe
 } from 'lucide-react';
-import Navbar from './Navbar';
+
 const DetailedPlayerProfile = () => {
+  const { playerId } = useParams();
   const [activeTab, setActiveTab] = useState('overview');
   const [ratingPeriod, setRatingPeriod] = useState('6months');
+  const [playerData, setPlayerData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Enhanced player data
-  const playerData = {
-    realName: "Swayam Nakte",
-    inGameName: "Zyaxxxx",
-    age: 19,
-    location: "Mumbai, Maharashtra",
-    country: "India",
-    game: "Valorant",
-    rank: "Immortal 3",
-    aegisRating: 2847,
-    peakRating: 2954,
-    role: "Duelist",
-    team: "Neon Esports",
-    tournamentsPlayed: 34,
-    winRate: 73.2,
-    avgKDA: 1.8,
-    joinDate: "March 2023",
-    verified: true,
-    status: "Looking for Team",
-    bio: "Passionate Valorant player with exceptional aim and game sense. Looking to join a competitive team for upcoming tournaments.",
-    primaryAgent: "Jett",
-    secondaryAgent: "Reyna",
-    playstyle: "Aggressive Entry",
-    languages: ["Hindi", "English", "Marathi"],
-    socials: {
-      twitter: "@zyaxxxx_val",
-      twitch: "zyaxxxx_gaming",
-      youtube: "ZyaxxxxPlays"
+  useEffect(() => {
+    const fetchPlayer = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`http://localhost:5000/api/players/${playerId}`, {
+          credentials: 'include',
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch player data');
+        }
+        const data = await response.json();
+        setPlayerData(data.player);
+        setLoading(false);
+      } catch (err) {
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+    fetchPlayer();
+  }, [playerId]);
+
+  if (loading) {
+    return <div className="text-white p-6">Loading player profile...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500 p-6">Error: {error}</div>;
+  }
+
+  if (!playerData) {
+    return <div className="text-white p-6">No player data found.</div>;
+  }
+
+  // Map playerData fields to expected variables for UI
+  const mappedPlayer = {
+    realName: playerData.realName || 'N/A',
+    inGameName: playerData.inGameName || playerData.username || 'N/A',
+    age: playerData.age || 'N/A',
+    location: playerData.location || playerData.country || 'N/A',
+    country: playerData.country || 'N/A',
+    game: playerData.primaryGame || 'N/A',
+    rank: 'N/A', // Not in schema
+    aegisRating: playerData.aegisRating || 0,
+    peakRating: 0, // Not in schema
+    role: playerData.inGameRole?.join(', ') || 'N/A',
+    team: playerData.teamStatus || 'N/A',
+    tournamentsPlayed: playerData.tournamentsPlayed || 0,
+    winRate: 0, // Not in schema
+    avgKDA: 0, // Not in schema
+    joinDate: playerData.createdAt ? new Date(playerData.createdAt).toLocaleDateString() : 'N/A',
+    verified: playerData.verified || false,
+    status: playerData.teamStatus || 'N/A',
+    bio: playerData.bio || '',
+    primaryAgent: 'N/A', // Not in schema
+    secondaryAgent: 'N/A', // Not in schema
+    playstyle: 'N/A', // Not in schema
+    languages: playerData.languages || [],
+    socials: { // Use schema fields
+      discord: playerData.discordTag || '',
+      twitch: playerData.twitch || '',
+      youtube: playerData.YouTube || '',
     },
-    currentStreak: 7,
-    followers: 1247,
-    following: 389
+    currentStreak: 0, // Not in schema
+    followers: 0, // Not in schema
+    following: 0, // Not in schema
+    earnings: playerData.earnings || 0,
+    matchesPlayed: playerData.matchesPlayed || 0,
+    qualifiedEvents: playerData.qualifiedEvents || false,
+    qualifiedEventDetails: playerData.qualifiedEventDetails || [],
+    availability: playerData.availability || 'N/A',
+    profileVisibility: playerData.profileVisibility || 'public',
+    cardTheme: playerData.cardTheme || 'orange',
   };
 
   // Match history data
@@ -157,9 +202,11 @@ const DetailedPlayerProfile = () => {
           <div className={`flex items-center gap-1 text-sm ${change > 0 ? 'text-green-400' : 'text-red-400'}`}>
             {change > 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
             {Math.abs(change)}
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+
+
+        </div>
       <div className={`text-2xl font-bold text-${color}-400 mb-1`}>{value}</div>
       <div className="text-zinc-400 text-sm">{label}</div>
     </div>
@@ -168,7 +215,7 @@ const DetailedPlayerProfile = () => {
   return (
     
    
-    <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans">
+    <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans mt-[100px]">
       <div className="container mx-auto px-6 py-8">
        
         {/* Header Section */}
@@ -235,18 +282,24 @@ const DetailedPlayerProfile = () => {
 
                   {/* Social Links */}
                   <div className="flex gap-3">
-                    <button className="flex items-center gap-2 bg-blue-600/20 border border-blue-500/30 rounded-lg px-3 py-2 text-blue-400 hover:bg-blue-600/30 transition-colors">
-                      <Hash className="w-4 h-4" />
-                      Twitter
-                    </button>
-                    <button className="flex items-center gap-2 bg-purple-600/20 border border-purple-500/30 rounded-lg px-3 py-2 text-purple-400 hover:bg-purple-600/30 transition-colors">
-                      <Activity className="w-4 h-4" />
-                      Twitch
-                    </button>
-                    <button className="flex items-center gap-2 bg-red-600/20 border border-red-500/30 rounded-lg px-3 py-2 text-red-400 hover:bg-red-600/30 transition-colors">
-                      <ExternalLink className="w-4 h-4" />
-                      YouTube
-                    </button>
+                    {mappedPlayer.socials.discord && (
+                      <button className="flex items-center gap-2 bg-indigo-600/20 border border-indigo-500/30 rounded-lg px-3 py-2 text-indigo-400 hover:bg-indigo-600/30 transition-colors">
+                        <Hash className="w-4 h-4" />
+                        Discord
+                      </button>
+                    )}
+                    {mappedPlayer.socials.twitch && (
+                      <button className="flex items-center gap-2 bg-purple-600/20 border border-purple-500/30 rounded-lg px-3 py-2 text-purple-400 hover:bg-purple-600/30 transition-colors">
+                        <Activity className="w-4 h-4" />
+                        Twitch
+                      </button>
+                    )}
+                    {mappedPlayer.socials.youtube && (
+                      <button className="flex items-center gap-2 bg-red-600/20 border border-red-500/30 rounded-lg px-3 py-2 text-red-400 hover:bg-red-600/30 transition-colors">
+                        <ExternalLink className="w-4 h-4" />
+                        YouTube
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -292,11 +345,12 @@ const DetailedPlayerProfile = () => {
             </div>
             
           </div>
-                        <div className="grid grid-cols-4 gap-4 mb-6 mt-6">
+            <div className="grid grid-cols-5 gap-4 mb-6 mt-6">
                 <StatCard icon={Target} label="Win Rate" value={`${playerData.winRate}%`} change={2.3} color="green" />
                 <StatCard icon={Zap} label="Avg K/D/A" value={playerData.avgKDA} change={0.2} color="blue" />
-                <StatCard icon={Zap} label="Win Streak" value={playerData.currentStreak} change={3} color="red" />
+                <StatCard icon={Gamepad2} label="Matches Played" value={playerData.matchesPlayed} change={3} color="purple" />
                 <StatCard icon={Trophy} label="Tournaments" value={playerData.tournamentsPlayed} change={2} color="amber" />
+                <StatCard icon={Trophy} label="Earnings" value={`$${playerData.earnings}`} color="green" />
               </div>
         </div>
 
@@ -307,6 +361,7 @@ const DetailedPlayerProfile = () => {
           <TabButton id="tournaments" label="Tournaments" isActive={activeTab === 'tournaments'} onClick={setActiveTab} />
           <TabButton id="achievements" label="Achievements" isActive={activeTab === 'achievements'} onClick={setActiveTab} />
           <TabButton id="ratings" label="Rating History" isActive={activeTab === 'ratings'} onClick={setActiveTab} />
+          <TabButton id="additional" label="Additional Info" isActive={activeTab === 'additional'} onClick={setActiveTab} />
         </div>
 
         {/* Tab Content */}
@@ -472,9 +527,65 @@ const DetailedPlayerProfile = () => {
                           {tournament.ratingChange > 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
                           {Math.abs(tournament.ratingChange)} Aegis Rating
                         </div>
+            </div>
+          )}
+
+          {activeTab === 'additional' && (
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+              <h2 className="text-2xl font-bold text-white mb-6">Additional Information</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
+                  <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-green-400" />
+                    Earnings
+                  </h3>
+                  <div className="text-2xl font-bold text-green-400">${mappedPlayer.earnings}</div>
+                  <div className="text-zinc-400 text-sm">Total Prize Money</div>
+                </div>
+
+                <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
+                  <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                    <Gamepad2 className="w-5 h-5 text-blue-400" />
+                    Matches Played
+                  </h3>
+                  <div className="text-2xl font-bold text-blue-400">{mappedPlayer.matchesPlayed}</div>
+                  <div className="text-zinc-400 text-sm">Total Matches</div>
+                </div>
+
+                <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
+                  <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                    <Check className="w-5 h-5 text-purple-400" />
+                    Qualified Events
+                  </h3>
+                  <div className="text-2xl font-bold text-purple-400">{mappedPlayer.qualifiedEvents ? 'Yes' : 'No'}</div>
+                  <div className="text-zinc-400 text-sm">Event Qualification</div>
+                </div>
+
+                <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
+                  <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-orange-400" />
+                    Availability
+                  </h3>
+                  <div className="text-2xl font-bold text-orange-400">{mappedPlayer.availability}</div>
+                  <div className="text-zinc-400 text-sm">Current Status</div>
+                </div>
+              </div>
+
+              {mappedPlayer.qualifiedEventDetails && mappedPlayer.qualifiedEventDetails.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-xl font-bold text-white mb-4">Qualified Event Details</h3>
+                  <div className="space-y-3">
+                    {mappedPlayer.qualifiedEventDetails.map((event, index) => (
+                      <div key={index} className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
+                        <div className="text-white font-medium">{event}</div>
                       </div>
-                    )}
+                    ))}
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
                 ))}
               </div>
             </div>
