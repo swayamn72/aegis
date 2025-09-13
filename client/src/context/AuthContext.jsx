@@ -136,6 +136,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const isProfileComplete = (userData) => {
+    if (!userData) return false;
+    return !!(
+      userData.realName &&
+      userData.age &&
+      userData.location &&
+      userData.country &&
+      userData.primaryGame &&
+      userData.teamStatus &&
+      userData.availability
+    );
+  };
+
   const value = {
     isAuthenticated,
     user,
@@ -143,6 +156,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     updateProfile,
+    isProfileComplete,
   };
 
   return (

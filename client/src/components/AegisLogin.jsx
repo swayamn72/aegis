@@ -80,7 +80,34 @@ const AegisLogin = () => {
     setIsLoading(false);
 
     if (result.success) {
-      navigate('/complete-profile');
+      // Check if profile is complete and redirect accordingly
+      const userDataResponse = await fetch('http://localhost:5000/api/players/me', {
+        credentials: 'include',
+      });
+      if (userDataResponse.ok) {
+        const userData = await userDataResponse.json();
+        // Import useAuth to get isProfileComplete or replicate logic here
+        const isProfileComplete = (user) => {
+          if (!user) return false;
+          return !!(
+            user.realName &&
+            user.age &&
+            user.location &&
+            user.country &&
+            user.primaryGame &&
+            user.teamStatus &&
+            user.availability
+          );
+        };
+        if (isProfileComplete(userData)) {
+          navigate('/my-profile');
+        } else {
+          navigate('/complete-profile');
+        }
+      } else {
+        // fallback redirect
+        navigate('/complete-profile');
+      }
     } else {
       setErrors({ general: result.message });
     }
