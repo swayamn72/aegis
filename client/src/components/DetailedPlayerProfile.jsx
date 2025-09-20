@@ -73,11 +73,9 @@ const DetailedPlayerProfile = () => {
     secondaryAgent: 'N/A', // Not in schema
     playstyle: 'N/A', // Not in schema
     languages: playerData.languages || [],
-    socials: { // Use schema fields
-      discord: playerData.discordTag || '',
-      twitch: playerData.twitch || '',
-      youtube: playerData.YouTube || '',
-    },
+    discord: playerData.discordTag || '',
+    twitch: playerData.twitch || '',
+    youtube: playerData.YouTube || '',
     currentStreak: 0, // Not in schema
     followers: 0, // Not in schema
     following: 0, // Not in schema
@@ -268,13 +266,10 @@ const DetailedPlayerProfile = () => {
                   <div className="flex flex-wrap gap-3 mb-4">
                     <div className="bg-green-500/20 border border-green-500/30 rounded-full px-3 py-1 flex items-center gap-2">
                       <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                      <span className="text-green-400 text-sm font-medium">{playerData.status}</span>
-                    </div>
-                    <div className="bg-orange-500/20 border border-orange-500/30 rounded-full px-3 py-1">
-                      <span className="text-orange-400 text-sm font-medium">{playerData.role}</span>
+                      <span className="text-green-400 text-sm font-medium">{mappedPlayer.status}</span>
                     </div>
                     <div className="bg-blue-500/20 border border-blue-500/30 rounded-full px-3 py-1">
-                      <span className="text-blue-400 text-sm font-medium">{playerData.playstyle}</span>
+                      <span className="text-blue-400 text-sm font-medium">{mappedPlayer.availability}</span>
                     </div>
                   </div>
 
@@ -282,24 +277,30 @@ const DetailedPlayerProfile = () => {
 
                   {/* Social Links */}
                   <div className="flex gap-3">
-                    {mappedPlayer.socials.discord && (
-                      <button className="flex items-center gap-2 bg-indigo-600/20 border border-indigo-500/30 rounded-lg px-3 py-2 text-indigo-400 hover:bg-indigo-600/30 transition-colors">
-                        <Hash className="w-4 h-4" />
-                        Discord
-                      </button>
-                    )}
-                    {mappedPlayer.socials.twitch && (
-                      <button className="flex items-center gap-2 bg-purple-600/20 border border-purple-500/30 rounded-lg px-3 py-2 text-purple-400 hover:bg-purple-600/30 transition-colors">
-                        <Activity className="w-4 h-4" />
-                        Twitch
-                      </button>
-                    )}
-                    {mappedPlayer.socials.youtube && (
-                      <button className="flex items-center gap-2 bg-red-600/20 border border-red-500/30 rounded-lg px-3 py-2 text-red-400 hover:bg-red-600/30 transition-colors">
-                        <ExternalLink className="w-4 h-4" />
-                        YouTube
-                      </button>
-                    )}
+                    <button className={`flex items-center gap-2 rounded-lg px-3 py-2 transition-colors ${
+                      mappedPlayer.discord
+                        ? 'bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-600/30'
+                        : 'bg-zinc-700/50 border border-zinc-600/50 text-zinc-500 cursor-not-allowed'
+                    }`}>
+                      <Hash className="w-4 h-4" />
+                      <span>{mappedPlayer.discord || 'Discord'}</span>
+                    </button>
+                    <button className={`flex items-center gap-2 rounded-lg px-3 py-2 transition-colors ${
+                      mappedPlayer.twitch
+                        ? 'bg-purple-600/20 border border-purple-500/30 text-purple-400 hover:bg-purple-600/30'
+                        : 'bg-zinc-700/50 border border-zinc-600/50 text-zinc-500 cursor-not-allowed'
+                    }`}>
+                      <Activity className="w-4 h-4" />
+                      <span>{mappedPlayer.twitch || 'Twitch'}</span>
+                    </button>
+                    <button className={`flex items-center gap-2 rounded-lg px-3 py-2 transition-colors ${
+                      mappedPlayer.youtube
+                        ? 'bg-red-600/20 border border-red-500/30 text-red-400 hover:bg-red-600/30'
+                        : 'bg-zinc-700/50 border border-zinc-600/50 text-zinc-500 cursor-not-allowed'
+                    }`}>
+                      <ExternalLink className="w-4 h-4" />
+                      <span>{mappedPlayer.youtube || 'YouTube'}</span>
+                    </button>
                   </div>
                 </div>
               </div>

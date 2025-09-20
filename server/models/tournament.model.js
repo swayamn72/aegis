@@ -31,10 +31,6 @@ const tournamentSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    gameVersion: { // Specific BGMI version/patch
-      type: String,
-      trim: true,
-    },
 
     // --- Tournament Classification ---
     tier: { // S-Tier, A-Tier, B-Tier, C-Tier (common esports classification)

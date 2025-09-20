@@ -22,6 +22,7 @@ function HomePage() {
       </main>
       <Footer />
       <DetailedTournamentInfo/>
+      <DetailedMatchInfo/>
       
     </>
   );
