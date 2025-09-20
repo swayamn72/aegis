@@ -18,8 +18,13 @@ import CompleteProfilePage from './pages/CompleteProfilePage';
 import MyProfilePage from './pages/MyProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import MyFeed from './pages/MyFeed';
 function App() {
   return (
+    <div>
+      <Routes>
+<Route path="/myfeed" element={<MyFeed/>} />
+    </Routes>
     <AuthProvider>
       <div className="bg-slate-900 font-sans min-h-screen">
         <Routes>
@@ -40,6 +45,7 @@ function App() {
         </Routes>
       </div>
     </AuthProvider>
+    </div>
   );
 }
 
