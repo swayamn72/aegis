@@ -1,0 +1,476 @@
+import express from 'express';
+import Tournament from '../models/tournament.model.js';
+import Match from '../models/match.model.js';
+import Admin from '../models/admin.model.js';
+import { verifyAdminToken, requirePermission, generateAdminToken } from '../middleware/adminAuth.js';
+
+const router = express.Router();
+
+// Admin login
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        error: 'Email and password are required.'
+      });
+    }
+
+    const admin = await Admin.findOne({ email: email.toLowerCase() });
+
+    if (!admin) {
+      return res.status(401).json({
+        error: 'Invalid credentials.'
+      });
+    }
+
+    if (admin.isLocked()) {
+      return res.status(401).json({
+        error: 'Account is temporarily locked. Please try again later.'
+      });
+    }
+
+    const isPasswordValid = await admin.comparePassword(password);
+
+    if (!isPasswordValid) {
+      await admin.incLoginAttempts();
+      return res.status(401).json({
+        error: 'Invalid credentials.'
+      });
+    }
+
+    // Successful login
+    await admin.resetLoginAttempts();
+
+    const token = generateAdminToken(admin._id);
+
+    res.json({
+      message: 'Login successful',
+      token,
+      admin: {
+        id: admin._id,
+        username: admin.username,
+        email: admin.email,
+        role: admin.role,
+        permissions: admin.permissions
+      }
+    });
+  } catch (error) {
+    console.error('Admin login error:', error);
+    res.status(500).json({
+      error: 'Internal server error during login.'
+    });
+  }
+});
+
+// Verify admin token
+router.get('/verify', verifyAdminToken, (req, res) => {
+  res.json({
+    valid: true,
+    admin: {
+      id: req.admin._id,
+      username: req.admin.username,
+      email: req.admin.email,
+      role: req.admin.role,
+      permissions: req.admin.permissions
+    }
+  });
+});
+
+// Logout (client-side token removal)
+router.post('/logout', (req, res) => {
+  res.json({ message: 'Logout successful' });
+});
+
+// TOURNAMENT CRUD OPERATIONS
+
+// Get all tournaments (admin view)
+router.get('/tournaments', verifyAdminToken, async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search, status, gameTitle } = req.query;
+    const skip = (page - 1) * limit;
+
+    let query = {};
+
+    if (search) {
+      query.$or = [
+        { tournamentName: { $regex: search, $options: 'i' } },
+        { shortName: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    if (status) {
+      query.status = status;
+    }
+
+    if (gameTitle) {
+      query.gameTitle = gameTitle;
+    }
+
+    const tournaments = await Tournament.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate('participatingTeams.team', 'teamName logo')
+      .populate('organizer.organizationRef', 'name');
+
+    const total = await Tournament.countDocuments(query);
+
+    res.json({
+      tournaments,
+      pagination: {
+        current: parseInt(page),
+        total: Math.ceil(total / limit),
+        count: tournaments.length,
+        totalRecords: total
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching tournaments:', error);
+    res.status(500).json({ error: 'Failed to fetch tournaments' });
+  }
+});
+
+// Create tournament
+router.post('/tournaments', verifyAdminToken, requirePermission('canCreateTournament'), async (req, res) => {
+  try {
+    const tournamentData = req.body;
+
+    // Validate required fields
+    if (!tournamentData.tournamentName || !tournamentData.gameTitle || !tournamentData.startDate || !tournamentData.endDate) {
+      return res.status(400).json({
+        error: 'Missing required fields: tournamentName, gameTitle, startDate, endDate'
+      });
+    }
+
+    const tournament = new Tournament(tournamentData);
+    await tournament.save();
+
+    await tournament.populate('participatingTeams.team', 'teamName logo');
+    await tournament.populate('organizer.organizationRef', 'name');
+
+    res.status(201).json({
+      message: 'Tournament created successfully',
+      tournament
+    });
+  } catch (error) {
+    console.error('Error creating tournament:', error);
+    if (error.code === 11000) {
+      res.status(400).json({ error: 'Tournament name already exists' });
+    } else {
+      res.status(500).json({ error: 'Failed to create tournament' });
+    }
+  }
+});
+
+// Get single tournament
+router.get('/tournaments/:id', verifyAdminToken, async (req, res) => {
+  try {
+    const tournament = await Tournament.findById(req.params.id)
+      .populate('participatingTeams.team', 'teamName logo teamTag')
+      .populate('organizer.organizationRef', 'name');
+
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    res.json({ tournament });
+  } catch (error) {
+    console.error('Error fetching tournament:', error);
+    res.status(500).json({ error: 'Failed to fetch tournament' });
+  }
+});
+
+// Update tournament
+router.put('/tournaments/:id', verifyAdminToken, requirePermission('canEditTournament'), async (req, res) => {
+  try {
+    const tournament = await Tournament.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    )
+    .populate('participatingTeams.team', 'teamName logo')
+    .populate('organizer.organizationRef', 'name');
+
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    res.json({
+      message: 'Tournament updated successfully',
+      tournament
+    });
+  } catch (error) {
+    console.error('Error updating tournament:', error);
+    if (error.code === 11000) {
+      res.status(400).json({ error: 'Tournament name already exists' });
+    } else {
+      res.status(500).json({ error: 'Failed to update tournament' });
+    }
+  }
+});
+
+// Delete tournament
+router.delete('/tournaments/:id', verifyAdminToken, requirePermission('canDeleteTournament'), async (req, res) => {
+  try {
+    const tournament = await Tournament.findByIdAndDelete(req.params.id);
+
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    res.json({ message: 'Tournament deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting tournament:', error);
+    res.status(500).json({ error: 'Failed to delete tournament' });
+  }
+});
+
+// MATCH CRUD OPERATIONS
+
+// Get all matches
+router.get('/matches', verifyAdminToken, async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search, status, tournament } = req.query;
+    const skip = (page - 1) * limit;
+
+    let query = {};
+
+    if (search) {
+      query.$or = [
+        { 'participatingTeams.teamName': { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    if (status) {
+      query.status = status;
+    }
+
+    if (tournament) {
+      query.tournament = tournament;
+    }
+
+    const matches = await Match.find(query)
+      .sort({ scheduledStartTime: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate('tournament', 'tournamentName shortName')
+      .populate('participatingTeams.team', 'teamName teamTag logo');
+
+    const total = await Match.countDocuments(query);
+
+    res.json({
+      matches,
+      pagination: {
+        current: parseInt(page),
+        total: Math.ceil(total / limit),
+        count: matches.length,
+        totalRecords: total
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching matches:', error);
+    res.status(500).json({ error: 'Failed to fetch matches' });
+  }
+});
+
+// Create match
+router.post('/matches', verifyAdminToken, requirePermission('canCreateMatch'), async (req, res) => {
+  try {
+    const matchData = req.body;
+
+    // Validate required fields
+    if (!matchData.tournament || !matchData.matchNumber || !matchData.scheduledStartTime || !matchData.map) {
+      return res.status(400).json({
+        error: 'Missing required fields: tournament, matchNumber, scheduledStartTime, map'
+      });
+    }
+
+    const match = new Match(matchData);
+    await match.save();
+
+    await match.populate('tournament', 'tournamentName shortName');
+    await match.populate('participatingTeams.team', 'teamName teamTag logo');
+
+    res.status(201).json({
+      message: 'Match created successfully',
+      match
+    });
+  } catch (error) {
+    console.error('Error creating match:', error);
+    res.status(500).json({ error: 'Failed to create match' });
+  }
+});
+
+// Get single match
+router.get('/matches/:id', verifyAdminToken, async (req, res) => {
+  try {
+    const match = await Match.findById(req.params.id)
+      .populate('tournament', 'tournamentName shortName')
+      .populate('participatingTeams.team', 'teamName teamTag logo')
+      .populate('participatingTeams.players.player', 'username inGameName');
+
+    if (!match) {
+      return res.status(404).json({ error: 'Match not found' });
+    }
+
+    res.json({ match });
+  } catch (error) {
+    console.error('Error fetching match:', error);
+    res.status(500).json({ error: 'Failed to fetch match' });
+  }
+});
+
+// Update match
+router.put('/matches/:id', verifyAdminToken, requirePermission('canEditMatch'), async (req, res) => {
+  try {
+    const match = await Match.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    )
+    .populate('tournament', 'tournamentName shortName')
+    .populate('participatingTeams.team', 'teamName teamTag logo');
+
+    if (!match) {
+      return res.status(404).json({ error: 'Match not found' });
+    }
+
+    res.json({
+      message: 'Match updated successfully',
+      match
+    });
+  } catch (error) {
+    console.error('Error updating match:', error);
+    res.status(500).json({ error: 'Failed to update match' });
+  }
+});
+
+// Delete match
+router.delete('/matches/:id', verifyAdminToken, requirePermission('canDeleteMatch'), async (req, res) => {
+  try {
+    const match = await Match.findByIdAndDelete(req.params.id);
+
+    if (!match) {
+      return res.status(404).json({ error: 'Match not found' });
+    }
+
+    res.json({ message: 'Match deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting match:', error);
+    res.status(500).json({ error: 'Failed to delete match' });
+  }
+});
+
+// DASHBOARD ENDPOINTS
+
+// Get dashboard statistics
+router.get('/dashboard/stats', verifyAdminToken, async (req, res) => {
+  try {
+    const now = new Date();
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+
+    // Get tournament stats
+    const totalTournaments = await Tournament.countDocuments();
+    const activeTournaments = await Tournament.countDocuments({
+      status: { $in: ['in_progress', 'qualifiers_in_progress', 'group_stage', 'playoffs', 'finals'] }
+    });
+    const upcomingTournaments = await Tournament.countDocuments({
+      startDate: { $gte: now },
+      status: { $in: ['announced', 'registration_open', 'upcoming'] }
+    });
+
+    // Get match stats
+    const totalMatches = await Match.countDocuments();
+    const activeMatches = await Match.countDocuments({
+      status: 'in_progress'
+    });
+    const scheduledMatches = await Match.countDocuments({
+      status: 'scheduled',
+      scheduledStartTime: { $gte: now }
+    });
+
+    // Get player stats (from participating teams)
+    const tournamentsWithTeams = await Tournament.find({
+      'participatingTeams.0': { $exists: true }
+    }).populate('participatingTeams.team');
+
+    let totalPlayers = 0;
+    tournamentsWithTeams.forEach(tournament => {
+      if (tournament.participatingTeams) {
+        totalPlayers += tournament.participatingTeams.length;
+      }
+    });
+
+    // Calculate trends (simplified - in real app you'd compare with previous periods)
+    const stats = {
+      totalTournaments,
+      activeMatches: activeMatches,
+      totalPlayers,
+      upcomingEvents: upcomingTournaments + scheduledMatches,
+      trends: {
+        tournaments: 12, // Mock trend data
+        matches: -5,
+        players: 8,
+        events: 15
+      }
+    };
+
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard statistics' });
+  }
+});
+
+// Get recent activity (mock data for now)
+router.get('/dashboard/activity', verifyAdminToken, async (req, res) => {
+  try {
+    // Mock recent activities - in real app, you'd track these in a separate collection
+    const activities = [
+      {
+        type: 'success',
+        message: 'New tournament "BGMI Championship" created',
+        time: '2 hours ago'
+      },
+      {
+        type: 'warning',
+        message: 'Match #1245 requires admin review',
+        time: '4 hours ago'
+      },
+      {
+        type: 'success',
+        message: 'Player verification completed for 15 players',
+        time: '6 hours ago'
+      },
+      {
+        type: 'info',
+        message: 'Server maintenance scheduled for tonight',
+        time: '1 day ago'
+      }
+    ];
+
+    res.json({ activities });
+  } catch (error) {
+    console.error('Error fetching recent activity:', error);
+    res.status(500).json({ error: 'Failed to fetch recent activity' });
+  }
+});
+
+// Get admin profile
+router.get('/profile', verifyAdminToken, (req, res) => {
+  res.json({
+    admin: {
+      id: req.admin._id,
+      username: req.admin.username,
+      email: req.admin.email,
+      role: req.admin.role,
+      permissions: req.admin.permissions,
+      lastLogin: req.admin.lastLogin,
+      createdAt: req.admin.createdAt
+    }
+  });
+});
+
+export default router;

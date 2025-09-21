@@ -3,7 +3,17 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import playerRoutes from './routes/player.routes.js'; // 1. Import the new routes
+import tournamentRoutes from './routes/tournament.routes.js'; // Import tournament routes
+import adminRoutes from './routes/admin.routes.js'; // Import admin routes
 import cookieParser from "cookie-parser";
+
+// Import all models to ensure they're registered with mongoose
+import './models/player.model.js';
+import './models/team.model.js';
+import './models/tournament.model.js';
+import './models/match.model.js';
+import './models/admin.model.js';
+import './models/org.model.js';
 
 dotenv.config();
 
@@ -34,6 +44,8 @@ app.get('/', (req, res) => {
 
 // 2. Tell Express to use the player routes
 app.use('/api/players', playerRoutes);
+app.use('/api/tournaments', tournamentRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.listen(port, () => {
   console.log(`✅ Server is running on port: ${port}`);

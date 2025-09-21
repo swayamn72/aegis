@@ -3,6 +3,7 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { AdminProvider } from './context/AdminContext';
 import HomePage from './pages/HomePage';
 import TournamentsPage from './pages/TournamentsPage';
 import SignupPage from './pages/SignupPage'
@@ -19,31 +20,43 @@ import MyProfilePage from './pages/MyProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import MyFeed from './pages/MyFeed';
+import Tournaments2Page from './pages/Tournaments2Page';
+import AdminLogin from './pages/AdminLogin';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminTournaments from './pages/AdminTournaments';
+import AdminMatches from './pages/AdminMatches';
 function App() {
   return (
     <div>
-      <Routes>
-<Route path="/myfeed" element={<MyFeed/>} />
-    </Routes>
     <AuthProvider>
-      <div className="bg-slate-900 font-sans min-h-screen">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/tournaments" element={<TournamentsPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path='/players' element={<PlayersPage />} />
-          <Route path='/opportunities' element={<OpportunitiesPage />} />
-          <Route path='/scrims' element={<ScrimsPage />} />
-          <Route path='/profile' element={<ProfilePlayer/>} />
-          <Route path='/detailed/:playerId' element={<DetailedPlayerProfileDN/>} />
-          <Route path='/match' element={<DetailedMatchInfoDN/>} />
-          <Route path='/org' element={<DetailedOrgInfoDN/>} />
-          <Route path='/complete-profile' element={<ProtectedRoute><CompleteProfilePage/></ProtectedRoute>} />
-          <Route path='/my-profile' element={<ProtectedRoute><MyProfilePage/></ProtectedRoute>} />
-          <Route path='/settings' element={<ProtectedRoute><SettingsPage/></ProtectedRoute>} />
-        </Routes>
-      </div>
+      <AdminProvider>
+        <div className="bg-slate-900 font-sans min-h-screen">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/tournaments" element={<TournamentsPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path='/players' element={<PlayersPage />} />
+            <Route path='/opportunities' element={<OpportunitiesPage />} />
+            <Route path='/scrims' element={<ScrimsPage />} />
+            <Route path='/profile' element={<ProfilePlayer/>} />
+            <Route path='/detailed/:playerId' element={<DetailedPlayerProfileDN/>} />
+            <Route path='/match' element={<DetailedMatchInfoDN/>} />
+            <Route path='/org' element={<DetailedOrgInfoDN/>} />
+            <Route path="/myfeed" element={<MyFeed/>} />
+            <Route path='/complete-profile' element={<ProtectedRoute><CompleteProfilePage/></ProtectedRoute>} />
+            <Route path='/my-profile' element={<ProtectedRoute><MyProfilePage/></ProtectedRoute>} />
+            <Route path='/settings' element={<ProtectedRoute><SettingsPage/></ProtectedRoute>} />
+            <Route path='/tournaments2' element={<Tournaments2Page />} />
+
+            {/* Admin Routes */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/tournaments" element={<AdminTournaments />} />
+            <Route path="/admin/matches" element={<AdminMatches />} />
+          </Routes>
+        </div>
+      </AdminProvider>
     </AuthProvider>
     </div>
   );
