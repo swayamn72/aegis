@@ -4,6 +4,7 @@ import FeedCard from "../components/FeedCard";
 import { mockPosts } from "../data/mockPosts";
 import { mockTournaments, mockNews } from "../data/mockData";
 import RightSideBar from "../components/RightSideBar";
+import { mockCommunities } from "../data/mockCommunities";
 
 export default function MyFeedPage() {
   const [posts, setPosts] = useState([]);
@@ -62,7 +63,7 @@ export default function MyFeedPage() {
           </div>
 
         
-          <RightSideBar tournaments={mockTournaments} news={mockNews} />
+          <RightSideBar tournaments={mockTournaments} news={mockNews} communities={mockCommunities} />
         </div>
       </main>
     </div>
