@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import { Home, Users, Trophy, Calendar } from 'lucide-react'; // icons for nav items
-
+import { mockCommunities } from '../data/mockCommunities';
 const Sidebar = () => {
   const location = useLocation();
 
@@ -42,6 +42,32 @@ const Sidebar = () => {
           <CustomNavLink key={link.text} {...link} />
         ))}
       </nav>
+
+
+<div className="mt-8 px-4">
+        <h2 className="text-gray-400 font-semibold text-sm mb-3">
+          Your Communities
+        </h2>
+        <ul className="space-y-2">
+          {mockCommunities.map((com) => (
+            <li
+              key={com.id}
+              className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-800 cursor-pointer"
+            >
+              <img
+                src={com.image}
+                alt={com.name}
+                className="w-8 h-8 rounded-full border border-zinc-700"
+              />
+              <div>
+                <p className="text-gray-200 font-medium text-sm">{com.name}</p>
+                <p className="text-gray-500 text-xs">{com.members}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+
     </aside>
   );
 };
