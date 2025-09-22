@@ -124,6 +124,12 @@ const playerSchema = new mongoose.Schema(
       enum: ['orange', 'blue', 'purple', 'red', 'green', 'pink'],
       default: 'orange',
     },
+      posts: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Post", 
+    },
+  ],
   },
   {
     timestamps: true,

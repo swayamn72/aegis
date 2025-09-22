@@ -25,6 +25,7 @@ import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminTournaments from './pages/AdminTournaments';
 import AdminMatches from './pages/AdminMatches';
+import CommunityPage from './pages/CommunityPage';
 function App() {
   return (
     <div>
@@ -44,6 +45,7 @@ function App() {
             <Route path='/match' element={<DetailedMatchInfoDN/>} />
             <Route path='/org' element={<DetailedOrgInfoDN/>} />
             <Route path="/myfeed" element={<MyFeed/>} />
+            <Route path='/community/:communityId' element={<CommunityPage/>}/>
             <Route path='/complete-profile' element={<ProtectedRoute><CompleteProfilePage/></ProtectedRoute>} />
             <Route path='/my-profile' element={<ProtectedRoute><MyProfilePage/></ProtectedRoute>} />
             <Route path='/settings' element={<ProtectedRoute><SettingsPage/></ProtectedRoute>} />
