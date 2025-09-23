@@ -7,6 +7,8 @@ import {
   Medal, Crown, ChevronRight, ExternalLink, Copy,
   BarChart3, PieChart, LineChart, Hash, Globe
 } from 'lucide-react';
+import CreatePost from './CreatePost';
+
 
 const DetailedPlayerProfile = () => {
   const { playerId } = useParams();
@@ -15,6 +17,28 @@ const DetailedPlayerProfile = () => {
   const [playerData, setPlayerData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+const [posts, setPosts] = useState([]);
+const loggedInPlayerId = "123";
+const profilePlayerId = playerId; 
+
+
+const fetchPlayerPosts = async () => {
+  try {
+    const res = await fetch(`http://localhost:5000/api/posts/player/${playerId}`, {
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error("Failed to fetch posts");
+    const data = await res.json();
+    setPosts(data.posts || []);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+useEffect(() => {
+  fetchPlayerPosts();
+}, [playerId]);
+
 
   useEffect(() => {
     const fetchPlayer = async () => {
@@ -363,6 +387,7 @@ const DetailedPlayerProfile = () => {
           <TabButton id="achievements" label="Achievements" isActive={activeTab === 'achievements'} onClick={setActiveTab} />
           <TabButton id="ratings" label="Rating History" isActive={activeTab === 'ratings'} onClick={setActiveTab} />
           <TabButton id="additional" label="Additional Info" isActive={activeTab === 'additional'} onClick={setActiveTab} />
+          {/* <TabButton id="posts" label="Posts" isActive={activeTab === 'posts'} onClick={(id) => setActiveTab(id)}/> */}
         </div>
 
         {/* Tab Content */}
@@ -530,6 +555,11 @@ const DetailedPlayerProfile = () => {
                         </div>
             </div>
           )}
+
+
+
+
+
 
           {activeTab === 'additional' && (
             <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">

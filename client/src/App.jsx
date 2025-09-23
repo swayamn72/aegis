@@ -28,6 +28,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminTournaments from './pages/AdminTournaments';
 import AdminMatches from './pages/AdminMatches';
 import CommunityPage from './pages/CommunityPage';
+import CreatePost from './components/CreatePost';
+import PostList from './components/PostList';
 function App() {
   return (
     <div>
@@ -36,6 +38,8 @@ function App() {
         <div className="bg-slate-900 font-sans min-h-screen">
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/createpost" element={<CreatePost/>} />
+            <Route path="/postlist" element={<PostList/>} />
             <Route path="/tournaments" element={<TournamentsPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/login" element={<LoginPage />} />
