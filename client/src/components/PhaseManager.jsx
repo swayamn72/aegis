@@ -6,38 +6,15 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
   const [errors, setErrors] = useState({});
 
   const phaseTypes = [
-    'Registration',
-    'Qualifiers',
-    'Group Stage',
-    'Round of 16',
-    'Quarter Finals',
-    'Semi Finals',
-    'Finals',
-    'Grand Finals'
+    'qualifier',
+    'group_stage',
+    'elimination_stage',
+    'final_stage'
   ];
 
   // Map UI-friendly phase types to schema enum values
   const mapPhaseTypeToSchema = (uiType) => {
-    switch (uiType) {
-      case 'Registration':
-        return 'qualifier';
-      case 'Qualifiers':
-        return 'qualifier';
-      case 'Group Stage':
-        return 'group_stage';
-      case 'Round of 16':
-        return 'elimination_stage';
-      case 'Quarter Finals':
-        return 'elimination_stage';
-      case 'Semi Finals':
-        return 'elimination_stage';
-      case 'Finals':
-        return 'final_stage';
-      case 'Grand Finals':
-        return 'final_stage';
-      default:
-        return 'qualifier';
-    }
+    return uiType; // Already using schema enum values
   };
 
   const formatOptions = [
@@ -52,36 +29,39 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
 
   useEffect(() => {
     if (initialPhases.length > 0) {
-      setPhases(initialPhases);
+      setPhases(initialPhases.map(phase => ({ ...phase, groups: phase.groups || [] })));
     } else {
       // Initialize with default phases
       setPhases([
         {
           name: 'Registration',
-          type: 'Registration',
+          type: 'qualifier',
           format: 'Custom',
           startDate: '',
           endDate: '',
           description: 'Team registration period',
-          status: 'upcoming'
+          status: 'upcoming',
+          groups: []
         },
         {
           name: 'Qualifiers',
-          type: 'Qualifiers',
+          type: 'qualifier',
           format: 'Battle Royale',
           startDate: '',
           endDate: '',
           description: 'Open qualifiers for all teams',
-          status: 'upcoming'
+          status: 'upcoming',
+          groups: []
         },
         {
           name: 'Finals',
-          type: 'Finals',
+          type: 'final_stage',
           format: 'Single Elimination',
           startDate: '',
           endDate: '',
           description: 'Main tournament finals',
-          status: 'upcoming'
+          status: 'upcoming',
+          groups: []
         }
       ]);
     }
@@ -97,7 +77,7 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
   const addPhase = () => {
     const newPhase = {
       name: '',
-      type: 'Custom',
+      type: 'qualifier',
       format: 'Single Elimination',
       startDate: '',
       endDate: '',
@@ -112,6 +92,28 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
     const newPhases = phases.filter((_, i) => i !== index);
     setPhases(newPhases);
     validatePhases(newPhases);
+  };
+
+  const addGroup = (phaseIndex) => {
+    const newPhases = [...phases];
+    newPhases[phaseIndex].groups.push({
+      name: '',
+      teams: [],
+      standings: []
+    });
+    setPhases(newPhases);
+  };
+
+  const removeGroup = (phaseIndex, groupIndex) => {
+    const newPhases = [...phases];
+    newPhases[phaseIndex].groups.splice(groupIndex, 1);
+    setPhases(newPhases);
+  };
+
+  const handleGroupChange = (phaseIndex, groupIndex, field, value) => {
+    const newPhases = [...phases];
+    newPhases[phaseIndex].groups[groupIndex][field] = value;
+    setPhases(newPhases);
   };
 
   const validatePhases = (phaseList) => {
@@ -319,6 +321,57 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
                     rows={2}
                     placeholder="Enter phase description"
                   />
+                </div>
+
+                {/* Groups Section */}
+                <div className="mt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-white font-medium">Groups</h4>
+                    <button
+                      onClick={() => addGroup(index)}
+                      className="text-orange-500 hover:text-orange-400 transition-colors"
+                      title="Add group to this phase"
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
+                  <div className="space-y-4">
+                    {phase.groups.map((group, groupIndex) => (
+                      <div key={groupIndex} className="bg-zinc-700/50 rounded-lg p-4 border border-zinc-600">
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="text-white font-medium">Group {groupIndex + 1}: {group.name || 'Untitled Group'}</h5>
+                          <button
+                            onClick={() => removeGroup(index, groupIndex)}
+                            className="text-red-400 hover:text-red-300 transition-colors"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm text-zinc-400 mb-2">Group Name</label>
+                            <input
+                              type="text"
+                              value={group.name}
+                              onChange={(e) => handleGroupChange(index, groupIndex, 'name', e.target.value)}
+                              className="w-full bg-zinc-600 border border-zinc-500 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                              placeholder="Enter group name"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm text-zinc-400 mb-2">Teams (comma-separated IDs)</label>
+                            <input
+                              type="text"
+                              value={group.teams.join(', ')}
+                              onChange={(e) => handleGroupChange(index, groupIndex, 'teams', e.target.value.split(',').map(id => id.trim()))}
+                              className="w-full bg-zinc-600 border border-zinc-500 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                              placeholder="Enter team IDs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {errors[`${index}_dates`] && (

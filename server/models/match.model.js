@@ -93,10 +93,11 @@ const matchSchema = new mongoose.Schema(
           }
         ],
         // Team's overall performance in this match
-        finalPosition: { // 1st, 2nd, 3rd, etc.
+        finalPosition: { // 1st, 2nd, 3rd, etc. - null for unplayed matches
           type: Number,
           min: 1,
           max: 16,
+          default: null,
         },
         points: {
           placementPoints: { type: Number, default: 0 },

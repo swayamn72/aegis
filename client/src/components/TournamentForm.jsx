@@ -77,6 +77,55 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
         endDate: tournament.endDate ? tournament.endDate.split('T')[0] : '',
         registrationDeadline: tournament.registrationDeadline ? tournament.registrationDeadline.split('T')[0] : ''
       });
+    } else {
+      // Initialize with default values if no tournament provided
+      setFormData({
+        tournamentName: '',
+        shortName: '',
+        gameTitle: 'BGMI',
+        description: '',
+        region: 'India',
+        tier: 'Community',
+        status: 'announced',
+        visibility: 'public',
+        startDate: '',
+        endDate: '',
+        registrationDeadline: '',
+        maxParticipants: '5',
+        slots: {
+          total: 16,
+          registered: 0
+        },
+        prizePool: {
+          total: 0,
+          currency: 'INR',
+          distribution: [],
+          individualAwards: []
+        },
+        rules: '',
+        requirements: '',
+        contactInfo: {
+          email: '',
+          phone: '',
+          discord: ''
+        },
+        media: {
+          logo: '',
+          banner: '',
+          screenshots: []
+        },
+        organizer: {
+          name: 'Aegis Esports',
+          organizationRef: null,
+          contactPerson: '',
+          contactEmail: ''
+        },
+        format: 'Battle Royale Points System',
+        participatingTeams: [],
+        tags: [],
+        featured: false,
+        isOfficial: true
+      });
     }
   }, [tournament]);
 

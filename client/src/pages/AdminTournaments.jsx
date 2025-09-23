@@ -3,6 +3,7 @@ import { useAdmin } from '../context/AdminContext';
 import AdminLayout from '../components/AdminLayout';
 import TournamentEntryModal from '../components/TournamentEntryModal';
 import TournamentForm from '../components/TournamentForm';
+import TournamentWindow from '../components/TournamentWindow';
 import { toast } from 'react-toastify';
 import {
   Plus,
@@ -16,7 +17,8 @@ import {
   Users,
   MapPin,
   MoreHorizontal,
-  UserPlus
+  UserPlus,
+  Maximize2
 } from 'lucide-react';
 
 // API functions
@@ -312,6 +314,7 @@ const AdminTournaments = () => {
   const [gameFilter, setGameFilter] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEnterModal, setShowEnterModal] = useState(false);
+  const [showTournamentWindow, setShowTournamentWindow] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState(null);
 
   // New state for ConfirmModal
@@ -421,8 +424,8 @@ const AdminTournaments = () => {
 
 
   const handleView = (tournament) => {
-    console.log('View tournament:', tournament);
-    // TODO: Open view modal or navigate to detail page
+    setSelectedTournament(tournament);
+    setShowTournamentWindow(true);
   };
 
   const handleCreate = () => {
@@ -616,6 +619,26 @@ const AdminTournaments = () => {
         onCancel={handleCancelDelete}
       />
 
+      {/* Tournament Window Modal */}
+      {showTournamentWindow && selectedTournament && (
+        <TournamentWindow
+          tournament={selectedTournament}
+          isOpen={showTournamentWindow}
+          onClose={() => {
+            setShowTournamentWindow(false);
+            setSelectedTournament(null);
+          }}
+          onSave={async (updatedTournament) => {
+            // Handle save logic here
+            console.log('Saving tournament:', updatedTournament);
+            // You can add API call to update the tournament
+            // For now, just close the window
+            setShowTournamentWindow(false);
+            setSelectedTournament(null);
+          }}
+          isAdmin={true} // Enable admin editing features
+        />
+      )}
 
     </AdminLayout>
   );
