@@ -3,6 +3,7 @@ import { useAdmin } from '../context/AdminContext';
 import AdminLayout from '../components/AdminLayout';
 import TournamentEntryModal from '../components/TournamentEntryModal';
 import TournamentForm from '../components/TournamentForm';
+import { toast } from 'react-toastify';
 import {
   Plus,
   Search,
@@ -313,11 +314,9 @@ const AdminTournaments = () => {
   const [showEnterModal, setShowEnterModal] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState(null);
 
-  // New state for ConfirmModal and Toast
+  // New state for ConfirmModal
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [tournamentToDelete, setTournamentToDelete] = useState(null);
-  const [toastMessage, setToastMessage] = useState('');
-  const [showToast, setShowToast] = useState(false);
 
   // ConfirmModal component
   const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel }) => {
@@ -346,26 +345,11 @@ const AdminTournaments = () => {
     );
   };
 
-  // Toast component
-  const Toast = ({ message, isOpen, onClose }) => {
-    if (!isOpen) return null;
-    return (
-      <div className="fixed bottom-6 right-6 bg-red-600 text-white px-6 py-3 rounded shadow-lg z-50">
-        <div className="flex items-center justify-between gap-4">
-          <span>{message}</span>
-          <button onClick={onClose} className="font-bold text-xl leading-none">&times;</button>
-        </div>
-      </div>
-    );
-  };
+
 
   // Handler to show toast for 3 seconds
   const showErrorToast = (message) => {
-    setToastMessage(message);
-    setShowToast(true);
-    setTimeout(() => {
-      setShowToast(false);
-    }, 3000);
+    toast.error(message);
   };
 
   // Modified handleDelete to use ConfirmModal
@@ -462,7 +446,7 @@ const AdminTournaments = () => {
       // Close the modal
       setShowCreateModal(false);
 
-      alert('Tournament created successfully!');
+      toast.success('Tournament created successfully!');
     } catch (error) {
       console.error('Error creating tournament:', error);
       console.error('Error details:', error.message, error.stack);
@@ -485,9 +469,9 @@ const AdminTournaments = () => {
 
       // Show a more informative message
       if (error.message.includes('Failed to create tournament')) {
-        alert('Tournament may have been created successfully. Please check the tournaments list.');
+        toast.info('Tournament may have been created successfully. Please check the tournaments list.');
       } else {
-        alert(`Error: ${error.message}`);
+        toast.error(`Error: ${error.message}`);
       }
     }
   };
@@ -632,12 +616,7 @@ const AdminTournaments = () => {
         onCancel={handleCancelDelete}
       />
 
-      {/* Toast Notification */}
-      <Toast
-        message={toastMessage}
-        isOpen={showToast}
-        onClose={() => setShowToast(false)}
-      />
+
     </AdminLayout>
   );
 };

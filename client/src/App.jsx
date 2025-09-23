@@ -4,6 +4,8 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { AdminProvider } from './context/AdminContext';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import HomePage from './pages/HomePage';
 import TournamentsPage from './pages/TournamentsPage';
 import SignupPage from './pages/SignupPage'
@@ -55,6 +57,18 @@ function App() {
             <Route path="/admin/tournaments" element={<AdminTournaments />} />
             <Route path="/admin/matches" element={<AdminMatches />} />
           </Routes>
+          <ToastContainer
+            position="bottom-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="dark"
+          />
         </div>
       </AdminProvider>
     </AuthProvider>

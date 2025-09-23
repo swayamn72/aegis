@@ -1,6 +1,7 @@
 import express from 'express';
 import Tournament from '../models/tournament.model.js';
 import Match from '../models/match.model.js';
+import Team from '../models/team.model.js';
 import Admin from '../models/admin.model.js';
 import { verifyAdminToken, requirePermission, generateAdminToken } from '../middleware/adminAuth.js';
 
@@ -455,6 +456,47 @@ router.get('/dashboard/activity', verifyAdminToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching recent activity:', error);
     res.status(500).json({ error: 'Failed to fetch recent activity' });
+  }
+});
+
+// TEAM SEARCH ENDPOINT
+// Search teams for tournament invitations
+router.get('/teams/search', verifyAdminToken, async (req, res) => {
+  try {
+    const { query, gameTitle, limit = 10 } = req.query;
+
+    if (!query || query.length < 2) {
+      return res.status(400).json({
+        error: 'Search query must be at least 2 characters long'
+      });
+    }
+
+    const searchRegex = new RegExp(query, 'i');
+
+    let searchQuery = {
+      $or: [
+        { teamName: searchRegex },
+        { tag: searchRegex }
+      ]
+    };
+
+    if (gameTitle) {
+      searchQuery.primaryGame = gameTitle;
+    }
+
+    const teams = await Team.find(searchQuery)
+      .select('teamName tag logo primaryGame region country captain')
+      .populate('captain', 'username inGameName')
+      .limit(parseInt(limit))
+      .sort({ teamName: 1 });
+
+    res.json({
+      teams,
+      count: teams.length
+    });
+  } catch (error) {
+    console.error('Error searching teams:', error);
+    res.status(500).json({ error: 'Failed to search teams' });
   }
 });
 

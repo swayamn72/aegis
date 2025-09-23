@@ -250,11 +250,50 @@ const tournamentSchema = new mongoose.Schema(
         enum: ['INR', 'USD', 'EUR', 'GBP'],
         default: 'INR',
       },
-      distribution: [ // How the prize pool is split
+      distribution: [ // How the prize pool is split for team positions
         {
           position: String, // "1st", "2nd", "3rd", "3rd-4th"
           amount: Number,
           percentage: Number,
+        },
+      ],
+      individualAwards: [ // Individual player awards (MVP, Best IGL, etc.)
+        {
+          name: {
+            type: String,
+            required: true,
+            trim: true,
+          },
+          description: {
+            type: String,
+            trim: true,
+          },
+          amount: {
+            type: Number,
+            min: 0,
+            default: 0,
+          },
+          percentage: {
+            type: Number,
+            min: 0,
+            max: 100,
+            default: 0,
+          },
+          recipient: { // Who won this award (populated after tournament ends)
+            player: {
+              type: mongoose.Schema.Types.ObjectId,
+              ref: 'Player',
+            },
+            team: {
+              type: mongoose.Schema.Types.ObjectId,
+              ref: 'Team',
+            },
+          },
+          awarded: {
+            type: Boolean,
+            default: false,
+          },
+          awardedDate: Date,
         },
       ],
     },

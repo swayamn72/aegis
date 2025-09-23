@@ -18,6 +18,36 @@ export const AuthProvider = ({ children }) => {
   // Check for existing session on app load
   useEffect(() => {
     const checkAuth = async () => {
+      // Check if we're on admin routes
+      if (window.location.pathname.startsWith('/admin')) {
+        // Check for admin token
+        const adminToken = localStorage.getItem('adminToken');
+        if (adminToken) {
+          try {
+            const response = await fetch('/api/admin/verify', {
+              headers: {
+                'Authorization': `Bearer ${adminToken}`
+              }
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              // Admin is authenticated, but we don't set user state for admin context
+              console.log('Admin authenticated:', data.admin.username);
+            } else {
+              console.log('Admin token invalid or expired');
+              localStorage.removeItem('adminToken');
+            }
+          } catch (error) {
+            console.error('Admin auth check failed:', error);
+            localStorage.removeItem('adminToken');
+          }
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Regular user authentication check
       try {
         const response = await fetch('http://localhost:5000/api/players/me', {
           credentials: 'include',

@@ -37,6 +37,14 @@ const DetailedTournamentInfo = () => {
         { position: '4th Place', amount: 250000 },
         { position: '5th-8th Place', amount: 62500 },
         { position: '9th-16th Place', amount: 31250 }
+      ],
+      individualAwards: [
+        { award: 'MVP of the Tournament', amount: 100000, description: 'Most Valuable Player' },
+        { award: 'Best IGL', amount: 75000, description: 'Best In-Game Leader' },
+        { award: 'Highest Kills', amount: 50000, description: 'Player with most eliminations' },
+        { award: 'Best Sniper', amount: 50000, description: 'Most sniper kills' },
+        { award: 'Best Support Player', amount: 50000, description: 'Best supportive gameplay' },
+        { award: 'Rising Star', amount: 25000, description: 'Best newcomer performance' }
       ]
     },
     startDate: '2025-08-20',
@@ -586,13 +594,33 @@ const DetailedTournamentInfo = () => {
 
                     <div>
                       <h3 className="text-lg font-semibold text-white mb-3">Prize Distribution</h3>
-                      <div className="space-y-2">
-                        {tournamentData.prizePool.distribution.slice(0, 4).map((prize, index) => (
-                          <div key={index} className="flex justify-between items-center p-2 bg-zinc-800/50 rounded-lg">
-                            <span className="text-zinc-300 text-sm">{prize.position}</span>
-                            <span className="text-green-400 font-medium">₹{prize.amount.toLocaleString()}</span>
+                      <div className="space-y-3">
+                        <div>
+                          <h4 className="text-sm font-medium text-zinc-400 mb-2">Team Prizes</h4>
+                          <div className="space-y-2">
+                            {tournamentData.prizePool.distribution.slice(0, 3).map((prize, index) => (
+                              <div key={index} className="flex justify-between items-center p-2 bg-zinc-800/50 rounded-lg">
+                                <span className="text-zinc-300 text-sm">{prize.position}</span>
+                                <span className="text-green-400 font-medium">₹{prize.amount.toLocaleString()}</span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        </div>
+
+                        <div>
+                          <h4 className="text-sm font-medium text-zinc-400 mb-2">Individual Awards</h4>
+                          <div className="space-y-2">
+                            {tournamentData.prizePool.individualAwards.slice(0, 3).map((award, index) => (
+                              <div key={index} className="flex justify-between items-center p-2 bg-zinc-800/50 rounded-lg">
+                                <div className="flex-1">
+                                  <div className="text-zinc-300 text-sm font-medium">{award.award}</div>
+                                  <div className="text-zinc-500 text-xs">{award.description}</div>
+                                </div>
+                                <span className="text-amber-400 font-medium">₹{award.amount.toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                       <button className="mt-3 text-orange-400 text-sm hover:text-orange-300 transition-colors">
                         View full prize breakdown →
