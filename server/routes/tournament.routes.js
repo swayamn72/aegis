@@ -104,4 +104,44 @@ router.get('/upcoming', async (req, res) => {
   }
 });
 
+// Update tournament groups (for backward compatibility)
+router.put('/:tournamentId/groups', async (req, res) => {
+  try {
+    const { tournamentId } = req.params;
+    const { groups, phaseId } = req.body;
+
+    let updateData;
+
+    if (phaseId) {
+      // Update groups within a specific phase
+      updateData = {
+        $set: { 'phases.$[phase].groups': groups }
+      };
+      const options = {
+        arrayFilters: [{ 'phase.name': phaseId }], // Use phase name instead of _id
+        new: true
+      };
+
+      const tournament = await Tournament.findByIdAndUpdate(tournamentId, updateData, options);
+
+      if (!tournament) {
+        return res.status(404).json({ error: 'Tournament not found' });
+      }
+    } else {
+      // Update groups at tournament level (backward compatibility)
+      updateData = { groups };
+      const tournament = await Tournament.findByIdAndUpdate(tournamentId, updateData, { new: true });
+
+      if (!tournament) {
+        return res.status(404).json({ error: 'Tournament not found' });
+      }
+    }
+
+    res.json({ tournament });
+  } catch (error) {
+    console.error('Error updating tournament groups:', error);
+    res.status(500).json({ error: 'Failed to update tournament groups' });
+  }
+});
+
 export default router;

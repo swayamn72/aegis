@@ -186,6 +186,30 @@ const tournamentSchema = new mongoose.Schema(
         }],
         rulesetSpecifics: String, // Any rules specific to this phase
         details: String, // e.g., "Top 8 teams advance"
+        // --- Groups for this phase ---
+        groups: [
+          {
+            name: String, // e.g., "Group Alpha", "Group Beta"
+            teams: [{ // Teams specifically in this group
+              type: mongoose.Schema.Types.ObjectId,
+              ref: 'Team',
+            }],
+            standings: [ // Group-specific standings
+              {
+                team: {
+                  type: mongoose.Schema.Types.ObjectId,
+                  ref: 'Team',
+                },
+                position: Number,
+                matchesPlayed: { type: Number, default: 0 },
+                chickenDinners: { type: Number, default: 0 }, // For BR games
+                points: { type: Number, default: 0 },
+                kills: { type: Number, default: 0 },
+                netChange: { type: Number, default: 0 }, // Position change if tracked live
+              },
+            ],
+          },
+        ],
       },
     ],
 
@@ -478,9 +502,10 @@ tournamentSchema.virtual('durationDays').get(function() {
 // Virtual for registration status (more robust)
 tournamentSchema.virtual('registrationDisplayStatus').get(function() {
   const now = new Date();
+  if (this.status === null || this.status === undefined) return 'Unknown';
   if (this.status === 'cancelled') return 'Cancelled';
   if (this.status === 'completed') return 'Completed';
-  if (this.status === 'in_progress' || this.status.includes('_in_progress')) return 'Live';
+  if (this.status === 'in_progress' || (this.status && typeof this.status === 'string' && this.status.includes('_in_progress'))) return 'Live';
 
   if (!this.registrationStartDate || !this.registrationEndDate) return 'Closed';
   if (now < this.registrationStartDate) return 'Upcoming';
