@@ -1,5 +1,7 @@
-// src/components/RightSidebar.js
+
 import React from "react";
+import {Link} from "react-router-dom";
+
 
 export default function RightSidebar({ tournaments, news, communities }) {
   return (
@@ -56,6 +58,8 @@ export default function RightSidebar({ tournaments, news, communities }) {
         key={i}
         className="flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-800 transition cursor-pointer"
       >
+
+         <Link to={`/community/${com.id}`} className="flex items-center gap-3 flex-1">
         <img
           src={com.image}
           alt={com.name}
@@ -65,6 +69,7 @@ export default function RightSidebar({ tournaments, news, communities }) {
           <p className="text-gray-200 font-medium">{com.name}</p>
           <p className="text-gray-400 text-xs">{com.members}</p>
         </div>
+          </Link>
         <button className="text-xs px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded-full">
           Join
         </button>

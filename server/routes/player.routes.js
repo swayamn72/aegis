@@ -2,6 +2,7 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Player from "../models/player.model.js";
+import Post from ".../models/post.model.js";
 
 const router = express.Router();
 
@@ -207,5 +208,89 @@ router.put("/update-profile", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+
+// Creation of Posts
+router.post("/create-post", async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: "No token provided" });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+
+    const { caption, media, tags } = req.body;
+
+    const newPost = await Post.create({
+      author: userId,
+      caption,
+      media,
+      tags,
+    });
+
+   
+    await Player.findByIdAndUpdate(userId, { $push: { posts: newPost._id } });
+
+    res.status(201).json({
+      message: "Post created successfully",
+      post: newPost,
+    });
+  } catch (error) {
+    console.error("Create post error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get all Posts of player
+router.get("/my-posts", async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: "No token provided" });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+
+    const posts = await Post.find({ author: userId })
+      .populate("author", "username email")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ posts });
+  } catch (error) {
+    console.error("Get posts error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+//delete pist
+router.delete("/delete-post/:postId", async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: "No token provided" });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+    const postId = req.params.postId;
+
+    
+    const updatedPlayer = await Player.findByIdAndUpdate(
+      userId,
+      { $pull: { posts: { _id: postId } } },
+      { new: true }
+    );
+
+    if (!updatedPlayer) {
+      return res.status(404).json({ message: "Player not found" });
+    }
+
+    res.status(200).json({ message: "Post deleted successfully" });
+  } catch (error) {
+    console.error("Delete post error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+
 
 export default router;
