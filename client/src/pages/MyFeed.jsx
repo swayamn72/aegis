@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import FeedCard from "../components/FeedCard";
-import { mockPosts } from "../data/mockPosts";
-import { mockTournaments, mockNews } from "../data/mockData";
 import RightSideBar from "../components/RightSideBar";
+import { mockTournaments, mockNews } from "../data/mockData";
 import { mockCommunities } from "../data/mockCommunities";
 
 export default function MyFeedPage() {
@@ -11,17 +10,36 @@ export default function MyFeedPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  const loadMorePosts = () => {
-    setLoading(true);
-    setTimeout(() => {
-      const start = (page - 1) * 2;
-      const end = page * 2;
-      const newPosts = mockPosts.slice(start, end);
-      setPosts((prev) => [...prev, ...newPosts]);
-      setPage((prev) => prev + 1);
-      setLoading(false);
-    }, 800);
-  };
+
+const loadMorePosts = async () => {
+  setLoading(true);
+  try {
+    const res = await fetch(
+      `http://localhost:5000/api/feed/myfeed?page=${page}&limit=2`,
+      {
+        method: "GET",
+        credentials: "include", // important!
+      }
+    );
+
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.message || "Failed to fetch feed");
+    }
+
+    const data = await res.json();
+    setPosts((prev) => [...prev, ...data]);
+    setPage((prev) => prev + 1);
+  } catch (err) {
+    console.error("Error fetching feed:", err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
+
 
   useEffect(() => {
     loadMorePosts();
@@ -42,17 +60,13 @@ export default function MyFeedPage() {
 
   return (
     <div className="flex bg-black">
-      {/* Left Sidebar */}
       <Sidebar />
 
-      {/* Main + Right Sidebar Wrapper */}
       <main className="ml-64 w-full min-h-screen bg-gradient-to-b from-black via-zinc-900/80 to-black px-6 py-10">
         <div className="flex gap-6">
-          
-          {/* Feed (center column) */}
           <div className="flex-1 max-w-2xl mx-auto">
             {posts.map((post) => (
-              <FeedCard key={post.id} post={post} />
+              <FeedCard key={post._id} post={post} />
             ))}
 
             {loading && (
@@ -62,8 +76,11 @@ export default function MyFeedPage() {
             )}
           </div>
 
-        
-          <RightSideBar tournaments={mockTournaments} news={mockNews} communities={mockCommunities} />
+          <RightSideBar
+            tournaments={mockTournaments}
+            news={mockNews}
+            communities={mockCommunities}
+          />
         </div>
       </main>
     </div>
