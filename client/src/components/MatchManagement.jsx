@@ -603,10 +603,12 @@ const MatchManagement = ({ tournament, onUpdate }) => {
                     {[...match.participatingTeams]
                       .filter(team => team.finalPosition > 0)
                       .sort((a, b) => {
-                        if (a.finalPosition !== b.finalPosition) {
-                          return a.finalPosition - b.finalPosition;
+                        const pointsA = a.points?.totalPoints || 0;
+                        const pointsB = b.points?.totalPoints || 0;
+                        if (pointsA !== pointsB) {
+                          return pointsB - pointsA; // Sort by points descending
                         }
-                        return (b.kills?.total || 0) - (a.kills?.total || 0);
+                        return (b.kills?.total || 0) - (a.kills?.total || 0); // Tiebreaker by kills
                       })
                       .map((team) => {
                         const teamData = team.team || team;
