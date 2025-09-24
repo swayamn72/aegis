@@ -42,10 +42,10 @@ const AegisMyProfile = () => {
     aegisRating: user.aegisRating || 1200, // Default starting rating
     peakRating: user.aegisRating ? Math.max(user.aegisRating + 50, user.aegisRating) : 1250,
     verified: user.verified || false,
-    joinDate: user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    joinDate: user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     }) : 'Recently',
 
     primaryGame: user.primaryGame || 'Not selected',
@@ -71,6 +71,16 @@ const AegisMyProfile = () => {
     tournamentsPlayed: 0,
     followers: 0,
     following: 0
+  };
+
+  // Function to check if profile is complete
+  const isProfileComplete = () => {
+    const hasBio = userData.bio && userData.bio !== 'No bio added yet. Share something about your gaming journey!';
+    const hasLanguages = userData.languages && userData.languages.length > 0;
+    const hasPrimaryGame = userData.primaryGame && userData.primaryGame !== 'Not selected';
+    const hasDiscord = userData.discordTag && userData.discordTag.trim() !== '';
+
+    return hasBio && hasLanguages && hasPrimaryGame && hasDiscord;
   };
 
   const AegisMascot = () => (
@@ -756,10 +766,12 @@ const AegisMyProfile = () => {
 
         {/* Action Buttons Section */}
         <div className="mt-8 flex flex-wrap gap-4 justify-center">
-          <button className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white font-bold px-8 py-3 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg shadow-cyan-500/30 flex items-center gap-2">
-            <Edit className="w-4 h-4" />
-            Complete Profile Setup
-          </button>
+          {!isProfileComplete() && (
+            <button className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white font-bold px-8 py-3 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg shadow-cyan-500/30 flex items-center gap-2">
+              <Edit className="w-4 h-4" />
+              Complete Profile Setup
+            </button>
+          )}
           <button className="bg-zinc-700 hover:bg-zinc-600 text-white font-medium px-8 py-3 rounded-lg transition-colors border border-cyan-400/30 flex items-center gap-2">
             <Share2 className="w-4 h-4" />
             Share Profile

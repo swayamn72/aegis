@@ -11,6 +11,7 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
   const [activeTab, setActiveTab] = useState('overview');
   const [isEditing, setIsEditing] = useState(false);
   const [editedTournament, setEditedTournament] = useState(tournament);
+  const [isPhaseManagerOpen, setIsPhaseManagerOpen] = useState(false);
 
   useEffect(() => {
     setEditedTournament(tournament);

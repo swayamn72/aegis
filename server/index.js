@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import playerRoutes from './routes/player.routes.js'; // 1. Import the new routes
 import tournamentRoutes from './routes/tournament.routes.js'; // Import tournament routes
 import adminRoutes from './routes/admin.routes.js'; // Import admin routes
+import matchRoutes from './routes/match.routes.js'; // Import match routes
 import cookieParser from "cookie-parser";
 
 // Import all models to ensure they're registered with mongoose
@@ -46,6 +47,7 @@ app.get('/', (req, res) => {
 app.use('/api/players', playerRoutes);
 app.use('/api/tournaments', tournamentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/matches', matchRoutes); // Add match routes
 
 app.listen(port, () => {
   console.log(`✅ Server is running on port: ${port}`);
