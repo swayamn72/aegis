@@ -6,6 +6,7 @@ import playerRoutes from './routes/player.routes.js'; // 1. Import the new route
 import tournamentRoutes from './routes/tournament.routes.js'; // Import tournament routes
 import adminRoutes from './routes/admin.routes.js'; // Import admin routes
 import cookieParser from "cookie-parser";
+import feedRoutes from './routes/feed.routes.js'
 
 // Import all models to ensure they're registered with mongoose
 import './models/player.model.js';
@@ -46,6 +47,7 @@ app.get('/', (req, res) => {
 app.use('/api/players', playerRoutes);
 app.use('/api/tournaments', tournamentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use("/api/feed", feedRoutes);
 
 app.listen(port, () => {
   console.log(`✅ Server is running on port: ${port}`);
