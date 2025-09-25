@@ -21,12 +21,12 @@ const ProfileDropdown = ({ user, logout }) => {
   }, []);
 
   const menuItems = [
-    { icon: User, label: 'My Profile', href: '#' },
-    { icon: Users, label: 'My Teams', href: '#' },
-    { icon: Trophy, label: 'Achievements', href: '#' },
-    { icon: Star, label: 'Favorites', href: '#' },
-    { icon: Bell, label: 'Notifications', href: '#' },
-    { icon: Settings, label: 'Settings', href: '#' },
+    { icon: User, label: 'My Profile', href: '/my-profile' },
+    { icon: Users, label: 'My Teams', href: '/my-teams' },
+    { icon: Trophy, label: 'Achievements', href: '/achievements' },
+    { icon: Star, label: 'Favorites', href: '/favorites' },
+    { icon: Bell, label: 'Notifications', href: '/notifications' },
+    { icon: Settings, label: 'Settings', href: '/settings' },
     { icon: LogOut, label: 'Logout', href: '#', isLogout: true }
   ];
 
@@ -83,18 +83,13 @@ const ProfileDropdown = ({ user, logout }) => {
                     setIsOpen(false);
                     if (item.isLogout) {
                       logout();
-                    } else if (item.label === 'My Profile') {
-                      navigate('/my-profile');
-                    } else if (item.label === 'Settings') {
-                      navigate('/settings');
-                    } else {
-                      // Handle other navigation here
-                      console.log(`Navigating to ${item.label}`);
+                    } else if (item.href && item.href !== '#') {
+                      navigate(item.href);
                     }
                   }}
                   className={`flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-800 transition-all duration-200 ${
-                    item.isLogout 
-                      ? 'hover:text-red-400 border-t border-gray-700 mt-2' 
+                    item.isLogout
+                      ? 'hover:text-red-400 border-t border-gray-700 mt-2'
                       : 'hover:text-orange-400'
                   }`}
                 >

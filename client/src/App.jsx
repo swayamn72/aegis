@@ -30,6 +30,7 @@ import AdminMatches from './pages/AdminMatches';
 import CommunityPage from './pages/CommunityPage';
 import CreatePost from './components/CreatePost';
 import PostList from './components/PostList';
+import NotificationsPage from './components/NotificationsPage';
 function App() {
   return (
     <div>
@@ -45,6 +46,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path='/players' element={<PlayersPage />} />
             <Route path='/opportunities' element={<OpportunitiesPage />} />
+            <Route path='/notifications' element={<NotificationsPage />} />
             <Route path='/scrims' element={<ScrimsPage />} />
             <Route path='/profile' element={<ProfilePlayer/>} />
             <Route path='/detailed/:playerId' element={<DetailedPlayerProfileDN/>} />

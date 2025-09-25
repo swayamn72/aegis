@@ -135,6 +135,11 @@ const playerSchema = new mongoose.Schema(
       ref: "Post", 
     },
   ],
+
+  connections: [{ type: mongoose.Schema.Types.ObjectId, ref: "Player" }], // confirmed connections
+  sentRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "Player" }], // requests you sent
+  receivedRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "Player" }], // requests you received
+
   },
   {
     timestamps: true,

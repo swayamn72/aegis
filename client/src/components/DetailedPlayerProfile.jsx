@@ -18,8 +18,11 @@ const DetailedPlayerProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 const [posts, setPosts] = useState([]);
+  const [status, setStatus] = useState(null);
 const loggedInPlayerId = "123";
 const profilePlayerId = playerId; 
+
+
 
 
 const fetchPlayerPosts = async () => {
@@ -38,6 +41,44 @@ const fetchPlayerPosts = async () => {
 useEffect(() => {
   fetchPlayerPosts();
 }, [playerId]);
+
+
+const handleConnect = async () => {
+  try {
+    console.log("Sending connection request..."); // ✅ log request start
+    const res = await fetch(
+      `http://localhost:5000/api/connections/send/${playerId}`,
+      {
+        method: "POST",
+        credentials: "include", // only works if JWT is stored in cookie
+        headers: {
+          "Content-Type": "application/json",
+          // "Authorization": `Bearer ${token}`, // use if JWT is in localStorage
+        },
+      }
+    );
+
+    const contentType = res.headers.get("content-type");
+    let data;
+    if (contentType && contentType.includes("application/json")) {
+      data = await res.json();
+    } else {
+      data = { message: await res.text() }; // fallback
+    }
+
+    if (res.ok) {
+      console.log("Request sent successfully:", data);
+      setStatus("pending");
+    } else {
+      console.error("Error sending request:", data.message);
+    }
+  } catch (err) {
+    console.error("Connect error:", err);
+  }
+};
+
+
+
 
 
   useEffect(() => {
@@ -273,9 +314,21 @@ useEffect(() => {
                       <button className="p-2 bg-zinc-700/50 hover:bg-zinc-600/50 rounded-lg transition-colors group">
                         <MessageCircle className="w-5 h-5 text-zinc-300 group-hover:text-orange-400" />
                       </button>
-                      <button className="p-2 bg-zinc-700/50 hover:bg-zinc-600/50 rounded-lg transition-colors group">
-                        <UserPlus className="w-5 h-5 text-zinc-300 group-hover:text-orange-400" />
-                      </button>
+                      {/* <button className="p-2 bg-zinc-700/50 hover:bg-zinc-600/50 rounded-lg transition-colors group"> */}
+                        {/* <UserPlus className="w-5 h-5 text-zinc-300 group-hover:text-orange-400" /> */}
+                      {/* </button> */}
+                            {status === "pending" ? (
+        <button className="bg-gray-600 px-4 py-2 rounded" disabled>
+          Request Sent
+        </button>
+      ) : (
+        <button
+          onClick={handleConnect}
+          className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600"
+        >
+          Link Up
+        </button>
+      )}
                     </div>
                   </div>
                   
