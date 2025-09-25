@@ -30,7 +30,7 @@ const ProfileDropdown = ({ user, logout }) => {
     { icon: LogOut, label: 'Logout', href: '#', isLogout: true }
   ];
 
-  // Get initials from username or fallback to 'US'
+ 
   const getInitials = (name) => {
     if (!name) return 'US';
     const names = name.split(' ');
