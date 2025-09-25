@@ -124,5 +124,23 @@ router.get("/requests", auth, async (req, res) => {
 });
 
 
+router.get("/", auth, async (req, res) => {
+  try {
+    const playerId = req.user.id;
+    const player = await Player.findById(playerId)
+      .populate("connections", "username avatar name") // confirmed connections
+      .populate("receivedRequests", "username avatar name"); // pending requests
+
+    if (!player) return res.status(404).json({ message: "User not found" });
+
+    res.json({
+      connections: player.connections,
+      pendingRequests: player.receivedRequests,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 
 export default router;
