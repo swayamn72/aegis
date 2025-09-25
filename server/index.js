@@ -8,6 +8,9 @@ import adminRoutes from './routes/admin.routes.js'; // Import admin routes
 import matchRoutes from './routes/match.routes.js'; // Import match routes
 import cookieParser from "cookie-parser";
 import feedRoutes from './routes/feed.routes.js'
+import connectionRoutes from './routes/connection.routes.js';
+
+
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 
@@ -74,6 +77,9 @@ app.use('/api/tournaments', tournamentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/matches', matchRoutes); // Add match routes
 app.use("/api/feed", feedRoutes);
+app.use('/api/connections', connectionRoutes);
+
+
 
 app.listen(port, () => {
   console.log(`✅ Server is running on port: ${port}`);
