@@ -19,6 +19,7 @@ const AegisProfileCompletion = () => {
     country: '',
     bio: '',
     languages: [],
+    profilePicture: '',
 
     // Gaming Info
     inGameName: '',
@@ -41,6 +42,9 @@ const AegisProfileCompletion = () => {
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
   const AegisCompletionMascot = () => (
     <div className="relative">
@@ -277,6 +281,75 @@ const AegisProfileCompletion = () => {
                         {lang}
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-white font-medium mb-2">Profile Picture</label>
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className="w-20 h-20 bg-zinc-800/50 border-2 border-dashed border-zinc-600 rounded-xl flex items-center justify-center overflow-hidden">
+                        {previewUrl ? (
+                          <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                        ) : (
+                          <Camera className="w-8 h-8 text-zinc-400" />
+                        )}
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            setSelectedFile(file);
+                            const reader = new FileReader();
+                            reader.onload = (e) => setPreviewUrl(e.target.result);
+                            reader.readAsDataURL(file);
+
+                            // Upload immediately
+                            setIsUploading(true);
+                            try {
+                              const formDataUpload = new FormData();
+                              formDataUpload.append('profilePicture', file);
+
+                              const response = await fetch('/api/players/upload-pfp', {
+                                method: 'POST',
+                                credentials: 'include',
+                                body: formDataUpload,
+                              });
+
+                              const result = await response.json();
+                              if (result.profilePicture) {
+                                setFormData(prev => ({ ...prev, profilePicture: result.profilePicture }));
+                              } else {
+                                alert('Upload failed: ' + result.message);
+                              }
+                            } catch (error) {
+                              console.error('Upload error:', error);
+                              alert('Upload failed. Please try again.');
+                            } finally {
+                              setIsUploading(false);
+                            }
+                          }
+                        }}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        disabled={isUploading}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-zinc-400 text-sm mb-2">
+                        Upload a profile picture (max 5MB, image files only)
+                      </p>
+                      {isUploading && (
+                        <div className="flex items-center gap-2 text-cyan-400">
+                          <div className="w-4 h-4 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
+                          Uploading...
+                        </div>
+                      )}
+                      {formData.profilePicture && !isUploading && (
+                        <p className="text-green-400 text-sm">✓ Profile picture uploaded successfully</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

@@ -148,7 +148,7 @@ const PlayerCard = ({ player }) => {
                 <div className="flex items-center gap-4 mb-4 mt-6">
                     <div className="relative">
                         <img
-                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${player.username}`}
+                            src={player.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${player.username}`}
                             alt={player.inGameName || player.username}
                             className="w-16 h-16 rounded-xl bg-zinc-700"
                         />

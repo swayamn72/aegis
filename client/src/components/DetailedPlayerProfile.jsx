@@ -110,6 +110,7 @@ useEffect(() => {
     availability: playerData.availability || 'N/A',
     profileVisibility: playerData.profileVisibility || 'public',
     cardTheme: playerData.cardTheme || 'orange',
+    profilePicture: playerData.profilePicture || null,
   };
 
   // Match history data
@@ -248,7 +249,15 @@ useEffect(() => {
             <div className="flex-1">
               <div className="flex items-start gap-6 mb-6">
                 <div className="relative">
-                  <AegisMascot />
+                  {playerData.profilePicture ? (
+                    <img
+                      src={playerData.profilePicture}
+                      alt="Profile Picture"
+                      className="w-20 h-24 rounded-t-full rounded-b-lg border-2 border-orange-300 object-cover shadow-lg shadow-orange-500/50"
+                    />
+                  ) : (
+                    <AegisMascot />
+                  )}
                   <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-orange-400 to-red-500 p-2 rounded-full shadow-lg shadow-orange-400/50">
                     <Check className="w-4 h-4 text-white" />
                   </div>

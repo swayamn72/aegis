@@ -6,7 +6,7 @@ import {
   Bug, MessageSquare, Trash2, ExternalLink, Eye, EyeOff,
   Save, X, Check, AlertTriangle, Globe, Smartphone, Monitor,
   Lock, Key, Unlink, Github, Twitch,
-  Volume2, VolumeX, Zap, Crown, Trophy, Star
+  Volume2, VolumeX, Zap, Crown, Trophy, Star, Upload
 } from 'lucide-react';
 import { FaDiscord, FaSteam } from 'react-icons/fa';
 
@@ -15,6 +15,20 @@ const SettingsComponent = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [savedMessage, setSavedMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      // Optional: Update profileSettings.profilePicture with a preview URL or base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileSettings(prev => ({ ...prev, profilePicture: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Profile settings state
   const [profileSettings, setProfileSettings] = useState({
@@ -25,6 +39,7 @@ const SettingsComponent = () => {
     country: '',
     bio: '',
     languages: [],
+    profilePicture: '',
 
     // Gaming Info
     inGameName: '',
@@ -133,6 +148,7 @@ const SettingsComponent = () => {
             country: data.country || '',
             bio: data.bio || '',
             languages: data.languages || [],
+            profilePicture: data.profilePicture || '',
             inGameName: data.inGameName || '',
             primaryGame: data.primaryGame || '',
             earnings: data.earnings || '',
@@ -161,6 +177,29 @@ const SettingsComponent = () => {
   const handleSaveProfile = async () => {
     setIsSaving(true);
     try {
+      // If there's a selected file, upload it first
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append('profilePicture', selectedFile);
+
+        const uploadResponse = await fetch('/api/players/upload-pfp', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        });
+
+        if (!uploadResponse.ok) {
+          const uploadError = await uploadResponse.json();
+          throw new Error(uploadError.message || 'Failed to upload profile picture');
+        }
+
+        const uploadData = await uploadResponse.json();
+        // Update profileSettings with the new profilePicture URL
+        setProfileSettings(prev => ({ ...prev, profilePicture: uploadData.profilePicture }));
+        setSelectedFile(null); // Clear selected file after upload
+      }
+
+      // Now update the profile with other settings
       const response = await fetch('/api/players/update-profile', {
         method: 'PUT',
         credentials: 'include',
@@ -453,6 +492,46 @@ const SettingsComponent = () => {
                           </button>
                         ))}
                       </div>
+                    </div>
+
+                    {/* Profile Picture Upload */}
+                    <div>
+                      <label className="block text-zinc-300 font-medium mb-2">Profile Picture</label>
+                      <div className="space-y-3">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileChange}
+                          className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-orange-500 file:to-red-600 file:text-white hover:file:from-orange-600 hover:file:to-red-700"
+                        />
+                        {selectedFile && (
+                          <div className="flex items-center gap-4">
+                            <img
+                              src={URL.createObjectURL(selectedFile)}
+                              alt="Profile preview"
+                              className="w-20 h-20 rounded-full object-cover border-2 border-orange-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedFile(null);
+                                setProfileSettings(prev => ({ ...prev, profilePicture: '' }));
+                              }}
+                              className="px-3 py-1 bg-red-500/20 border border-red-500/50 text-red-400 rounded-lg hover:bg-red-500/30 transition-all text-sm"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
+                        {profileSettings.profilePicture && !selectedFile && (
+                          <img
+                            src={profileSettings.profilePicture}
+                            alt="Current profile"
+                            className="w-20 h-20 rounded-full object-cover border-2 border-zinc-600"
+                          />
+                        )}
+                      </div>
+                      <p className="text-sm text-zinc-400 mt-2">Upload a square image (recommended: 400x400px, max 5MB)</p>
                     </div>
                   </div>
 

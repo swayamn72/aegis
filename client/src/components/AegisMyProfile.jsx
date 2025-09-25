@@ -63,6 +63,7 @@ const AegisMyProfile = () => {
     twitch: user.twitch || '',
     YouTube: user.YouTube || '',
     profileVisibility: user.profileVisibility || 'public',
+    profilePicture: user.profilePicture || null,
 
     // Placeholder data for missing schema fields (to be added later)
     currentStreak: 0,
@@ -160,7 +161,15 @@ const AegisMyProfile = () => {
             <div className="flex-1">
               <div className="flex items-start gap-6 mb-6">
                 <div className="relative">
-                  <AegisMascot />
+                  {userData.profilePicture ? (
+                    <img
+                      src={userData.profilePicture}
+                      alt="Profile Picture"
+                      className="w-20 h-24 rounded-t-full rounded-b-lg border-2 border-cyan-300 object-cover shadow-lg shadow-cyan-500/50"
+                    />
+                  ) : (
+                    <AegisMascot />
+                  )}
                   <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-cyan-400 to-purple-500 p-2 rounded-full shadow-lg shadow-cyan-400/50">
                     <Check className="w-4 h-4 text-white" />
                   </div>

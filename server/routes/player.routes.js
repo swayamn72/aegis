@@ -3,8 +3,24 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Player from "../models/player.model.js";
 import Post from "../models/post.model.js";
+import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
 
 const router = express.Router();
+
+// Configure Multer for memory storage
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  },
+});
 
 // --- Signup Route ---
 router.post("/signup", async (req, res) => {
@@ -209,6 +225,62 @@ router.put("/update-profile", async (req, res) => {
   }
 });
 
+// --- Upload Profile Picture Route ---
+router.post("/upload-pfp", upload.single('profilePicture'), async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    // Upload to Cloudinary
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'aegis-pfps',
+          public_id: `pfp-${userId}-${Date.now()}`,
+          transformation: [{ width: 300, height: 300, crop: 'fill' }],
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      stream.end(req.file.buffer);
+    });
+
+    // Update player with new PFP URL
+    const updatedPlayer = await Player.findByIdAndUpdate(
+      userId,
+      { $set: { profilePicture: result.secure_url } },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!updatedPlayer) {
+      return res.status(404).json({ message: "Player not found" });
+    }
+
+    res.status(200).json({
+      message: "Profile picture uploaded successfully",
+      profilePicture: result.secure_url,
+      player: updatedPlayer
+    });
+  } catch (error) {
+    console.error("Upload PFP error:", error);
+    if (error.message === 'Only image files are allowed') {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 // // Creation of Posts
 // router.post("/create-post", async (req, res) => {
@@ -262,6 +334,8 @@ router.put("/update-profile", async (req, res) => {
 // });
 
 
+
+
 // //delete pist
 // router.delete("/delete-post/:postId", async (req, res) => {
 //   try {
@@ -272,7 +346,7 @@ router.put("/update-profile", async (req, res) => {
 //     const userId = decoded.id;
 //     const postId = req.params.postId;
 
-    
+
 //     const updatedPlayer = await Player.findByIdAndUpdate(
 //       userId,
 //       { $pull: { posts: { _id: postId } } },

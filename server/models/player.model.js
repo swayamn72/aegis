@@ -41,6 +41,11 @@ const playerSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    profilePicture: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     primaryGame: {
       type: String,
       enum: ['BGMI', 'VALO', 'CS2'],
