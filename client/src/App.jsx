@@ -31,6 +31,7 @@ import CommunityPage from './pages/CommunityPage';
 import CreatePost from './components/CreatePost';
 import PostList from './components/PostList';
 import NotificationsPage from './components/NotificationsPage';
+import ConnectionsPage from './components/ConnectionsPage';
 function App() {
   return (
     <div>
@@ -47,6 +48,7 @@ function App() {
             <Route path='/players' element={<PlayersPage />} />
             <Route path='/opportunities' element={<OpportunitiesPage />} />
             <Route path='/notifications' element={<NotificationsPage />} />
+            <Route path='/connections' element={<ConnectionsPage />} />
             <Route path='/scrims' element={<ScrimsPage />} />
             <Route path='/profile' element={<ProfilePlayer/>} />
             <Route path='/detailed/:playerId' element={<DetailedPlayerProfileDN/>} />
