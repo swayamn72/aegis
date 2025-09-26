@@ -83,10 +83,10 @@ app.use('/api/feed', feedRoutes);
 app.use('/api/connections', connectionRoutes);
 app.use('/api/chat', chatRoutes);
 
-// Create HTTP server for Socket.IO
+
 const server = createServer(app);
 
-// Initialize Socket.IO
+
 const io = new Server(server, {
   cors: {
     origin: 'http://localhost:5173',
@@ -94,17 +94,17 @@ const io = new Server(server, {
   },
 });
 
-// Socket.IO connection handling
+
 io.on('connection', (socket) => {
   console.log('New Client Joined', socket.id);
 
-  // User joins their own room
+  
   socket.on('join', (playerId) => {
     socket.join(playerId);
     console.log(`Player ${playerId} joined room`);
   });
 
-  // Handle sending messages
+  
   socket.on('sendMessage', ({ senderId, receiverId, message }) => {
     console.log(`${senderId} -> ${receiverId}: ${message}`);
 
@@ -115,12 +115,12 @@ io.on('connection', (socket) => {
       timestamp: new Date(),
     };
 
-    // Send message to receiver and sender for UI consistency
+   
     io.to(receiverId).emit('receiveMessage', msgData);
     io.to(senderId).emit('receiveMessage', msgData);
   });
 
-  // Handle disconnect
+  
   socket.on('disconnect', () => {
     console.log('❌ Client disconnected:', socket.id);
   });

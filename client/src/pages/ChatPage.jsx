@@ -12,25 +12,25 @@ export default function ChatPage({ userId }) {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
 
-  // Scroll to bottom whenever messages update
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
-    // Fetch all connections for the player
+   
     fetch("http://localhost:5000/api/connections", { credentials: "include" })
       .then((res) => res.json())
       .then((data) => setConnections(data.connections || []));
 
-    // Join user's own socket room
+    
     if (userId) {
       socket.emit("join", userId);
     }
 
-    // Listen for incoming messages
+   
     socket.on("receiveMessage", (msg) => {
-      // Only add to state if it's relevant to the current chat
+      
       if (
         selectedChat &&
         (msg.senderId === selectedChat._id || msg.receiverId === selectedChat._id)
@@ -56,10 +56,10 @@ export default function ChatPage({ userId }) {
       timestamp: new Date(),
     };
 
-    // Emit message to server
+   
     socket.emit("sendMessage", msg);
 
-    // Optimistically update UI
+    
     setMessages((prev) => [...prev, msg]);
     setInput("");
   };
@@ -74,7 +74,7 @@ export default function ChatPage({ userId }) {
             key={conn._id}
             onClick={() => {
               setSelectedChat(conn);
-              setMessages([]); // TODO: fetch previous chat history from DB here
+              setMessages([]); 
             }}
             className={`p-2 rounded cursor-pointer hover:bg-zinc-800 ${
               selectedChat?._id === conn._id ? "bg-zinc-700" : ""
