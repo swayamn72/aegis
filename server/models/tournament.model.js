@@ -367,6 +367,7 @@ const tournamentSchema = new mongoose.Schema(
     media: {
       logo: String, // URL for tournament logo
       banner: String, // URL for main banner image
+      coverImage: String, // URL for tournament cover image (alternative to banner)
       trailer: String, // URL for announcement trailer video
       gallery: [String], // Array of image URLs for event gallery
     },

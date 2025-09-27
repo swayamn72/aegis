@@ -11,6 +11,7 @@ import AegisProfileCardBGMI from '../components/AegisProfileCardBGMI';
 import DetailedTournamentInfo from '../components/DetailedTournamentInfo';
 
 
+
 function HomePage() {
   return (
     <>

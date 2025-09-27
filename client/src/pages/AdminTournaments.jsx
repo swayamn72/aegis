@@ -98,10 +98,10 @@ const createTournament = async (tournamentData, token) => {
     const response = await fetch('/api/admin/tournaments', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        'Authorization': `Bearer ${token}`
+        // Remove Content-Type header to let browser set it for FormData
       },
-      body: JSON.stringify(tournamentData)
+      body: tournamentData // tournamentData is now FormData
     });
     if (!response.ok) {
       const errorData = await response.json();
@@ -110,6 +110,27 @@ const createTournament = async (tournamentData, token) => {
     return await response.json();
   } catch (error) {
     console.error('Error creating tournament:', error);
+    throw error;
+  }
+};
+
+const editTournament = async (tournamentData, tournamentId, token) => {
+  try {
+    const response = await fetch(`/api/admin/tournaments/${tournamentId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`
+        // Remove Content-Type header to let browser set it for FormData
+      },
+      body: tournamentData // tournamentData is now FormData
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update tournament');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating tournament:', error);
     throw error;
   }
 };
@@ -313,6 +334,7 @@ const AdminTournaments = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [gameFilter, setGameFilter] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showEnterModal, setShowEnterModal] = useState(false);
   const [showTournamentWindow, setShowTournamentWindow] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState(null);
@@ -415,8 +437,8 @@ const AdminTournaments = () => {
   }, [searchTerm, statusFilter, gameFilter, token]);
 
   const handleEdit = (tournament) => {
-    console.log('Edit tournament:', tournament);
-    // TODO: Open edit modal
+    setSelectedTournament(tournament);
+    setShowEditModal(true);
   };
 
   // Remove old handleDelete and replace with handleDeleteClick
@@ -479,8 +501,63 @@ const AdminTournaments = () => {
     }
   };
 
+  const handleEditSubmit = async (tournamentData) => {
+    if (!selectedTournament) return;
+    try {
+      const result = await editTournament(tournamentData, selectedTournament._id, token);
+      console.log('Tournament update result:', result);
+
+      // Refresh the tournaments list after successful update
+      const params = {};
+      if (searchTerm) params.search = searchTerm;
+      if (statusFilter) params.status = statusFilter;
+      if (gameFilter) params.gameTitle = gameFilter;
+
+      const data = await fetchTournaments(params, token);
+      setTournaments(data.tournaments || []);
+
+      // Close the modal
+      setShowEditModal(false);
+      setSelectedTournament(null);
+
+      toast.success('Tournament updated successfully!');
+    } catch (error) {
+      console.error('Error updating tournament:', error);
+      console.error('Error details:', error.message, error.stack);
+
+      // Even if there's an error, refresh the list in case it was updated
+      try {
+        const params = {};
+        if (searchTerm) params.search = searchTerm;
+        if (statusFilter) params.status = statusFilter;
+        if (gameFilter) params.gameTitle = gameFilter;
+
+        const data = await fetchTournaments(params, token);
+        setTournaments(data.tournaments || []);
+      } catch (refreshError) {
+        console.error('Error refreshing tournaments:', refreshError);
+      }
+
+      // Close the modal anyway since the tournament might have been updated
+      setShowEditModal(false);
+      setSelectedTournament(null);
+
+      // Show a more informative message
+      if (error.message.includes('Failed to update tournament')) {
+        toast.info('Tournament may have been updated successfully. Please check the tournaments list.');
+      } else {
+        toast.error(`Error: ${error.message}`);
+      }
+    }
+  };
+
   const handleCreateCancel = () => {
     setShowCreateModal(false);
+  };
+
+  const handleEditCancel = () => {
+    setShowEditModal(false);
+    setSelectedTournament(null);
   };
 
   const handleEnter = (tournament) => {
@@ -607,6 +684,16 @@ const AdminTournaments = () => {
           onSubmit={handleCreateSubmit}
           onCancel={handleCreateCancel}
           isEditing={false}
+        />
+      )}
+
+      {/* Tournament Edit Modal */}
+      {showEditModal && selectedTournament && (
+        <TournamentForm
+          tournament={selectedTournament}
+          onSubmit={handleEditSubmit}
+          onCancel={handleEditCancel}
+          isEditing={true}
         />
       )}
 

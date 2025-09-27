@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, ChevronDown, MapPin, Gamepad2, Trophy, Calendar, Users } from 'lucide-react';
 
 // --- API CALLS ---
@@ -57,7 +58,7 @@ const FilterDropdown = ({ options, selected, onSelect, placeholder, icon: Icon }
   );
 };
 
-const TournamentCard = ({ tournament }) => {
+const TournamentCard = ({ tournament, onClick }) => {
     const getStatusIndicator = () => {
         switch (tournament.status) {
             case 'in_progress':
@@ -110,7 +111,10 @@ const TournamentCard = ({ tournament }) => {
     };
 
     return (
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl overflow-hidden transition-all duration-300 hover:border-orange-500/50 hover:scale-105 hover:shadow-2xl hover:shadow-orange-500/10 group">
+        <div 
+            className="bg-zinc-900/50 border border-zinc-800 rounded-xl overflow-hidden transition-all duration-300 hover:border-orange-500/50 hover:scale-105 hover:shadow-2xl hover:shadow-orange-500/10 group cursor-pointer"
+            onClick={onClick}
+        >
             <div className="relative p-6">
                 {getStatusIndicator()}
                 <div className="flex items-center gap-4 mb-4">
@@ -156,12 +160,24 @@ const TournamentCard = ({ tournament }) => {
 };
 
 const Tournaments2 = () => {
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [filters, setFilters] = useState({ game: '', region: '', status: '' });
     const [tournaments, setTournaments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [liveTournaments, setLiveTournaments] = useState([]);
     const [upcomingTournaments, setUpcomingTournaments] = useState([]);
+
+    const formatPrizePool = (prizePool) => {
+        if (!prizePool || !prizePool.total) return 'TBD';
+        const amount = prizePool.total;
+        if (amount >= 100000) {
+            return `₹${(amount / 100000).toFixed(1)}L`;
+        } else if (amount >= 1000) {
+            return `₹${(amount / 1000).toFixed(1)}K`;
+        }
+        return `₹${amount}`;
+    };
 
     useEffect(() => {
         const loadTournaments = async () => {
@@ -248,7 +264,10 @@ const Tournaments2 = () => {
                                 <span className="flex items-center gap-2"><Users className="w-5 h-5 text-orange-400"/>{featuredTournament.participatingTeams?.length || 0} Teams</span>
                             </div>
                         </div>
-                        <button className="bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold px-8 py-4 rounded-lg transition-transform hover:scale-105 whitespace-nowrap">
+                        <button 
+                            className="bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold px-8 py-4 rounded-lg transition-transform hover:scale-105 whitespace-nowrap cursor-pointer"
+                            onClick={() => navigate(`/tournament/${featuredTournament._id}`)}
+                        >
                             View Details
                         </button>
                     </div>
@@ -294,7 +313,7 @@ const Tournaments2 = () => {
                 {/* --- TOURNAMENTS GRID --- */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {filteredTournaments.length > 0 ? (
-                        filteredTournaments.map(t => <TournamentCard key={t._id} tournament={t} />)
+                        filteredTournaments.map(t => <TournamentCard key={t._id} tournament={t} onClick={() => navigate(`/tournament/${t._id}`)} />)
                     ) : (
                         <p className="lg:col-span-3 text-center text-zinc-400 text-lg">No tournaments match your criteria.</p>
                     )}

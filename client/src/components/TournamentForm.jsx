@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Upload, Calendar, MapPin, Trophy, Users, DollarSign, Settings, UserPlus, Target, ChevronDown, ChevronUp } from 'lucide-react';
+import { toast } from 'react-toastify';
 import TeamSearchModal from './TeamSearchModal';
 import PrizeDistributionForm from './PrizeDistributionForm';
 import PhaseManager from './PhaseManager';
@@ -16,8 +17,7 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
     visibility: 'public',
     startDate: '',
     endDate: '',
-    registrationDeadline: '',
-    maxParticipants: '',
+    registrationEndDate: '',
     slots: {
       total: 16,
       registered: 0
@@ -28,33 +28,30 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
       distribution: [],
       individualAwards: []
     },
-    rules: '',
-    requirements: '',
-    contactInfo: {
-      email: '',
-      phone: '',
-      discord: ''
-    },
     media: {
       logo: '',
-      banner: '',
+      coverImage: '',
       screenshots: []
     },
     organizer: {
       name: 'Aegis Esports',
       organizationRef: null,
-      contactPerson: '',
       contactEmail: ''
     },
     format: 'Battle Royale Points System',
     participatingTeams: [],
     tags: [],
-    featured: false,
-    isOfficial: true
+    featured: false
   });
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+
+  // File upload states
+  const [logoFile, setLogoFile] = useState(null);
+  const [coverFile, setCoverFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState('');
+  const [coverPreview, setCoverPreview] = useState('');
 
   // Modal states
   const [showTeamSearchModal, setShowTeamSearchModal] = useState(false);
@@ -75,8 +72,11 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
         ...tournament,
         startDate: tournament.startDate ? tournament.startDate.split('T')[0] : '',
         endDate: tournament.endDate ? tournament.endDate.split('T')[0] : '',
-        registrationDeadline: tournament.registrationDeadline ? tournament.registrationDeadline.split('T')[0] : ''
+        registrationEndDate: tournament.registrationEndDate ? tournament.registrationEndDate.split('T')[0] : ''
       });
+      // Set previews for editing
+      setLogoPreview(tournament.media?.logo || '');
+      setCoverPreview(tournament.media?.coverImage || '');
     } else {
       // Initialize with default values if no tournament provided
       setFormData({
@@ -90,8 +90,7 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
         visibility: 'public',
         startDate: '',
         endDate: '',
-        registrationDeadline: '',
-        maxParticipants: '5',
+        registrationEndDate: '',
         slots: {
           total: 16,
           registered: 0
@@ -102,30 +101,26 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
           distribution: [],
           individualAwards: []
         },
-        rules: '',
-        requirements: '',
-        contactInfo: {
-          email: '',
-          phone: '',
-          discord: ''
-        },
         media: {
           logo: '',
-          banner: '',
+          coverImage: '',
           screenshots: []
         },
         organizer: {
           name: 'Aegis Esports',
           organizationRef: null,
-          contactPerson: '',
           contactEmail: ''
         },
         format: 'Battle Royale Points System',
         participatingTeams: [],
         tags: [],
-        featured: false,
-        isOfficial: true
+        featured: false
       });
+      // Clear file states for new form
+      setLogoFile(null);
+      setCoverFile(null);
+      setLogoPreview('');
+      setCoverPreview('');
     }
   }, [tournament]);
 
@@ -156,6 +151,43 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
       }));
     }
   };
+
+  const handleFileChange = (e, fileType) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error(`${fileType} must be an image file`);
+      e.target.value = ''; // Clear input
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(`${fileType} size must be less than 5MB`);
+      e.target.value = ''; // Clear input
+      return;
+    }
+
+    // Create preview
+    const previewUrl = URL.createObjectURL(file);
+    if (fileType === 'logo') {
+      setLogoFile(file);
+      setLogoPreview(previewUrl);
+    } else if (fileType === 'cover') {
+      setCoverFile(file);
+      setCoverPreview(previewUrl);
+    }
+  };
+
+  // Cleanup preview URLs
+  useEffect(() => {
+    return () => {
+      if (logoPreview) URL.revokeObjectURL(logoPreview);
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+    };
+  }, [logoPreview, coverPreview]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -191,7 +223,10 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
         return;
       }
 
-      // Filter out empty participating teams and clean up the data
+      // Create FormData for file uploads
+      const formDataToSend = new FormData();
+
+      // Append all form fields, flattening nested objects
       const cleanedFormData = {
         ...formData,
         participatingTeams: formData.participatingTeams?.filter(team => team && team.teamName && team.teamName.trim() !== '').map(team => ({
@@ -212,7 +247,28 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
         }
       };
 
-      await onSubmit(cleanedFormData);
+      // Append all fields to FormData
+      Object.keys(cleanedFormData).forEach(key => {
+        if (key === 'media') {
+          // Handle media separately - exclude logo/coverImage if files are provided
+          const media = { ...cleanedFormData.media };
+          if (logoFile) delete media.logo;
+          if (coverFile) delete media.coverImage;
+          formDataToSend.append(key, JSON.stringify(media));
+        } else {
+          formDataToSend.append(key, JSON.stringify(cleanedFormData[key]));
+        }
+      });
+
+      // Append files if selected
+      if (logoFile) {
+        formDataToSend.append('logo', logoFile);
+      }
+      if (coverFile) {
+        formDataToSend.append('coverImage', coverFile);
+      }
+
+      await onSubmit(formDataToSend);
     } catch (error) {
       console.error('Form submission error:', error);
     } finally {
@@ -408,12 +464,12 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
 
             <div>
               <label className="block text-sm font-medium text-zinc-300 mb-2">
-                Registration Deadline
+                Registration End Date
               </label>
               <input
                 type="date"
-                name="registrationDeadline"
-                value={formData.registrationDeadline}
+                name="registrationEndDate"
+                value={formData.registrationEndDate}
                 onChange={handleChange}
                 className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
@@ -451,6 +507,79 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
               className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
               placeholder="Tournament description..."
             />
+          </div>
+
+          {/* Media Uploads */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-white border-b border-zinc-800 pb-2">Media Uploads</h3>
+
+            {/* Tournament Logo */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-1">
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Tournament Logo
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileChange(e, 'logo')}
+                  className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-500 file:text-white hover:file:bg-orange-600"
+                />
+                {logoPreview && (
+                  <div className="mt-4">
+                    <img
+                      src={logoPreview}
+                      alt="Logo Preview"
+                      className="w-32 h-32 object-cover rounded-lg border border-zinc-700"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLogoFile(null);
+                        setLogoPreview('');
+                        document.querySelector('input[type="file"][accept="image/*"]:first-of-type').value = '';
+                      }}
+                      className="mt-2 text-red-400 hover:text-red-300 text-sm"
+                    >
+                      Remove Logo
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Tournament Cover Page */}
+              <div className="md:col-span-1">
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Tournament Cover Page
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileChange(e, 'cover')}
+                  className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-500 file:text-white hover:file:bg-orange-600"
+                />
+                {coverPreview && (
+                  <div className="mt-4">
+                    <img
+                      src={coverPreview}
+                      alt="Cover Preview"
+                      className="w-32 h-64 object-cover rounded-lg border border-zinc-700"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCoverFile(null);
+                        setCoverPreview('');
+                        document.querySelector('input[type="file"][accept="image/*"]:last-of-type').value = '';
+                      }}
+                      className="mt-2 text-red-400 hover:text-red-300 text-sm"
+                    >
+                      Remove Cover
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Status and Visibility */}
@@ -509,7 +638,7 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
 
               {expandedSections.slots && (
                 <div className="p-4 pt-0 border-t border-zinc-700 max-h-64 overflow-y-auto">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-zinc-300 mb-2">
                         Total Slots
@@ -521,20 +650,6 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
                         onChange={handleChange}
                         className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                         placeholder="16"
-                        min="1"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-300 mb-2">
-                        Max Participants per Team
-                      </label>
-                      <input
-                        type="number"
-                        name="maxParticipants"
-                        value={formData.maxParticipants}
-                        onChange={handleChange}
-                        className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        placeholder="5"
                         min="1"
                       />
                     </div>

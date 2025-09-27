@@ -1,4 +1,6 @@
 import express from 'express';
+import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
 import Tournament from '../models/tournament.model.js';
 import Match from '../models/match.model.js';
 import Team from '../models/team.model.js';
@@ -133,16 +135,82 @@ router.get('/tournaments', verifyAdminToken, async (req, res) => {
   }
 });
 
-// Create tournament
-router.post('/tournaments', verifyAdminToken, requirePermission('canCreateTournament'), async (req, res) => {
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  },
+});
+
+// Create tournament with image uploads
+router.post('/tournaments', verifyAdminToken, requirePermission('canCreateTournament'), upload.fields([
+  { name: 'logo', maxCount: 1 },
+  { name: 'coverImage', maxCount: 1 }
+]), async (req, res) => {
   try {
     const tournamentData = req.body;
+
+    // Parse JSON strings back to objects/values since FormData sends everything as strings
+    for (const key in tournamentData) {
+      if (typeof tournamentData[key] === 'string') {
+        try {
+          tournamentData[key] = JSON.parse(tournamentData[key]);
+        } catch (e) {
+          // If it's not valid JSON, keep as string
+        }
+      }
+    }
 
     // Validate required fields
     if (!tournamentData.tournamentName || !tournamentData.gameTitle || !tournamentData.startDate || !tournamentData.endDate) {
       return res.status(400).json({
         error: 'Missing required fields: tournamentName, gameTitle, startDate, endDate'
       });
+    }
+
+    // Handle logo upload
+    let logoUrl = '';
+    if (req.files && req.files.logo && req.files.logo[0]) {
+      const logoResult = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          { resource_type: 'image', folder: 'tournaments/logos' },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result.secure_url);
+          }
+        ).end(req.files.logo[0].buffer);
+      });
+      logoUrl = logoResult;
+    }
+
+    // Handle cover image upload
+    let coverImageUrl = '';
+    if (req.files && req.files.coverImage && req.files.coverImage[0]) {
+      const coverResult = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          { resource_type: 'image', folder: 'tournaments/covers' },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result.secure_url);
+          }
+        ).end(req.files.coverImage[0].buffer);
+      });
+      coverImageUrl = coverResult;
+    }
+
+    // Set media fields if images were uploaded
+    if (logoUrl || coverImageUrl) {
+      tournamentData.media = {
+        ...(tournamentData.media || {}),
+        logo: logoUrl,
+        coverImage: coverImageUrl
+      };
     }
 
     const tournament = new Tournament(tournamentData);
@@ -183,12 +251,57 @@ router.get('/tournaments/:id', verifyAdminToken, async (req, res) => {
   }
 });
 
-// Update tournament
-router.put('/tournaments/:id', verifyAdminToken, requirePermission('canEditTournament'), async (req, res) => {
+router.put('/tournaments/:id', verifyAdminToken, requirePermission('canEditTournament'), upload.fields([
+  { name: 'logo', maxCount: 1 },
+  { name: 'coverImage', maxCount: 1 }
+]), async (req, res) => {
   try {
+    const updateData = req.body;
+
+    // Parse JSON strings back to objects/values since FormData sends everything as strings
+    for (const key in updateData) {
+      if (typeof updateData[key] === 'string') {
+        try {
+          updateData[key] = JSON.parse(updateData[key]);
+        } catch (e) {
+          // If it's not valid JSON, keep as string
+        }
+      }
+    }
+
+    // Handle logo upload if provided
+    if (req.files && req.files.logo && req.files.logo[0]) {
+      const logoResult = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          { resource_type: 'image', folder: 'tournaments/logos' },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result.secure_url);
+          }
+        ).end(req.files.logo[0].buffer);
+      });
+      updateData.media = updateData.media || {};
+      updateData.media.logo = logoResult;
+    }
+
+    // Handle cover image upload if provided
+    if (req.files && req.files.coverImage && req.files.coverImage[0]) {
+      const coverResult = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          { resource_type: 'image', folder: 'tournaments/covers' },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result.secure_url);
+          }
+        ).end(req.files.coverImage[0].buffer);
+      });
+      updateData.media = updateData.media || {};
+      updateData.media.coverImage = coverResult;
+    }
+
     const tournament = await Tournament.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     )
     .populate('participatingTeams.team', 'teamName logo')
