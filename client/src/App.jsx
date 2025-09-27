@@ -1,5 +1,3 @@
-// src/App.jsx
-
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
@@ -32,6 +30,7 @@ import CreatePost from './components/CreatePost';
 import PostList from './components/PostList';
 import NotificationsPage from './components/NotificationsPage';
 import ConnectionsPage from './components/ConnectionsPage';
+import DetailedTournamentInfo2 from './components/DetailedTournamentInfo2';
 function App() {
   return (
     <div>
@@ -60,6 +59,7 @@ function App() {
             <Route path='/my-profile' element={<ProtectedRoute><MyProfilePage/></ProtectedRoute>} />
             <Route path='/settings' element={<ProtectedRoute><SettingsPage/></ProtectedRoute>} />
             <Route path='/tournaments2' element={<Tournaments2Page />} />
+            <Route path="/tournament/:id" element={<DetailedTournamentInfo2 />} />
 
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
