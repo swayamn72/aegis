@@ -31,6 +31,7 @@ import PostList from './components/PostList';
 import NotificationsPage from './components/NotificationsPage';
 import ConnectionsPage from './components/ConnectionsPage';
 import DetailedTournamentInfo2 from './components/DetailedTournamentInfo2';
+import ChatPage from './pages/ChatPage';
 function App() {
   return (
     <div>
@@ -48,6 +49,7 @@ function App() {
             <Route path='/opportunities' element={<OpportunitiesPage />} />
             <Route path='/notifications' element={<NotificationsPage />} />
             <Route path='/connections' element={<ConnectionsPage />} />
+            <Route path="/chat" element={<ChatPage  />} />
             <Route path='/scrims' element={<ScrimsPage />} />
             <Route path='/profile' element={<ProfilePlayer/>} />
             <Route path='/detailed/:playerId' element={<DetailedPlayerProfileDN/>} />
