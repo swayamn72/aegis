@@ -100,6 +100,17 @@ const playerSchema = new mongoose.Schema(
       type: String,
       enum: ['looking for a team', 'in a team', 'open for offers'],
     },
+    team: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Team',
+      default: null,
+    },
+    previousTeams: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Team',
+      },
+    ],
     availability: {
       type: String,
       enum: ['weekends only', 'evenings', 'flexible', 'full time'],

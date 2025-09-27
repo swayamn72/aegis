@@ -134,7 +134,7 @@ router.get("/me", async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log("GET /me - Token decoded:", decoded);
 
-    const user = await Player.findById(decoded.id).select("-password");
+    const user = await Player.findById(decoded.id).select("-password").populate('team').populate('previousTeams');
     console.log("GET /me - User found:", user ? user.username : "null");
 
     if (!user) {

@@ -1,0 +1,457 @@
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import {
+  ArrowLeft, Users, Trophy, Calendar, MapPin, Shield,
+  Award, Star, Target, TrendingUp, Share2, MessageCircle,
+  Check, Gamepad2, Briefcase, Copy, Twitter, Youtube,
+  Twitch
+} from 'lucide-react';
+import { FaDiscord } from "react-icons/fa"
+
+const DetailedTeamInfo = () => {
+  const { id } = useParams();
+  const [activeTab, setActiveTab] = useState('overview');
+  const [teamData, setTeamData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch team data from API
+  useEffect(() => {
+    const fetchTeamData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/teams/${id}`, {
+          credentials: 'include',
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch team data');
+        }
+        const data = await response.json();
+        setTeamData(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchTeamData();
+    }
+  }, [id]);
+
+  const TabButton = ({ id, label, isActive, onClick }) => (
+    <button
+      onClick={() => onClick(id)}
+      className={`px-6 py-3 font-medium rounded-lg transition-all duration-200 ${
+        isActive
+          ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg shadow-orange-500/30'
+          : 'bg-zinc-800/50 text-zinc-300 hover:bg-zinc-700/50 hover:text-white'
+      }`}
+    >
+      {label}
+    </button>
+  );
+
+  const StatCard = ({ icon: Icon, label, value, sublabel, color = "orange" }) => (
+    <div className={`bg-zinc-800/50 border border-${color}-400/30 rounded-xl p-4 shadow-lg shadow-${color}-500/10`}>
+      <div className="flex items-center justify-between mb-2">
+        <Icon className={`w-6 h-6 text-${color}-400`} />
+      </div>
+      <div className={`text-2xl font-bold text-${color}-400 mb-1`}>{value}</div>
+      <div className="text-zinc-400 text-sm">{label}</div>
+      {sublabel && <div className="text-zinc-500 text-xs mt-1">{sublabel}</div>}
+    </div>
+  );
+
+  const PlayerCard = ({ player }) => (
+    <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4 hover:border-orange-500/40 transition-colors group">
+      <div className="flex items-center gap-4 mb-3">
+        <img
+          src={player.profilePicture || `https://placehold.co/64x64/4A5568/FFFFFF?text=${player.username?.charAt(0) || 'P'}`}
+          alt={player.username}
+          className="w-12 h-12 rounded-full object-cover ring-2 ring-zinc-700 group-hover:ring-orange-500/50 transition-colors"
+        />
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-white font-semibold">{player.inGameName || player.username}</span>
+            {player.verified && (
+              <Shield className="w-4 h-4 text-amber-400" title="Verified Player" />
+            )}
+          </div>
+          <div className="text-zinc-400 text-sm">{player.realName}</div>
+        </div>
+        <div className="text-right">
+          <div className="text-orange-400 font-semibold text-sm">
+            {player.inGameRole?.join(', ') || 'Player'}
+          </div>
+          <div className="text-zinc-500 text-xs">{player.aegisRating || 0}</div>
+        </div>
+      </div>
+      
+      <div className="space-y-1">
+        <div className="text-xs text-zinc-400 flex items-center gap-1">
+          <Trophy className="w-3 h-3 text-amber-400" />
+          {player.tournamentsPlayed || 0} Tournaments
+        </div>
+        <div className="text-xs text-zinc-400 flex items-center gap-1">
+          <Target className="w-3 h-3 text-green-400" />
+          {player.matchesPlayed || 0} Matches
+        </div>
+      </div>
+    </div>
+  );
+
+
+
+  if (loading) {
+    return (
+      <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-400 mx-auto mb-4"></div>
+          <p className="text-zinc-400 text-lg">Loading team information...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-400 text-lg mb-4">Error loading team data</div>
+          <p className="text-zinc-400">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!teamData) {
+    return (
+      <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-zinc-400 text-lg">Team not found</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans mt-[100px]">
+      <div className="container mx-auto px-6 py-8">
+
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-6">
+          <button className="p-2 bg-zinc-800/50 hover:bg-zinc-700/50 rounded-lg transition-colors">
+            <ArrowLeft className="w-5 h-5 text-zinc-300" />
+          </button>
+          <div>
+            <h1 className="text-3xl font-bold text-white">Team Profile</h1>
+            <p className="text-zinc-400">Professional Esports Team</p>
+          </div>
+        </div>
+
+        {/* Team Header */}
+        <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-8 mb-8">
+          <div className="flex flex-col lg:flex-row gap-8">
+
+            {/* Left Side - Team Info */}
+            <div className="flex-1">
+              <div className="flex items-start gap-6 mb-6">
+                <div className="relative">
+                  <img
+                    src={teamData.logo || `https://placehold.co/120x120/4A5568/FFFFFF?text=${teamData.tag || teamData.teamName?.charAt(0) || 'T'}`}
+                    alt={teamData.teamName}
+                    className="w-24 h-24 rounded-xl object-contain bg-zinc-800/50 p-2"
+                  />
+                  {teamData.verified && (
+                    <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-orange-400 to-red-500 p-2 rounded-full shadow-lg shadow-orange-400/50">
+                      <Check className="w-4 h-4 text-white" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h1 className="text-4xl font-bold text-white">{teamData.teamName}</h1>
+                    {teamData.tag && (
+                      <span className="bg-orange-500/20 border border-orange-500/30 rounded-lg px-3 py-1 text-orange-400 font-bold">
+                        {teamData.tag}
+                      </span>
+                    )}
+                    <div className="flex gap-2">
+                      <button className="p-2 bg-zinc-700/50 hover:bg-zinc-600/50 rounded-lg transition-colors group">
+                        <Share2 className="w-5 h-5 text-zinc-300 group-hover:text-orange-400" />
+                      </button>
+                      <button className="p-2 bg-zinc-700/50 hover:bg-zinc-600/50 rounded-lg transition-colors group">
+                        <MessageCircle className="w-5 h-5 text-zinc-300 group-hover:text-orange-400" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 text-zinc-400 mb-4">
+                    <span className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      {teamData.region || 'Unknown'}
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      Est. {new Date(teamData.establishedDate).getFullYear()}
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <Gamepad2 className="w-4 h-4" />
+                      {teamData.primaryGame}
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      {teamData.players?.length || 0} Players
+                    </span>
+                  </div>
+
+                  <p className="text-zinc-300 text-sm mb-6 max-w-2xl">{teamData.bio || 'Professional esports team competing at the highest level.'}</p>
+
+                  {/* Social Links */}
+                  <div className="flex gap-3">
+                    {teamData.socials?.discord && (
+                      <button className="flex items-center gap-2 bg-indigo-600/20 border border-indigo-500/30 rounded-lg px-3 py-2 text-indigo-400 hover:bg-indigo-600/30 transition-colors">
+                        <FaDiscord className="w-4 h-4" />
+                        Discord
+                      </button>
+                    )}
+                    {teamData.socials?.twitter && (
+                      <button className="flex items-center gap-2 bg-blue-600/20 border border-blue-500/30 rounded-lg px-3 py-2 text-blue-400 hover:bg-blue-600/30 transition-colors">
+                        <Twitter className="w-4 h-4" />
+                        Twitter
+                      </button>
+                    )}
+                    {teamData.socials?.youtube && (
+                      <button className="flex items-center gap-2 bg-red-600/20 border border-red-500/30 rounded-lg px-3 py-2 text-red-400 hover:bg-red-600/30 transition-colors">
+                        <Youtube className="w-4 h-4" />
+                        YouTube
+                      </button>
+                    )}
+                    {teamData.socials?.twitch && (
+                      <button className="flex items-center gap-2 bg-purple-600/20 border border-purple-500/30 rounded-lg px-3 py-2 text-purple-400 hover:bg-purple-600/30 transition-colors">
+                        <Twitch className="w-4 h-4" />
+                        Twitch
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side - Quick Stats */}
+            <div className="lg:w-80">
+              <div className="bg-gradient-to-r from-orange-600/20 to-red-500/20 border border-orange-400/30 rounded-xl p-6 mb-6">
+                <div className="text-center mb-4">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Trophy className="w-6 h-6 text-amber-400" />
+                    <span className="text-amber-400 font-semibold text-lg">Total Earnings</span>
+                  </div>
+                  <div className="text-4xl font-bold text-white mb-1">
+                    ₹{((teamData.totalEarnings || 0) / 100000).toFixed(1)}L
+                  </div>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-green-400 text-sm">
+                  <TrendingUp className="w-4 h-4" />
+                  <span>Aegis Rating: {teamData.aegisRating || 0}</span>
+                </div>
+              </div>
+
+              <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
+                <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                  <Award className="w-5 h-5 text-orange-400" />
+                  Team Overview
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400 text-sm">Captain</span>
+                    <span className="text-white font-medium text-sm">
+                      {teamData.captain?.inGameName || teamData.captain?.username || 'TBA'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400 text-sm">Roster Size</span>
+                    <span className="text-orange-400 font-medium text-sm">
+                      {teamData.players?.length || 0}/5
+                    </span>
+                  </div>
+                  {teamData.organization && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-400 text-sm">Organization</span>
+                      <span className="text-blue-400 font-medium text-sm">
+                        {teamData.organization.orgName}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 gap-4 mb-6 mt-6">
+            <StatCard 
+              icon={Trophy} 
+              label="Total Earnings" 
+              value={`₹${((teamData.totalEarnings || 0) / 100000).toFixed(1)}L`} 
+              color="green" 
+            />
+            <StatCard 
+              icon={Target} 
+              label="Aegis Rating" 
+              value={teamData.aegisRating || 0} 
+              color="orange" 
+            />
+            <StatCard 
+              icon={Users} 
+              label="Active Players" 
+              value={teamData.players?.length || 0} 
+              color="blue" 
+            />
+            <StatCard 
+              icon={Star} 
+              label="Qualified Events" 
+              value={teamData.qualifiedEvents?.length || 0} 
+              color="purple" 
+            />
+          </div>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="flex flex-wrap gap-3 mb-8">
+          <TabButton id="overview" label="Overview" isActive={activeTab === 'overview'} onClick={setActiveTab} />
+          <TabButton id="roster" label="Current Roster" isActive={activeTab === 'roster'} onClick={setActiveTab} />
+          <TabButton id="achievements" label="Achievements" isActive={activeTab === 'achievements'} onClick={setActiveTab} />
+        </div>
+
+        {/* Tab Content */}
+        <div className="min-h-[500px]">
+          {activeTab === 'overview' && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Team Stats */}
+              <div className="lg:col-span-2 bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                  <TrendingUp className="w-6 h-6 text-orange-400" />
+                  Team Statistics
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-orange-400 mb-2">
+                      ₹{((teamData.totalEarnings || 0) / 100000).toFixed(1)}L
+                    </div>
+                    <div className="text-zinc-400 text-sm">Total Earnings</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-green-400 mb-2">{teamData.aegisRating || 0}</div>
+                    <div className="text-zinc-400 text-sm">Aegis Rating</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-blue-400 mb-2">{teamData.players?.length || 0}</div>
+                    <div className="text-zinc-400 text-sm">Active Players</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Organization Info */}
+              {teamData.organization && (
+                <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+                  <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                    <Briefcase className="w-5 h-5 text-orange-400" />
+                    Organization
+                  </h3>
+                  <div className="text-center">
+                    <img
+                      src={teamData.organization.logo || `https://placehold.co/80x80/4A5568/FFFFFF?text=${teamData.organization.orgName?.charAt(0) || 'O'}`}
+                      alt={teamData.organization.orgName}
+                      className="w-16 h-16 rounded-xl mx-auto mb-4"
+                    />
+                    <h4 className="text-lg font-bold text-white mb-2">{teamData.organization.orgName}</h4>
+                    <p className="text-zinc-400 text-sm mb-4">
+                      {teamData.organization.description || 'Professional Esports Organization'}
+                    </p>
+                    <div className="text-sm text-zinc-500">
+                      Est. {new Date(teamData.organization.establishedDate).getFullYear()}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'roster' && (
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+              <h2 className="text-2xl font-bold text-white mb-6">Current Roster</h2>
+              
+              {(!teamData.players || teamData.players.length === 0) ? (
+                <div className="text-center py-16">
+                  <Users className="w-24 h-24 text-zinc-600 mx-auto mb-6" />
+                  <h3 className="text-xl font-semibold text-white mb-2">No roster information available</h3>
+                  <p className="text-zinc-400">Team roster will be displayed here once available</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {teamData.players.map(player => (
+                    <PlayerCard key={player._id} player={player} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'achievements' && (
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+              <h2 className="text-2xl font-bold text-white mb-6">Achievements & Awards</h2>
+              
+              {(!teamData.qualifiedEvents || teamData.qualifiedEvents.length === 0) ? (
+                <div className="text-center py-16">
+                  <Award className="w-24 h-24 text-zinc-600 mx-auto mb-6" />
+                  <h3 className="text-xl font-semibold text-white mb-2">No achievements yet</h3>
+                  <p className="text-zinc-400">Team achievements and awards will be displayed here</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {teamData.qualifiedEvents.map((event, index) => (
+                    <div key={index} className="bg-zinc-800/50 border border-amber-500/30 rounded-lg p-4">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Trophy className="w-6 h-6 text-amber-400" />
+                        <span className="text-white font-semibold">{event}</span>
+                      </div>
+                      <p className="text-zinc-400 text-sm">Qualified Event</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Action Buttons Section */}
+        <div className="mt-8 flex flex-wrap gap-4 justify-center">
+          <button className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold px-8 py-3 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg shadow-orange-500/30">
+            Contact Team
+          </button>
+          <button className="bg-zinc-700 hover:bg-zinc-600 text-white font-medium px-8 py-3 rounded-lg transition-colors border border-orange-400/30">
+            Follow Team
+          </button>
+          <button className="bg-zinc-700 hover:bg-zinc-600 text-white font-medium px-6 py-3 rounded-lg transition-colors border border-zinc-600 flex items-center gap-2">
+            <Share2 className="w-4 h-4" />
+            Share Team
+          </button>
+          <button className="bg-zinc-700 hover:bg-zinc-600 text-white font-medium px-6 py-3 rounded-lg transition-colors border border-zinc-600 flex items-center gap-2">
+            <Copy className="w-4 h-4" />
+            Copy Team URL
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DetailedTeamInfo;

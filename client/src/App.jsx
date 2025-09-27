@@ -29,9 +29,11 @@ import CommunityPage from './pages/CommunityPage';
 import CreatePost from './components/CreatePost';
 import PostList from './components/PostList';
 import NotificationsPage from './components/NotificationsPage';
-import ConnectionsPage from './components/ConnectionsPage';
+import ConnectionsPage from './pages/ConnectionsPage';
 import DetailedTournamentInfo2 from './components/DetailedTournamentInfo2';
 import ChatPage from './pages/ChatPage';
+import MyTeamsPage from './pages/MyTeamsPage';
+import DetailedTeamInfo from './components/DetailedTeamInfo';
 function App() {
   return (
     <div>
@@ -62,12 +64,14 @@ function App() {
             <Route path='/settings' element={<ProtectedRoute><SettingsPage/></ProtectedRoute>} />
             <Route path='/tournaments2' element={<Tournaments2Page />} />
             <Route path="/tournament/:id" element={<DetailedTournamentInfo2 />} />
+            <Route path="/team/:id" element={<DetailedTeamInfo />} />
 
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/tournaments" element={<AdminTournaments />} />
             <Route path="/admin/matches" element={<AdminMatches />} />
+            <Route path="/my-teams" element={<ProtectedRoute><MyTeamsPage /></ProtectedRoute>} />
           </Routes>
           <ToastContainer
             position="bottom-right"
