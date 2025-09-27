@@ -16,6 +16,7 @@ import matchRoutes from './routes/match.routes.js';
 import feedRoutes from './routes/feed.routes.js';
 import connectionRoutes from './routes/connection.routes.js';
 import chatRoutes from './routes/message.routes.js';
+import teamRoutes from './routes/team.routes.js';
 
 // Import Models to register with Mongoose
 import './models/player.model.js';
@@ -82,6 +83,7 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/feed', feedRoutes);
 app.use('/api/connections', connectionRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/teams', teamRoutes);
 
 
 const server = createServer(app);

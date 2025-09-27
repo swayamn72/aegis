@@ -9,6 +9,7 @@ import DetailedMatchInfo from '../components/DetailedMatchInfo';
 import DetailedOrgInfo from '../components/DetailedOrgInfo';
 import AegisProfileCardBGMI from '../components/AegisProfileCardBGMI';
 import DetailedTournamentInfo from '../components/DetailedTournamentInfo';
+import DetailedTeamInfo from '../components/DetailedTeamInfo';
 
 
 
@@ -24,7 +25,7 @@ function HomePage() {
       <Footer />
       <DetailedTournamentInfo/>
       <DetailedMatchInfo/>
-      
+      <DetailedTeamInfo/>
     </>
   );
 }
