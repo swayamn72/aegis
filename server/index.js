@@ -17,6 +17,7 @@ import feedRoutes from './routes/feed.routes.js';
 import connectionRoutes from './routes/connection.routes.js';
 import chatRoutes from './routes/message.routes.js';
 import teamRoutes from './routes/team.routes.js';
+import ChatMessage from './models/chat.model.js';
 
 // Import Models to register with Mongoose
 import './models/player.model.js';
@@ -107,7 +108,7 @@ io.on('connection', (socket) => {
   });
 
   
-  socket.on('sendMessage', ({ senderId, receiverId, message }) => {
+  socket.on('sendMessage', async ({ senderId, receiverId, message }) => {
     console.log(`${senderId} -> ${receiverId}: ${message}`);
 
     const msgData = {
@@ -117,9 +118,18 @@ io.on('connection', (socket) => {
       timestamp: new Date(),
     };
 
-   
-    io.to(receiverId).emit('receiveMessage', msgData);
-    io.to(senderId).emit('receiveMessage', msgData);
+    try {
+      const savedMessage = await ChatMessage.create(msgData);
+      const msgToEmit = {
+        _id: savedMessage._id,
+        ...msgData,
+      };
+
+      // Emit to receiver (sender adds locally in client)
+      io.to(receiverId).emit('receiveMessage', msgToEmit);
+    } catch (error) {
+      console.error('Error saving message:', error);
+    }
   });
 
   
