@@ -34,6 +34,7 @@ import DetailedTournamentInfo2 from './components/DetailedTournamentInfo2';
 import ChatPage from './pages/ChatPage';
 import MyTeamsPage from './pages/MyTeamsPage';
 import DetailedTeamInfo from './components/DetailedTeamInfo';
+import DetailedMatchInfoBGMI from './components/DetailedMatchInfoBGMI'
 function App() {
   return (
     <div>
@@ -65,7 +66,7 @@ function App() {
             <Route path='/tournaments2' element={<Tournaments2Page />} />
             <Route path="/tournament/:id" element={<DetailedTournamentInfo2 />} />
             <Route path="/team/:id" element={<DetailedTeamInfo />} />
-
+            <Route path="/matches/:id" element={<DetailedMatchInfoBGMI />} />
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />

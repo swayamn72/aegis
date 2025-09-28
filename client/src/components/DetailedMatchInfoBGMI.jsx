@@ -1,351 +1,121 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Clock, MapPin, Trophy, Target, Shield,
   TrendingUp, Star, Crown, Calendar, Globe, Hash,
   ExternalLink, Users, Award, Flag, Activity, Zap,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, Timer, Gamepad2, Medal,
+  BarChart3, Eye, Share2, Download, AlertCircle
 } from 'lucide-react';
 
-/**
- * DetailedMatchInfo for BGMI
- * BGMS Season 4 Grand Finals - Match 3
- * Date: 2024-09-15 | Map: Erangel
- */
+import ErangelMap from '../assets/mapImages/erangel.jpg';
+import MiramarMap from '../assets/mapImages/miramar.webp';
+import SanhokMap from '../assets/mapImages/sanhok.webp';
+import VikendiMap from '../assets/mapImages/vikendi.jpg';
+
+const formatTime = (seconds) => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+};
+
+const mapImages = {
+  'Erangel': ErangelMap,
+  'Miramar': MiramarMap,
+  'Sanhok': SanhokMap,
+  'Vikendi': VikendiMap,
+  'Livik': ErangelMap,
+  'Nusa': ErangelMap,
+  'Rondo': ErangelMap
+};
 
 const DetailedMatchInfo = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('leaderboard');
   const [expandedTeam, setExpandedTeam] = useState(null);
-  
-  // BGMI Match data
-  const matchData = {
-    id: "BGMS-S4-GF-M3",
-    matchNumber: 3,
-    matchType: "Grand Finals",
-    date: "2024-09-15",
-    time: "Mumbai (IST)",
-    duration: "24:32",
-    event: "BGMI Masters Series Season 4",
-    stage: "Grand Finals",
-    server: "Asia",
-    gameVersion: "3.4.0",
-    map: "Erangel",
-    venue: "Offline LAN • Mumbai",
-    totalKills: 67,
-    totalDamage: 89245,
-    chickenDinnerTeam: "Soul",
-    firstBloodPlayer: "ScoutOP",
-    firstBloodTime: "0:45"
-  };
+  const [matchData, setMatchData] = useState(null);
+  const [teamsData, setTeamsData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // 16 Teams with their performance data
-  const teamsData = [
-    { 
-      position: 1, 
-      team: "Team Soul", 
-      tag: "SOUL", 
-      logo: "https://placehold.co/60x60/FF6B6B/FFFFFF?text=S",
-      kills: 12, 
-      placementPoints: 10, 
-      killPoints: 12, 
-      totalPoints: 22,
-      survivalTime: "24:32",
-      damage: 8234,
-      chickenDinner: true,
-      players: [
-        { name: "ScoutOP", kills: 4, assists: 2, damage: 2145, survivalTime: "24:32", role: "IGL" },
-        { name: "Clutchgod", kills: 3, assists: 1, damage: 2034, survivalTime: "24:32", role: "Assaulter" },
-        { name: "Regaltos", kills: 3, assists: 3, damage: 1987, survivalTime: "24:32", role: "Support" },
-        { name: "Mavi", kills: 2, assists: 2, damage: 2068, survivalTime: "24:32", role: "Fragger" }
-      ]
-    },
-    { 
-      position: 2, 
-      team: "GodLike Esports", 
-      tag: "GLE", 
-      logo: "https://placehold.co/60x60/4ECDC4/FFFFFF?text=G",
-      kills: 8, 
-      placementPoints: 6, 
-      killPoints: 8, 
-      totalPoints: 14,
-      survivalTime: "23:45",
-      damage: 6789,
-      chickenDinner: false,
-      players: [
-        { name: "Zgod", kills: 3, assists: 1, damage: 1876, survivalTime: "23:45", role: "IGL" },
-        { name: "Jonathan", kills: 2, assists: 2, damage: 1734, survivalTime: "23:45", role: "Assaulter" },
-        { name: "Admino", kills: 2, assists: 1, damage: 1612, survivalTime: "23:45", role: "Support" },
-        { name: "Destro", kills: 1, assists: 3, damage: 1567, survivalTime: "23:45", role: "Fragger" }
-      ]
-    },
-    { 
-      position: 3, 
-      team: "TSM", 
-      tag: "TSM", 
-      logo: "https://placehold.co/60x60/45B7D1/FFFFFF?text=T",
-      kills: 9, 
-      placementPoints: 5, 
-      killPoints: 9, 
-      totalPoints: 14,
-      survivalTime: "22:18",
-      damage: 7123,
-      chickenDinner: false,
-      players: [
-        { name: "Ghatak", kills: 3, assists: 2, damage: 1923, survivalTime: "22:18", role: "IGL" },
-        { name: "Jash", kills: 2, assists: 1, damage: 1789, survivalTime: "22:18", role: "Assaulter" },
-        { name: "Neyoo", kills: 2, assists: 2, damage: 1678, survivalTime: "22:18", role: "Support" },
-        { name: "Akshat", kills: 2, assists: 0, damage: 1733, survivalTime: "22:18", role: "Fragger" }
-      ]
-    },
-    { 
-      position: 4, 
-      team: "OR Esports", 
-      tag: "OR", 
-      logo: "https://placehold.co/60x60/F7DC6F/FFFFFF?text=OR",
-      kills: 6, 
-      placementPoints: 4, 
-      killPoints: 6, 
-      totalPoints: 10,
-      survivalTime: "21:34",
-      damage: 5456,
-      chickenDinner: false,
-      players: [
-        { name: "Rebel", kills: 2, assists: 1, damage: 1456, survivalTime: "21:34", role: "IGL" },
-        { name: "Pahadi", kills: 2, assists: 2, damage: 1389, survivalTime: "21:34", role: "Assaulter" },
-        { name: "Alpha", kills: 1, assists: 1, damage: 1234, survivalTime: "21:34", role: "Support" },
-        { name: "Fierce", kills: 1, assists: 0, damage: 1377, survivalTime: "21:34", role: "Fragger" }
-      ]
-    },
-    { 
-      position: 5, 
-      team: "Revenant Esports", 
-      tag: "REV", 
-      logo: "https://placehold.co/60x60/BB8FCE/FFFFFF?text=R",
-      kills: 7, 
-      placementPoints: 3, 
-      killPoints: 7, 
-      totalPoints: 10,
-      survivalTime: "20:12",
-      damage: 6234,
-      chickenDinner: false,
-      players: [
-        { name: "Owais", kills: 3, assists: 1, damage: 1734, survivalTime: "20:12", role: "IGL" },
-        { name: "Sensei", kills: 2, assists: 2, damage: 1567, survivalTime: "20:12", role: "Assaulter" },
-        { name: "Tofu", kills: 1, assists: 1, damage: 1456, survivalTime: "20:12", role: "Support" },
-        { name: "Daljitsk", kills: 1, assists: 0, damage: 1477, survivalTime: "20:12", role: "Fragger" }
-      ]
-    },
-    { 
-      position: 6, 
-      team: "Blind Esports", 
-      tag: "BE", 
-      logo: "https://placehold.co/60x60/85C1E9/FFFFFF?text=BE",
-      kills: 5, 
-      placementPoints: 2, 
-      killPoints: 5, 
-      totalPoints: 7,
-      survivalTime: "19:45",
-      damage: 4789,
-      chickenDinner: false,
-      players: [
-        { name: "Mamba", kills: 2, assists: 1, damage: 1289, survivalTime: "19:45", role: "IGL" },
-        { name: "Viper", kills: 1, assists: 2, damage: 1156, survivalTime: "19:45", role: "Assaulter" },
-        { name: "Badman", kills: 1, assists: 1, damage: 1123, survivalTime: "19:45", role: "Support" },
-        { name: "Psycho", kills: 1, assists: 0, damage: 1221, survivalTime: "19:45", role: "Fragger" }
-      ]
-    },
-    { 
-      position: 7, 
-      team: "Velocity Gaming", 
-      tag: "VLT", 
-      logo: "https://placehold.co/60x60/82E0AA/FFFFFF?text=VG",
-      kills: 4, 
-      placementPoints: 1, 
-      killPoints: 4, 
-      totalPoints: 5,
-      survivalTime: "18:23",
-      damage: 3987,
-      chickenDinner: false,
-      players: [
-        { name: "Smokie", kills: 2, assists: 0, damage: 1123, survivalTime: "18:23", role: "IGL" },
-        { name: "Paradox", kills: 1, assists: 1, damage: 987, survivalTime: "18:23", role: "Assaulter" },
-        { name: "Nakul", kills: 1, assists: 1, damage: 934, survivalTime: "18:23", role: "Support" },
-        { name: "Textures", kills: 0, assists: 2, damage: 943, survivalTime: "18:23", role: "Fragger" }
-      ]
-    },
-    { 
-      position: 8, 
-      team: "Team XO", 
-      tag: "XO", 
-      logo: "https://placehold.co/60x60/F1948A/FFFFFF?text=XO",
-      kills: 3, 
-      placementPoints: 1, 
-      killPoints: 3, 
-      totalPoints: 4,
-      survivalTime: "17:56",
-      damage: 3456,
-      chickenDinner: false,
-      players: [
-        { name: "Raven", kills: 1, assists: 1, damage: 934, survivalTime: "17:56", role: "IGL" },
-        { name: "Iconic", kills: 1, assists: 0, damage: 876, survivalTime: "17:56", role: "Assaulter" },
-        { name: "Shiba", kills: 1, assists: 1, damage: 823, survivalTime: "17:56", role: "Support" },
-        { name: "Fierce", kills: 0, assists: 1, damage: 823, survivalTime: "17:56", role: "Fragger" }
-      ]
-    },
-    { 
-      position: 9, 
-      team: "8Bit", 
-      tag: "8BIT", 
-      logo: "https://placehold.co/60x60/D2B4DE/FFFFFF?text=8B",
-      kills: 2, 
-      placementPoints: 0, 
-      killPoints: 2, 
-      totalPoints: 2,
-      survivalTime: "16:34",
-      damage: 2789,
-      chickenDinner: false,
-      players: [
-        { name: "Goldy", kills: 1, assists: 0, damage: 734, survivalTime: "16:34", role: "IGL" },
-        { name: "Aditya", kills: 1, assists: 1, damage: 689, survivalTime: "16:34", role: "Assaulter" },
-        { name: "Thug", kills: 0, assists: 1, damage: 678, survivalTime: "16:34", role: "Support" },
-        { name: "Ultron", kills: 0, assists: 0, damage: 688, survivalTime: "16:34", role: "Fragger" }
-      ]
-    },
-    { 
-      position: 10, 
-      team: "Team Tamilas", 
-      tag: "TT", 
-      logo: "https://placehold.co/60x60/AED6F1/FFFFFF?text=TT",
-      kills: 3, 
-      placementPoints: 0, 
-      killPoints: 3, 
-      totalPoints: 3,
-      survivalTime: "15:12",
-      damage: 3123,
-      chickenDinner: false,
-      players: [
-        { name: "Alpha7", kills: 2, assists: 0, damage: 834, survivalTime: "15:12", role: "IGL" },
-        { name: "Beast", kills: 1, assists: 1, damage: 789, survivalTime: "15:12", role: "Assaulter" },
-        { name: "Zaber", kills: 0, assists: 1, damage: 756, survivalTime: "15:12", role: "Support" },
-        { name: "Hunter", kills: 0, assists: 0, damage: 744, survivalTime: "15:12", role: "Fragger" }
-      ]
-    },
-    { 
-      position: 11, 
-      team: "Marcos Gaming", 
-      tag: "MG", 
-      logo: "https://placehold.co/60x60/F8C471/FFFFFF?text=MG",
-      kills: 4, 
-      placementPoints: 0, 
-      killPoints: 4, 
-      totalPoints: 4,
-      survivalTime: "14:45",
-      damage: 3678,
-      chickenDinner: false,
-      players: [
-        { name: "Scout", kills: 2, assists: 1, damage: 987, survivalTime: "14:45", role: "IGL" },
-        { name: "Snax", kills: 1, assists: 0, damage: 876, survivalTime: "14:45", role: "Assaulter" },
-        { name: "Viper", kills: 1, assists: 1, damage: 834, survivalTime: "14:45", role: "Support" },
-        { name: "Aaru", kills: 0, assists: 2, damage: 981, survivalTime: "14:45", role: "Fragger" }
-      ]
-    },
-    { 
-      position: 12, 
-      team: "Team Forever", 
-      tag: "FOR", 
-      logo: "https://placehold.co/60x60/85929E/FFFFFF?text=TF",
-      kills: 1, 
-      placementPoints: 0, 
-      killPoints: 1, 
-      totalPoints: 1,
-      survivalTime: "13:23",
-      damage: 2345,
-      chickenDinner: false,
-      players: [
-        { name: "Crown", kills: 1, assists: 0, damage: 634, survivalTime: "13:23", role: "IGL" },
-        { name: "Phoenix", kills: 0, assists: 1, damage: 567, survivalTime: "13:23", role: "Assaulter" },
-        { name: "Shadow", kills: 0, assists: 0, damage: 589, survivalTime: "13:23", role: "Support" },
-        { name: "Matrix", kills: 0, assists: 0, damage: 555, survivalTime: "13:23", role: "Fragger" }
-      ]
-    },
-    { 
-      position: 13, 
-      team: "Team IND", 
-      tag: "IND", 
-      logo: "https://placehold.co/60x60/F39C12/FFFFFF?text=IN",
-      kills: 2, 
-      placementPoints: 0, 
-      killPoints: 2, 
-      totalPoints: 2,
-      survivalTime: "12:56",
-      damage: 2678,
-      chickenDinner: false,
-      players: [
-        { name: "Savage", kills: 1, assists: 0, damage: 678, survivalTime: "12:56", role: "IGL" },
-        { name: "Dynamo", kills: 1, assists: 1, damage: 634, survivalTime: "12:56", role: "Assaulter" },
-        { name: "Carry", kills: 0, assists: 1, damage: 678, survivalTime: "12:56", role: "Support" },
-        { name: "Mortal", kills: 0, assists: 0, damage: 688, survivalTime: "12:56", role: "Fragger" }
-      ]
-    },
-    { 
-      position: 14, 
-      team: "Chemin Esports", 
-      tag: "CE", 
-      logo: "https://placehold.co/60x60/52C4C4/FFFFFF?text=CE",
-      kills: 3, 
-      placementPoints: 0, 
-      killPoints: 3, 
-      totalPoints: 3,
-      survivalTime: "11:34",
-      damage: 2987,
-      chickenDinner: false,
-      players: [
-        { name: "Eminem", kills: 2, assists: 0, damage: 789, survivalTime: "11:34", role: "IGL" },
-        { name: "Desi", kills: 1, assists: 1, damage: 734, survivalTime: "11:34", role: "Assaulter" },
-        { name: "Prince", kills: 0, assists: 1, damage: 723, survivalTime: "11:34", role: "Support" },
-        { name: "Alpha", kills: 0, assists: 0, damage: 741, survivalTime: "11:34", role: "Fragger" }
-      ]
-    },
-    { 
-      position: 15, 
-      team: "Big Brother Esports", 
-      tag: "BBE", 
-      logo: "https://placehold.co/60x60/E74C3C/FFFFFF?text=BB",
-      kills: 1, 
-      placementPoints: 0, 
-      killPoints: 1, 
-      totalPoints: 1,
-      survivalTime: "10:12",
-      damage: 1987,
-      chickenDinner: false,
-      players: [
-        { name: "Binks", kills: 1, assists: 0, damage: 534, survivalTime: "10:12", role: "IGL" },
-        { name: "Knight", kills: 0, assists: 0, damage: 467, survivalTime: "10:12", role: "Assaulter" },
-        { name: "Saber", kills: 0, assists: 1, damage: 498, survivalTime: "10:12", role: "Support" },
-        { name: "Demon", kills: 0, assists: 0, damage: 488, survivalTime: "10:12", role: "Fragger" }
-      ]
-    },
-    { 
-      position: 16, 
-      team: "Entity Gaming", 
-      tag: "ENT", 
-      logo: "https://placehold.co/60x60/9B59B6/FFFFFF?text=EN",
-      kills: 2, 
-      placementPoints: 0, 
-      killPoints: 2, 
-      totalPoints: 2,
-      survivalTime: "8:45",
-      damage: 2234,
-      chickenDinner: false,
-      players: [
-        { name: "Spike", kills: 1, assists: 0, damage: 578, survivalTime: "8:45", role: "IGL" },
-        { name: "Venom", kills: 1, assists: 1, damage: 567, survivalTime: "8:45", role: "Assaulter" },
-        { name: "Toxic", kills: 0, assists: 1, damage: 545, survivalTime: "8:45", role: "Support" },
-        { name: "Blade", kills: 0, assists: 0, damage: 544, survivalTime: "8:45", role: "Fragger" }
-      ]
+  useEffect(() => {
+    const fetchMatchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch(`/api/matches/${id}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch match data: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Format match data
+        const formattedMatchData = {
+          id: data._id,
+          matchNumber: data.matchNumber,
+          matchType: data.matchType || 'Tournament Match',
+          date: new Date(data.scheduledStartTime).toLocaleDateString(),
+          time: new Date(data.scheduledStartTime).toLocaleTimeString(),
+          duration: data.matchDuration ? `${data.matchDuration}:00` : 'N/A',
+          tournament: data.tournament?.tournamentName || 'Tournament',
+          stage: data.tournamentPhase || 'Match',
+          server: 'Asia',
+          gameVersion: '3.4.0',
+          map: data.map,
+          venue: 'Online',
+          totalKills: data.matchStats?.totalKills || 0,
+          totalDamage: data.matchStats?.totalDamage || 0,
+          chickenDinnerTeam: data.participatingTeams?.find(t => t.chickenDinner)?.team?.teamName || 'TBD',
+          firstBloodPlayer: data.matchStats?.firstBloodPlayer || 'N/A',
+          firstBloodTime: '0:45',
+          status: data.status
+        };
+
+        // Format teams data
+        const formattedTeamsData = data.participatingTeams?.map((pt, index) => ({
+          position: pt.finalPosition || (index + 1),
+          team: pt.team?.teamName || pt.teamName || 'Unknown Team',
+          tag: pt.team?.teamTag || pt.teamTag || 'UNK',
+          logo: pt.team?.logo || 'https://placehold.co/60x60/1a1a1a/ffffff?text=' + (pt.team?.teamTag || 'T'),
+          kills: pt.kills?.total || 0,
+          placementPoints: pt.points?.placementPoints || 0,
+          killPoints: pt.points?.killPoints || pt.kills?.total || 0,
+          totalPoints: pt.points?.totalPoints || 0,
+          survivalTime: pt.survivalTime ? formatTime(pt.survivalTime) : 'N/A',
+          damage: pt.totalDamage || 0,
+          chickenDinner: pt.chickenDinner || false,
+          players: pt.kills?.breakdown?.map(pb => ({
+            name: pb.player?.username || pb.player?.inGameName || 'Player',
+            kills: pb.kills || 0,
+            assists: pb.assists || 0,
+            damage: pb.damage || 0,
+            survivalTime: pb.survivalTime ? formatTime(pb.survivalTime) : 'N/A',
+            role: pb.player?.inGameRole?.[0] || 'Player'
+          })) || []
+        })) || [];
+
+        // Sort teams by position
+        formattedTeamsData.sort((a, b) => a.position - b.position);
+
+        setMatchData(formattedMatchData);
+        setTeamsData(formattedTeamsData);
+
+      } catch (err) {
+        console.error('Error fetching match data:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchMatchData();
     }
-  ];
+  }, [id]);
 
-  // Components
   const TabButton = ({ id, label, isActive, onClick }) => (
     <button
       onClick={() => onClick(id)}
@@ -360,7 +130,7 @@ const DetailedMatchInfo = () => {
   );
 
   const StatPill = ({ label, value, icon: Icon, color = "orange" }) => (
-    <div className={`flex items-center gap-2 bg-zinc-800/60 border border-${color}-400/30 rounded-lg px-3 py-2`}>
+    <div className={`flex items-center gap-2 bg-zinc-800/60 border border-zinc-700 rounded-lg px-3 py-2`}>
       <Icon className={`w-4 h-4 text-${color}-400`} />
       <span className="text-zinc-400 text-xs">{label}</span>
       <span className="text-white font-semibold text-sm">{value}</span>
@@ -382,12 +152,50 @@ const DetailedMatchInfo = () => {
     );
   };
 
+  const StatusBadge = ({ status }) => {
+    const getStatusConfig = (status) => {
+      if (status === 'in_progress') {
+        return { color: 'red', text: 'Live', icon: Activity, pulse: true };
+      } else if (status === 'completed') {
+        return { color: 'green', text: 'Completed', icon: Trophy, pulse: false };
+      } else if (status === 'scheduled') {
+        return { color: 'blue', text: 'Scheduled', icon: Clock, pulse: false };
+      } else {
+        return { color: 'gray', text: 'Unknown', icon: AlertCircle, pulse: false };
+      }
+    };
+    
+    const config = getStatusConfig(status);
+    const Icon = config.icon;
+    
+    return (
+      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-${config.color}-500/20 border border-${config.color}-500/30 text-${config.color}-400`}>
+        <Icon className={`w-4 h-4 ${config.pulse ? 'animate-pulse' : ''}`} />
+        {config.text}
+      </div>
+    );
+  };
+
   const LeaderboardTable = () => (
     <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
-      <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-        <Trophy className="w-6 h-6 text-amber-400" />
-        Match 3 Final Standings - {matchData.map}
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+          <Trophy className="w-6 h-6 text-amber-400" />
+          Match {matchData?.matchNumber} Final Standings - {matchData?.map}
+        </h2>
+        
+        {/* Map Image */}
+        <div className="w-24 h-16 rounded-lg overflow-hidden bg-zinc-700">
+          <img
+            src={mapImages[matchData?.map] || ErangelMap}
+            alt={matchData?.map}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.target.src = 'https://via.placeholder.com/384x216/1a1a1a/ffffff?text=Map';
+            }}
+          />
+        </div>
+      </div>
       
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -420,7 +228,14 @@ const DetailedMatchInfo = () => {
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
-                        <img src={team.logo} alt={team.team} className="w-10 h-10 rounded-lg" />
+                        <img 
+                          src={team.logo} 
+                          alt={team.team} 
+                          className="w-10 h-10 rounded-lg object-cover"
+                          onError={(e) => {
+                            e.target.src = 'https://placehold.co/40x40/1a1a1a/ffffff?text=' + team.tag;
+                          }}
+                        />
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="text-white font-medium">{team.team}</span>
@@ -460,7 +275,7 @@ const DetailedMatchInfo = () => {
                     </td>
                   </tr>
                   
-                  {isExpanded && (
+                  {isExpanded && team.players.length > 0 && (
                     <tr>
                       <td colSpan="9" className="px-4 py-0">
                         <div className="bg-zinc-800/30 rounded-lg p-4 mb-2">
@@ -523,19 +338,19 @@ const DetailedMatchInfo = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-400/30 rounded-lg p-4 text-center">
               <Crown className="w-8 h-8 text-amber-400 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-amber-400 mb-1">Team Soul</div>
+              <div className="text-2xl font-bold text-amber-400 mb-1">{matchData?.chickenDinnerTeam || 'TBD'}</div>
               <div className="text-zinc-300 text-sm font-medium">Chicken Dinner Winner</div>
             </div>
             
             <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4 text-center">
               <Target className="w-8 h-8 text-red-400 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-red-400 mb-1">{matchData.totalKills}</div>
+              <div className="text-2xl font-bold text-red-400 mb-1">{matchData?.totalKills || 0}</div>
               <div className="text-zinc-400 text-sm">Total Eliminations</div>
             </div>
             
             <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4 text-center">
               <Zap className="w-8 h-8 text-purple-400 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-purple-400 mb-1">{matchData.totalDamage.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-purple-400 mb-1">{matchData?.totalDamage?.toLocaleString() || 0}</div>
               <div className="text-zinc-400 text-sm">Total Damage</div>
             </div>
           </div>
@@ -545,19 +360,19 @@ const DetailedMatchInfo = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-zinc-400">First Blood</span>
-                <span className="text-orange-400 font-medium">{matchData.firstBloodPlayer} ({matchData.firstBloodTime})</span>
+                <span className="text-orange-400 font-medium">{matchData?.firstBloodPlayer} ({matchData?.firstBloodTime})</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-zinc-400">Match Duration</span>
-                <span className="text-green-400 font-medium">{matchData.duration}</span>
+                <span className="text-green-400 font-medium">{matchData?.duration}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-zinc-400">Most Kills (Team)</span>
-                <span className="text-red-400 font-medium">Team Soul (12 kills)</span>
+                <span className="text-red-400 font-medium">{teamsData[0]?.team} ({teamsData[0]?.kills} kills)</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-zinc-400">Highest Damage (Team)</span>
-                <span className="text-purple-400 font-medium">Team Soul (8,234)</span>
+                <span className="text-purple-400 font-medium">{teamsData[0]?.team} ({teamsData[0]?.damage?.toLocaleString()})</span>
               </div>
             </div>
           </div>
@@ -567,28 +382,38 @@ const DetailedMatchInfo = () => {
       <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
         <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
           <MapPin className="w-5 h-5 text-orange-400" />
-          {matchData.venue}
+          Match Details
         </h3>
 
         <div className="space-y-4">
           <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
-            <h4 className="text-white font-medium mb-3">Match Details</h4>
+            <div className="w-full h-24 rounded-lg overflow-hidden bg-zinc-700 mb-3">
+              <img
+                src={mapImages[matchData?.map] || ErangelMap}
+                alt={matchData?.map}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.src = 'https://via.placeholder.com/300x200/1a1a1a/ffffff?text=Map';
+                }}
+              />
+            </div>
+            <h4 className="text-white font-medium mb-3">Match Information</h4>
             <div className="space-y-2 text-sm text-zinc-300">
               <div className="flex justify-between">
                 <span>Match Type:</span>
-                <span className="text-white font-semibold">{matchData.matchType}</span>
+                <span className="text-white font-semibold">{matchData?.matchType}</span>
               </div>
               <div className="flex justify-between">
                 <span>Map:</span>
-                <span className="text-white font-semibold">{matchData.map}</span>
+                <span className="text-white font-semibold">{matchData?.map}</span>
               </div>
               <div className="flex justify-between">
                 <span>Duration:</span>
-                <span className="text-white font-semibold">{matchData.duration}</span>
+                <span className="text-white font-semibold">{matchData?.duration}</span>
               </div>
               <div className="flex justify-between">
                 <span>Teams:</span>
-                <span className="text-white font-semibold">16 Teams</span>
+                <span className="text-white font-semibold">{teamsData.length}</span>
               </div>
             </div>
           </div>
@@ -597,20 +422,20 @@ const DetailedMatchInfo = () => {
             <h4 className="text-white font-medium mb-3">Tournament Info</h4>
             <div className="space-y-2 text-sm text-zinc-300">
               <div className="flex justify-between">
-                <span>Event:</span>
-                <span className="text-white font-semibold">{matchData.event}</span>
+                <span>Tournament:</span>
+                <span className="text-white font-semibold">{matchData?.tournament}</span>
               </div>
               <div className="flex justify-between">
                 <span>Stage:</span>
-                <span className="text-white font-semibold">{matchData.stage}</span>
+                <span className="text-white font-semibold">{matchData?.stage}</span>
               </div>
               <div className="flex justify-between">
-                <span>Server:</span>
-                <span className="text-white font-semibold">{matchData.server}</span>
+                <span>Status:</span>
+                <StatusBadge status={matchData?.status} />
               </div>
               <div className="flex justify-between">
-                <span>Version:</span>
-                <span className="text-white font-semibold">{matchData.gameVersion}</span>
+                <span>Date:</span>
+                <span className="text-white font-semibold">{matchData?.date}</span>
               </div>
             </div>
           </div>
@@ -650,26 +475,151 @@ const DetailedMatchInfo = () => {
     </div>
   );
 
+  const StatsTab = () => (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+        <h2 className="text-2xl font-bold text-white mb-6">Match Statistics</h2>
+        
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-zinc-800/50 rounded-lg p-4 text-center">
+            <div className="text-3xl font-bold text-red-400 mb-2">{matchData?.totalKills || 0}</div>
+            <div className="text-zinc-400 text-sm">Total Kills</div>
+          </div>
+          <div className="bg-zinc-800/50 rounded-lg p-4 text-center">
+            <div className="text-3xl font-bold text-purple-400 mb-2">{matchData?.totalDamage?.toLocaleString() || 0}</div>
+            <div className="text-zinc-400 text-sm">Total Damage</div>
+          </div>
+          <div className="bg-zinc-800/50 rounded-lg p-4 text-center">
+            <div className="text-3xl font-bold text-green-400 mb-2">{teamsData.length}</div>
+            <div className="text-zinc-400 text-sm">Teams Participated</div>
+          </div>
+          <div className="bg-zinc-800/50 rounded-lg p-4 text-center">
+            <div className="text-3xl font-bold text-blue-400 mb-2">{matchData?.duration}</div>
+            <div className="text-zinc-400 text-sm">Match Duration</div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="text-lg font-bold text-white">Top Performers</h3>
+          {teamsData.slice(0, 3).map((team, index) => (
+            <div key={index} className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <PositionBadge position={team.position} />
+                <img src={team.logo} alt={team.team} className="w-8 h-8 rounded" />
+                <span className="text-white font-medium">{team.team}</span>
+              </div>
+              <div className="text-right">
+                <div className="text-orange-400 font-bold">{team.totalPoints} pts</div>
+                <div className="text-zinc-400 text-sm">{team.kills} kills</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+        <h2 className="text-2xl font-bold text-white mb-6">Performance Breakdown</h2>
+        
+        <div className="space-y-6">
+          <div>
+            <h4 className="text-white font-medium mb-3">Kill Distribution</h4>
+            <div className="space-y-2">
+              {teamsData.slice(0, 5).map((team, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <div className="w-16 text-zinc-400 text-sm">{team.team.substring(0, 8)}</div>
+                  <div className="flex-1 bg-zinc-700 rounded-full h-2">
+                    <div 
+                      className="bg-red-400 h-2 rounded-full" 
+                      style={{ width: `${(team.kills / Math.max(...teamsData.map(t => t.kills))) * 100}%` }}
+                    />
+                  </div>
+                  <div className="w-8 text-red-400 font-bold text-sm">{team.kills}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-white font-medium mb-3">Damage Distribution</h4>
+            <div className="space-y-2">
+              {teamsData.slice(0, 5).map((team, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <div className="w-16 text-zinc-400 text-sm">{team.team.substring(0, 8)}</div>
+                  <div className="flex-1 bg-zinc-700 rounded-full h-2">
+                    <div 
+                      className="bg-purple-400 h-2 rounded-full" 
+                      style={{ width: `${(team.damage / Math.max(...teamsData.map(t => t.damage))) * 100}%` }}
+                    />
+                  </div>
+                  <div className="w-12 text-purple-400 font-bold text-sm">{(team.damage / 1000).toFixed(1)}k</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans mt-[100px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-400 mx-auto mb-4"></div>
+          <p className="text-zinc-400 text-lg">Loading match data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans mt-[100px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-400 text-lg mb-4">Error loading match data</div>
+          <p className="text-zinc-400 mb-4">{error}</p>
+          <button 
+            onClick={() => navigate(-1)} 
+            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg transition-colors"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!matchData) {
+    return (
+      <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans mt-[100px] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-zinc-400 text-lg">Match not found</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans mt-[100px]">
       <div className="container mx-auto px-6 py-8">
 
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
-          <button className="p-2 bg-zinc-800/50 hover:bg-zinc-700/50 rounded-lg transition-colors">
+          <button 
+            onClick={() => navigate(-1)}
+            className="p-2 bg-zinc-800/50 hover:bg-zinc-700/50 rounded-lg transition-colors"
+          >
             <ArrowLeft className="w-5 h-5 text-zinc-300" />
           </button>
           <div>
             <h1 className="text-3xl font-bold text-white">Match Details</h1>
-            <p className="text-zinc-400">{matchData.event} • {matchData.stage}</p>
+            <p className="text-zinc-400">{matchData.tournament} • {matchData.stage}</p>
           </div>
         </div>
 
         {/* Match Header */}
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-8 mb-8">
           <div className="flex flex-col lg:flex-row gap-8">
-
-            {/* Left: Match Result */}
             <div className="flex-1">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
@@ -677,7 +627,7 @@ const DetailedMatchInfo = () => {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-amber-400">
-                    Team Soul Victory
+                    {matchData.chickenDinnerTeam} Victory
                   </div>
                   <div className="text-zinc-400 flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
@@ -687,33 +637,35 @@ const DetailedMatchInfo = () => {
               </div>
 
               {/* Winner Showcase */}
-              <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-400/30 rounded-xl p-6 mb-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <img 
-                      src={teamsData[0].logo} 
-                      alt={teamsData[0].team}
-                      className="w-16 h-16 rounded-lg object-contain"
-                    />
-                    <div>
-                      <div className="text-2xl font-bold text-white">{teamsData[0].team}</div>
-                      <div className="text-amber-400 text-sm font-medium">🏆 CHICKEN DINNER WINNER</div>
-                      <div className="text-zinc-400 text-sm">{teamsData[0].tag}</div>
+              {teamsData.length > 0 && (
+                <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-400/30 rounded-xl p-6 mb-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <img 
+                        src={teamsData[0].logo} 
+                        alt={teamsData[0].team}
+                        className="w-16 h-16 rounded-lg object-contain"
+                      />
+                      <div>
+                        <div className="text-2xl font-bold text-white">{teamsData[0].team}</div>
+                        <div className="text-amber-400 text-sm font-medium">🏆 CHICKEN DINNER WINNER</div>
+                        <div className="text-zinc-400 text-sm">{teamsData[0].tag}</div>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-amber-400">{teamsData[0].totalPoints}</div>
+                      <div className="text-zinc-400 text-sm">Total Points</div>
+                      <div className="text-orange-400 text-sm">{teamsData[0].kills} Kills • {teamsData[0].survivalTime}</div>
                     </div>
                   </div>
-
-                  <div className="text-right">
-                    <div className="text-3xl font-bold text-amber-400">{teamsData[0].totalPoints}</div>
-                    <div className="text-zinc-400 text-sm">Total Points</div>
-                    <div className="text-orange-400 text-sm">{teamsData[0].kills} Kills • {teamsData[0].survivalTime}</div>
-                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Info pills */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatPill label="Map" value={matchData.map} icon={MapPin} color="green" />
-                <StatPill label="Teams" value="16" icon={Users} color="blue" />
+                <StatPill label="Teams" value={teamsData.length} icon={Users} color="blue" />
                 <StatPill label="Duration" value={matchData.duration} icon={Clock} color="purple" />
                 <StatPill label="Kills" value={matchData.totalKills} icon={Target} color="red" />
               </div>
@@ -725,12 +677,14 @@ const DetailedMatchInfo = () => {
         <div className="flex flex-wrap gap-3 mb-8">
           <TabButton id="leaderboard" label="Full Leaderboard" isActive={activeTab === 'leaderboard'} onClick={setActiveTab} />
           <TabButton id="overview" label="Match Overview" isActive={activeTab === 'overview'} onClick={setActiveTab} />
+          <TabButton id="statistics" label="Statistics" isActive={activeTab === 'statistics'} onClick={setActiveTab} />
         </div>
 
         {/* Tab Content */}
         <div className="min-h-[600px]">
           {activeTab === 'leaderboard' && <LeaderboardTable />}
           {activeTab === 'overview' && <OverviewTab />}
+          {activeTab === 'statistics' && <StatsTab />}
         </div>
       </div>
     </div>
