@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from 'react-router-dom';
 import {
   Users, UserPlus, UserCheck, UserX, Search, Filter, MessageCircle,
   Star, Trophy, MapPin, Calendar, Eye, Share2, CheckCircle, XCircle,
@@ -7,6 +8,7 @@ import {
 } from 'lucide-react';
 
 const Connections = () => {
+  const navigate = useNavigate();
   const [connections, setConnections] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [activeTab, setActiveTab] = useState('connections');
@@ -190,7 +192,10 @@ const Connections = () => {
             <button className="bg-zinc-700/50 hover:bg-zinc-600/50 text-zinc-300 hover:text-orange-400 p-2 rounded-lg transition-colors">
               <Eye className="w-4 h-4" />
             </button>
-            <button className="bg-orange-500/20 border border-orange-500/30 text-orange-400 hover:bg-orange-500/30 px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium">
+            <button
+              onClick={() => navigate('/chat', { state: { selectedUserId: connection._id } })}
+              className="bg-orange-500/20 border border-orange-500/30 text-orange-400 hover:bg-orange-500/30 px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium"
+            >
               <Send className="w-4 h-4" />
               Message
             </button>
