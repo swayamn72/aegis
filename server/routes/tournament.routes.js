@@ -1,83 +1,161 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import Tournament from '../models/tournament.model.js';
+import Match from '../models/match.model.js';
+import Team from '../models/team.model.js';
 
 const router = express.Router();
 
 // Get all tournaments (excluding featured/primary ones)
 router.get('/all', async (req, res) => {
   try {
-    const tournaments = await Tournament.find({
-      visibility: 'public',
-      featured: { $ne: true } // Exclude featured tournaments
-    })
-    .sort({ startDate: -1 })
-    .limit(50)
-    .select('tournamentName gameTitle region tier status startDate endDate prizePool media organizer participatingTeams')
-    .populate('participatingTeams.team', 'teamName logo');
+    const { page = 1, limit = 50, game, region, status, tier } = req.query;
+    
+    // Build filter query
+    const filter = {
+      visibility: 'public'
+    };
+    
+    if (game) filter.gameTitle = game;
+    if (region) filter.region = region;
+    if (status) filter.status = status;
+    if (tier) filter.tier = tier;
 
-    res.json({ tournaments });
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const tournaments = await Tournament.find(filter)
+      .sort({ startDate: -1, featured: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .select(`
+        tournamentName shortName gameTitle region tier status startDate endDate 
+        prizePool media organizer participatingTeams statistics slots featured verified
+      `)
+      .populate({
+        path: 'participatingTeams.team',
+        select: 'teamName teamTag logo',
+        model: 'Team'
+      })
+      .lean();
+
+    // Calculate additional fields
+    const enrichedTournaments = tournaments.map(tournament => ({
+      ...tournament,
+      // Ensure we have participant count
+      participantCount: tournament.participatingTeams?.length || tournament.statistics?.totalParticipatingTeams || 0,
+      totalSlots: tournament.slots?.total || null,
+      // Format dates properly
+      startDate: tournament.startDate ? tournament.startDate.toISOString() : null,
+      endDate: tournament.endDate ? tournament.endDate.toISOString() : null,
+      // Ensure media has default values
+      media: {
+        logo: tournament.media?.logo || null,
+        banner: tournament.media?.banner || null,
+        coverImage: tournament.media?.coverImage || null
+      },
+      // Ensure organizer has default
+      organizer: {
+        name: tournament.organizer?.name || 'Unknown Organizer'
+      }
+    }));
+
+    const total = await Tournament.countDocuments(filter);
+
+    res.json({
+      tournaments: enrichedTournaments,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / parseInt(limit)),
+        totalItems: total,
+        hasNext: skip + enrichedTournaments.length < total,
+        hasPrev: parseInt(page) > 1
+      }
+    });
   } catch (error) {
     console.error('Error fetching tournaments:', error);
     res.status(500).json({ error: 'Failed to fetch tournaments' });
   }
 });
 
-// Get tournaments by status
+// Get tournaments by status with better error handling
 router.get('/status/:status', async (req, res) => {
   try {
     const { status } = req.params;
-    const tournaments = await Tournament.find({
+    const { limit = 20, game, region } = req.query;
+    
+    const filter = {
       status: status,
-      visibility: 'public',
-      featured: { $ne: true }
-    })
-    .sort({ startDate: -1 })
-    .limit(20)
-    .select('tournamentName gameTitle region tier status startDate endDate prizePool media organizer');
+      visibility: 'public'
+    };
+    
+    if (game) filter.gameTitle = game;
+    if (region) filter.region = region;
 
-    res.json({ tournaments });
+    const tournaments = await Tournament.find(filter)
+      .sort({ startDate: status === 'completed' ? -1 : 1 })
+      .limit(parseInt(limit))
+      .select(`
+        tournamentName shortName gameTitle region tier status startDate endDate 
+        prizePool media organizer participatingTeams statistics slots
+      `)
+      .populate({
+        path: 'participatingTeams.team',
+        select: 'teamName teamTag logo'
+      })
+      .lean();
+
+    const enrichedTournaments = tournaments.map(tournament => ({
+      ...tournament,
+      participantCount: tournament.participatingTeams?.length || tournament.statistics?.totalParticipatingTeams || 0,
+      totalSlots: tournament.slots?.total || null,
+      startDate: tournament.startDate ? tournament.startDate.toISOString() : null,
+      endDate: tournament.endDate ? tournament.endDate.toISOString() : null
+    }));
+
+    res.json({ tournaments: enrichedTournaments });
   } catch (error) {
     console.error('Error fetching tournaments by status:', error);
     res.status(500).json({ error: 'Failed to fetch tournaments' });
   }
 });
 
-// Get tournaments by game
-router.get('/game/:gameTitle', async (req, res) => {
-  try {
-    const { gameTitle } = req.params;
-    const tournaments = await Tournament.find({
-      gameTitle: gameTitle,
-      visibility: 'public',
-      featured: { $ne: true }
-    })
-    .sort({ startDate: -1 })
-    .limit(20)
-    .select('tournamentName gameTitle region tier status startDate endDate prizePool media organizer');
-
-    res.json({ tournaments });
-  } catch (error) {
-    console.error('Error fetching tournaments by game:', error);
-    res.status(500).json({ error: 'Failed to fetch tournaments' });
-  }
-});
-
-// Get live tournaments
+// Get live tournaments with real-time status checking
 router.get('/live', async (req, res) => {
   try {
     const now = new Date();
+    const { limit = 10 } = req.query;
+    
     const tournaments = await Tournament.find({
-      startDate: { $lte: now },
-      endDate: { $gte: now },
-      status: { $in: ['qualifiers_in_progress', 'in_progress', 'group_stage', 'playoffs', 'finals'] },
-      visibility: 'public',
-      featured: { $ne: true }
+      $and: [
+        {
+          $or: [
+            { startDate: { $lte: now }, endDate: { $gte: now } },
+            { status: { $in: ['qualifiers_in_progress', 'in_progress', 'group_stage', 'playoffs', 'finals'] } }
+          ]
+        },
+        { visibility: 'public' }
+      ]
     })
     .sort({ startDate: 1 })
-    .limit(10)
-    .select('tournamentName gameTitle region tier status startDate endDate prizePool media organizer');
+    .limit(parseInt(limit))
+    .select(`
+      tournamentName shortName gameTitle region tier status startDate endDate 
+      prizePool media organizer participatingTeams statistics streamLinks
+    `)
+    .populate({
+      path: 'participatingTeams.team',
+      select: 'teamName teamTag logo'
+    })
+    .lean();
 
-    res.json({ tournaments });
+    const enrichedTournaments = tournaments.map(tournament => ({
+      ...tournament,
+      participantCount: tournament.participatingTeams?.length || 0,
+      isLive: ['qualifiers_in_progress', 'in_progress', 'group_stage', 'playoffs', 'finals'].includes(tournament.status),
+      hasActiveStreams: tournament.streamLinks?.length > 0
+    }));
+
+    res.json({ tournaments: enrichedTournaments });
   } catch (error) {
     console.error('Error fetching live tournaments:', error);
     res.status(500).json({ error: 'Failed to fetch live tournaments' });
@@ -88,196 +166,330 @@ router.get('/live', async (req, res) => {
 router.get('/upcoming', async (req, res) => {
   try {
     const now = new Date();
+    const { limit = 20 } = req.query;
+    
     const tournaments = await Tournament.find({
-      startDate: { $gte: now },
-      visibility: 'public',
-      featured: { $ne: true }
+      $or: [
+        { startDate: { $gte: now } },
+        { status: { $in: ['announced', 'registration_open', 'registration_closed'] } }
+      ],
+      visibility: 'public'
     })
     .sort({ startDate: 1 })
-    .limit(20)
-    .select('tournamentName gameTitle region tier status startDate endDate prizePool media organizer');
+    .limit(parseInt(limit))
+    .select(`
+      tournamentName shortName gameTitle region tier status startDate endDate 
+      prizePool media organizer participatingTeams statistics slots registrationStartDate registrationEndDate
+    `)
+    .lean();
 
-    res.json({ tournaments });
+    const enrichedTournaments = tournaments.map(tournament => {
+      let registrationStatus = 'closed';
+      if (tournament.registrationStartDate && tournament.registrationEndDate) {
+        if (now < tournament.registrationStartDate) {
+          registrationStatus = 'upcoming';
+        } else if (now >= tournament.registrationStartDate && now <= tournament.registrationEndDate) {
+          registrationStatus = 'open';
+        }
+      }
+
+      return {
+        ...tournament,
+        participantCount: tournament.participatingTeams?.length || 0,
+        totalSlots: tournament.slots?.total || null,
+        registrationStatus,
+        daysUntilStart: tournament.startDate ? Math.ceil((new Date(tournament.startDate) - now) / (1000 * 60 * 60 * 24)) : null
+      };
+    });
+
+    res.json({ tournaments: enrichedTournaments });
   } catch (error) {
     console.error('Error fetching upcoming tournaments:', error);
     res.status(500).json({ error: 'Failed to fetch upcoming tournaments' });
   }
 });
 
-// Get single tournament by ID
+// Get featured tournaments
+router.get('/featured', async (req, res) => {
+  try {
+    const { limit = 5 } = req.query;
+    
+    const tournaments = await Tournament.find({
+      featured: true,
+      visibility: 'public'
+    })
+    .sort({ startDate: -1, tier: 1 }) // S-tier first, then by date
+    .limit(parseInt(limit))
+    .select(`
+      tournamentName shortName gameTitle region tier status startDate endDate 
+      prizePool media organizer participatingTeams statistics streamLinks
+    `)
+    .populate({
+      path: 'participatingTeams.team',
+      select: 'teamName teamTag logo'
+    })
+    .lean();
+
+    const enrichedTournaments = tournaments.map(tournament => ({
+      ...tournament,
+      participantCount: tournament.participatingTeams?.length || 0,
+      isLive: ['qualifiers_in_progress', 'in_progress', 'group_stage', 'playoffs', 'finals'].includes(tournament.status)
+    }));
+
+    res.json({ tournaments: enrichedTournaments });
+  } catch (error) {
+    console.error('Error fetching featured tournaments:', error);
+    res.status(500).json({ error: 'Failed to fetch featured tournaments' });
+  }
+});
+
+// Get single tournament by ID with comprehensive data
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid tournament ID' });
+    }
+
     const tournament = await Tournament.findById(id)
-      .populate('participatingTeams.team', 'teamName logo')
-      .populate('organizer', 'name');
+      .populate({
+        path: 'participatingTeams.team',
+        select: 'teamName teamTag logo primaryGame region establishedDate'
+      })
+      .populate('organizer', 'name website contactEmail')
+      .populate({
+        path: 'phases.groups.teams',
+        select: 'teamName teamTag logo'
+      })
+      .populate({
+        path: 'phases.groups.standings.team',
+        select: 'teamName teamTag logo'
+      })
+      .lean();
 
     if (!tournament) {
       return res.status(404).json({ error: 'Tournament not found' });
     }
 
-    // Mock additional data for the detailed view
+    // Fetch recent matches for this tournament
+    const recentMatches = await Match.find({ tournament: id })
+      .sort({ scheduledStartTime: -1 })
+      .limit(20)
+      .populate({
+        path: 'participatingTeams.team',
+        select: 'teamName teamTag'
+      })
+      .select(`
+        matchNumber matchType tournamentPhase scheduledStartTime actualStartTime actualEndTime
+        status map participatingTeams matchStats
+      `)
+      .lean();
+
+    // Calculate live statistics from matches
+    const matchStatsAgg = await Match.aggregate([
+      { $match: { tournament: new mongoose.Types.ObjectId(id), status: 'completed' } },
+      {
+        $group: {
+          _id: null,
+          totalMatches: { $sum: 1 },
+          totalKills: { $sum: '$matchStats.totalKills' },
+          totalDamage: { $sum: '$matchStats.totalDamage' },
+          avgDuration: { $avg: '$matchDuration' },
+          minDuration: { $min: '$matchDuration' },
+          maxDuration: { $max: '$matchDuration' }
+        }
+      }
+    ]);
+
+    const liveStats = matchStatsAgg[0] || {};
+
+    // Build comprehensive tournament data
     const tournamentData = {
+      _id: tournament._id,
       name: tournament.tournamentName,
+      shortName: tournament.shortName,
       game: tournament.gameTitle,
       region: tournament.region,
       tier: tournament.tier,
       status: tournament.status,
-      currentPhase: tournament.currentPhase || 'Group Stage',
+      currentPhase: tournament.currentCompetitionPhase || 
+                   tournament.phases?.find(p => p.status === 'in_progress')?.name || 
+                   'Not Started',
       startDate: tournament.startDate,
       endDate: tournament.endDate,
+      registrationStartDate: tournament.registrationStartDate,
+      registrationEndDate: tournament.registrationEndDate,
       teams: tournament.participatingTeams?.length || 0,
-      description: tournament.description || 'A competitive esports tournament featuring top teams from around the world.',
+      totalSlots: tournament.slots?.total || 0,
+      description: tournament.description || `${tournament.tournamentName} is a competitive ${tournament.gameTitle} tournament featuring top teams from ${tournament.region}.`,
+      
       media: {
-        banner: tournament.media?.banner || 'https://placehold.co/1200x400/1a1a1a/ffffff?text=Tournament+Banner',
-        coverImage: tournament.media?.coverImage || 'https://placehold.co/1200x600/1a1a1a/ffffff?text=Tournament+Cover+Image',
-        logo: tournament.media?.logo || 'https://placehold.co/200x200/1a1a1a/ffffff?text=Logo'
+        banner: tournament.media?.banner || null,
+        coverImage: tournament.media?.coverImage || null,
+        logo: tournament.media?.logo || null
       },
+      
       organizer: {
-        name: tournament.organizer?.name || 'AEGIS Esports'
+        name: tournament.organizer?.name || 'AEGIS Esports',
+        website: tournament.organizer?.website || null,
+        contactEmail: tournament.organizer?.contactEmail || null
       },
-      venue: tournament.venue || 'Online',
-      format: tournament.format || 'Single Elimination',
+      
+      format: tournament.format || 'Battle Royale Points System',
+      formatDetails: tournament.formatDetails,
+      
       gameSettings: tournament.gameSettings || {
-        mode: 'TPP',
-        serverRegion: 'Asia',
+        serverRegion: tournament.region || 'Asia',
+        gameMode: 'TPP Squad',
         maps: ['Erangel', 'Miramar', 'Sanhok'],
         pointsSystem: {
           killPoints: 1,
           placementPoints: {
-            1: 10,
-            2: 6,
-            3: 5,
-            4: 4
+            1: 10, 2: 6, 3: 5, 4: 4, 5: 3, 6: 2, 7: 1, 8: 1
           }
         }
       },
+      
       prizePool: tournament.prizePool || {
-        total: 10000000,
+        total: 0,
         currency: 'INR',
-        distribution: [
-          { position: '1st', amount: 5000000 },
-          { position: '2nd', amount: 3000000 },
-          { position: '3rd', amount: 2000000 }
-        ],
-        individualAwards: [
-          { award: 'Most Kills', description: 'Player with highest eliminations', amount: 100000 }
-        ]
+        distribution: [],
+        individualAwards: []
       },
-      phases: tournament.phases || [
-        { name: 'Group Stage', status: 'completed', startDate: '2025-08-15', endDate: '2025-08-20', description: 'Round-robin group matches' },
-        { name: 'Playoffs', status: 'in_progress', startDate: '2025-08-22', endDate: '2025-08-25', description: 'Single elimination bracket' },
-        { name: 'Finals', status: 'upcoming', startDate: '2025-08-27', endDate: '2025-08-27', description: 'Championship final' }
-      ],
-      viewership: {
-        currentViewers: 125000,
-        peakViewers: 250000,
-        totalViews: 2500000,
-        averageViewers: 180000
-      }
-    };
-
-    const scheduleData = [
-      { phase: 'Group Stage', match: 'Group A - Round 1 - Match 1', teams: 'Team Soul vs TSM', date: '2025-08-15', time: '18:00', status: 'completed' },
-      { phase: 'Group Stage', match: 'Group A - Round 1 - Match 2', teams: 'GodLike vs OR Esports', date: '2025-08-15', time: '19:30', status: 'completed' },
-      { phase: 'Playoffs', match: 'Quarter Finals - Match 1', teams: 'Team Soul vs Blind Esports', date: '2025-08-22', time: '18:00', status: 'upcoming', streamUrl: 'https://twitch.tv/aegisesports' },
-      { phase: 'Playoffs', match: 'Quarter Finals - Match 2', teams: 'TSM vs Revenant', date: '2025-08-22', time: '19:30', status: 'upcoming' }
-    ];
-
-    const groupsData = {
-      A: {
-        standings: [
-          { rank: 1, team: { name: 'Team Soul', logo: 'https://placehold.co/40x40/FF6B6B/FFFFFF?text=S' }, points: 45, kills: 156, averagePlacement: 2.3, matchesPlayed: 6, chickenDinners: 2, isQualified: true },
-          { rank: 2, team: { name: 'TSM', logo: 'https://placehold.co/40x40/4ECDC4/FFFFFF?text=T' }, points: 42, kills: 142, averagePlacement: 2.5, matchesPlayed: 6, chickenDinners: 1, isQualified: true },
-          { rank: 3, team: { name: 'GodLike', logo: 'https://placehold.co/40x40/45B7D1/FFFFFF?text=G' }, points: 38, kills: 134, averagePlacement: 2.8, matchesPlayed: 6, chickenDinners: 1, isQualified: false },
-          { rank: 4, team: { name: 'OR Esports', logo: 'https://placehold.co/40x40/F7DC6F/FFFFFF?text=OR' }, points: 35, kills: 128, averagePlacement: 3.1, matchesPlayed: 6, chickenDinners: 0, isQualified: false }
-        ]
+      
+      phases: tournament.phases?.map(phase => ({
+        name: phase.name,
+        type: phase.type,
+        status: phase.status,
+        startDate: phase.startDate,
+        endDate: phase.endDate,
+        description: phase.details,
+        groups: phase.groups || []
+      })) || [],
+      
+      statistics: {
+        totalMatches: liveStats.totalMatches || 0,
+        totalParticipatingTeams: tournament.participatingTeams?.length || 0,
+        totalKills: liveStats.totalKills || 0,
+        averageMatchDuration: Math.round(liveStats.avgDuration || 0),
+        shortestMatch: liveStats.minDuration || 0,
+        longestMatch: liveStats.maxDuration || 0,
+        ...tournament.statistics?.viewership && {
+          viewership: tournament.statistics.viewership
+        }
       },
-      B: {
-        standings: [
-          { rank: 1, team: { name: 'Revenant', logo: 'https://placehold.co/40x40/BB8FCE/FFFFFF?text=R' }, points: 47, kills: 164, averagePlacement: 2.1, matchesPlayed: 6, chickenDinners: 3, isQualified: true },
-          { rank: 2, team: { name: 'Blind Esports', logo: 'https://placehold.co/40x40/85C1E9/FFFFFF?text=BE' }, points: 44, kills: 148, averagePlacement: 2.4, matchesPlayed: 6, chickenDinners: 2, isQualified: true },
-          { rank: 3, team: { name: 'Velocity Gaming', logo: 'https://placehold.co/40x40/82E0AA/FFFFFF?text=VG' }, points: 39, kills: 138, averagePlacement: 2.7, matchesPlayed: 6, chickenDinners: 1, isQualified: false },
-          { rank: 4, team: { name: 'Team XO', logo: 'https://placehold.co/40x40/F1948A/FFFFFF?text=XO' }, points: 36, kills: 132, averagePlacement: 3.0, matchesPlayed: 6, chickenDinners: 0, isQualified: false }
-        ]
+      
+      streamLinks: tournament.streamLinks?.map(stream => ({
+        platform: stream.platform,
+        url: stream.url,
+        language: stream.language,
+        isOfficial: stream.isOfficial || false
+      })) || [],
+      
+      socialMedia: tournament.socialMedia || {},
+      
+      featured: tournament.featured || false,
+      verified: tournament.verified || false
+    };
+
+    // Build schedule data from matches
+    const scheduleData = recentMatches.map(match => ({
+      _id: match._id,
+      phase: match.tournamentPhase || 'Group Stage',
+      match: `Match ${match.matchNumber}`,
+      matchType: match.matchType,
+      teams: match.participatingTeams?.slice(0, 2).map(pt => 
+        pt.team?.teamName || 'TBD'
+      ).join(' vs ') || 'TBD vs TBD',
+      map: match.map,
+      date: match.scheduledStartTime ? match.scheduledStartTime.toISOString().split('T')[0] : null,
+      time: match.scheduledStartTime ? match.scheduledStartTime.toTimeString().slice(0, 5) : null,
+      status: match.status,
+      actualStartTime: match.actualStartTime,
+      actualEndTime: match.actualEndTime
+    }));
+
+    // Build groups data from tournament phases
+    const groupsData = {};
+    if (tournament.phases && tournament.phases.length > 0) {
+      for (const phase of tournament.phases) {
+        if (phase.groups && phase.groups.length > 0) {
+          groupsData[phase.name] = {};
+          for (const group of phase.groups) {
+            const groupKey = group.name?.replace('Group ', '') || 'A';
+            groupsData[phase.name][groupKey] = {
+              teams: group.teams?.map(team => ({
+                _id: team._id,
+                name: team.teamName || 'Unknown Team',
+                tag: team.teamTag,
+                logo: team.logo || null
+              })) || [],
+              standings: group.standings?.map(standing => ({
+                team: {
+                  _id: standing.team._id,
+                  name: standing.team.teamName,
+                  tag: standing.team.teamTag,
+                  logo: standing.team.logo
+                },
+                position: standing.position,
+                matchesPlayed: standing.matchesPlayed || 0,
+                points: standing.points || 0,
+                kills: standing.kills || 0,
+                chickenDinners: standing.chickenDinners || 0
+              })) || []
+            };
+          }
+        }
       }
-    };
-
-    const tournamentStats = {
-      completedMatches: 24,
-      totalMatches: 30,
-      totalKills: 1250,
-      averageKills: 52,
-      chickenDinners: 12,
-      averageMatchDuration: 24,
-      shortestMatch: 18,
-      longestMatch: 32,
-      mostKillsInMatch: { player: 'ScoutOP', team: 'Team Soul', count: 18 },
-      highestDamageInMatch: { player: 'Jonathan', team: 'TSM', amount: 3245 },
-      mapStats: [
-        { mapName: 'Erangel', timesPlayed: 12, averageDuration: 26, averageKills: 54 },
-        { mapName: 'Miramar', timesPlayed: 10, averageDuration: 22, averageKills: 48 },
-        { mapName: 'Sanhok', timesPlayed: 8, averageDuration: 20, averageKills: 46 }
-      ]
-    };
-
-    const streamLinks = [
-      { title: 'Main Stream', viewers: 125000, isLive: true, platform: 'Twitch', language: 'English', commentaryType: 'Professional' },
-      { title: 'Hindi Stream', viewers: 45000, isLive: true, platform: 'YouTube', language: 'Hindi', commentaryType: 'Professional' },
-      { title: 'Telugu Stream', viewers: 28000, isLive: true, platform: 'Twitch', language: 'Telugu', commentaryType: 'Professional' },
-      { title: 'Tamil Stream', viewers: 15000, isLive: false, platform: 'YouTube', language: 'Tamil', commentaryType: 'Professional' }
-    ];
+    }
 
     res.json({
       tournamentData,
       scheduleData,
       groupsData,
-      tournamentStats,
-      streamLinks
+      tournamentStats: tournamentData.statistics,
+      streamLinks: tournamentData.streamLinks
     });
+
   } catch (error) {
     console.error('Error fetching tournament:', error);
-    res.status(500).json({ error: 'Failed to fetch tournament' });
+    res.status(500).json({ error: 'Failed to fetch tournament details' });
   }
 });
 
-// Update tournament groups (for backward compatibility)
-router.put('/:tournamentId/groups', async (req, res) => {
+// Search tournaments
+router.get('/search/:query', async (req, res) => {
   try {
-    const { tournamentId } = req.params;
-    const { groups, phaseId } = req.body;
+    const { query } = req.params;
+    const { limit = 20, game, region } = req.query;
 
-    let updateData;
+    const filter = {
+      visibility: 'public',
+      $or: [
+        { tournamentName: { $regex: query, $options: 'i' } },
+        { shortName: { $regex: query, $options: 'i' } },
+        { 'organizer.name': { $regex: query, $options: 'i' } }
+      ]
+    };
 
-    if (phaseId) {
-      // Update groups within a specific phase
-      updateData = {
-        $set: { 'phases.$[phase].groups': groups }
-      };
-      const options = {
-        arrayFilters: [{ 'phase.name': phaseId }], // Use phase name instead of _id
-        new: true
-      };
+    if (game) filter.gameTitle = game;
+    if (region) filter.region = region;
 
-      const tournament = await Tournament.findByIdAndUpdate(tournamentId, updateData, options);
+    const tournaments = await Tournament.find(filter)
+      .sort({ startDate: -1, featured: -1 })
+      .limit(parseInt(limit))
+      .select(`
+        tournamentName shortName gameTitle region tier status startDate endDate 
+        prizePool media organizer participatingTeams
+      `)
+      .lean();
 
-      if (!tournament) {
-        return res.status(404).json({ error: 'Tournament not found' });
-      }
-    } else {
-      // Update groups at tournament level (backward compatibility)
-      updateData = { groups };
-      const tournament = await Tournament.findByIdAndUpdate(tournamentId, updateData, { new: true });
-
-      if (!tournament) {
-        return res.status(404).json({ error: 'Tournament not found' });
-      }
-    }
-
-    res.json({ tournament });
+    res.json({ tournaments });
   } catch (error) {
-    console.error('Error updating tournament groups:', error);
-    res.status(500).json({ error: 'Failed to update tournament groups' });
+    console.error('Error searching tournaments:', error);
+    res.status(500).json({ error: 'Failed to search tournaments' });
   }
 });
 

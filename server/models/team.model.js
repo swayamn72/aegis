@@ -8,8 +8,9 @@ const teamSchema = new mongoose.Schema(
       unique: true,
       trim: true,
       index: true,
+      maxlength: 100,
     },
-    tag: { // Abbreviated tag for display, e.g., "TSM", "NRG"
+    teamTag: { // Changed from 'tag' to match usage in other files
       type: String,
       unique: true,
       trim: true,
@@ -17,9 +18,14 @@ const teamSchema = new mongoose.Schema(
       minlength: 2,
       maxlength: 5,
     },
+    logo: { // URL to the team's logo
+      type: String,
+      trim: true,
+      default: 'https://placehold.co/200x200/1a1a1a/ffffff?text=TEAM',
+    },
     captain: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Player', // Reference to the Player who is the captain
+      ref: 'Player',
       required: true,
     },
     players: [ // Roster of players in the team
@@ -32,10 +38,12 @@ const teamSchema = new mongoose.Schema(
       type: String,
       enum: ['BGMI', 'VALO', 'CS2'],
       required: true,
+      default: 'BGMI',
     },
-    region: { // e.g., "North America", "Europe", "APAC"
+    region: {
       type: String,
-      trim: true,
+      enum: ['Global', 'Asia', 'India', 'South Asia', 'Europe', 'North America', 'South America', 'Oceania', 'Middle East', 'Africa'],
+      default: 'India',
     },
     country: {
       type: String,
@@ -45,11 +53,7 @@ const teamSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: '',
-    },
-    logo: { // URL to the team's logo
-      type: String,
-      trim: true,
-      default: '',
+      maxlength: 500,
     },
     establishedDate: {
       type: Date,
@@ -63,17 +67,53 @@ const teamSchema = new mongoose.Schema(
     aegisRating: { // Team-level rating
       type: Number,
       default: 0,
+      min: 0,
+      max: 3000,
     },
-    qualifiedEvents: [ // List of events they've qualified for (strings or IDs to Event schema)
+    
+    // Tournament and match statistics
+    statistics: {
+      tournamentsPlayed: { type: Number, default: 0 },
+      matchesPlayed: { type: Number, default: 0 },
+      matchesWon: { type: Number, default: 0 },
+      totalKills: { type: Number, default: 0 },
+      totalDamage: { type: Number, default: 0 },
+      chickenDinners: { type: Number, default: 0 },
+      averagePlacement: { type: Number, default: 0 },
+      winRate: { type: Number, default: 0 }, // Calculated field
+    },
+    
+    // Recent tournament results
+    recentResults: [
       {
-        type: String, // Or mongoose.Schema.Types.ObjectId, ref: 'Event' if you make an Event schema
+        tournament: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Tournament',
+        },
+        placement: Number,
+        points: Number,
+        earnings: Number,
+        date: Date,
+      }
+    ],
+    
+    qualifiedEvents: [ // List of events they've qualified for
+      {
+        tournament: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Tournament',
+        },
+        eventName: String,
+        qualificationDate: Date,
       },
     ],
+    
     organization: { // If the team belongs to a larger organization
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Organization',
       default: null,
     },
+    
     socials: {
       discord: { type: String, trim: true, default: '' },
       twitter: { type: String, trim: true, default: '' },
@@ -81,20 +121,98 @@ const teamSchema = new mongoose.Schema(
       youtube: { type: String, trim: true, default: '' },
       website: { type: String, trim: true, default: '' },
     },
+    
     profileVisibility: {
       type: String,
       enum: ['public', 'private'],
       default: 'public',
     },
+    
+    // Team status and availability
+    status: {
+      type: String,
+      enum: ['active', 'inactive', 'disbanded', 'looking_for_players'],
+      default: 'active',
+    },
+    
+    // Recruitment information
+    lookingForPlayers: {
+      type: Boolean,
+      default: false,
+    },
+    openRoles: [
+      {
+        type: String,
+        enum: ['IGL', 'assaulter', 'support', 'sniper', 'fragger'],
+      },
+    ],
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
-// Add a compound unique index to prevent a player from being captain of multiple teams
-// and to ensure no two teams have the same tag (if desired, though teamName handles uniqueness)
-// teamSchema.index({ captain: 1, primaryGame: 1 }, { unique: true }); // Example: captain can only captain one team per game
+// Virtual for win rate calculation
+teamSchema.virtual('winRatePercentage').get(function() {
+  if (this.statistics.matchesPlayed === 0) return 0;
+  return Math.round((this.statistics.matchesWon / this.statistics.matchesPlayed) * 100);
+});
+
+// Virtual for average kills per match
+teamSchema.virtual('averageKillsPerMatch').get(function() {
+  if (this.statistics.matchesPlayed === 0) return 0;
+  return Math.round((this.statistics.totalKills / this.statistics.matchesPlayed) * 100) / 100;
+});
+
+// Indexes for better query performance
+teamSchema.index({ teamName: 1, primaryGame: 1 });
+teamSchema.index({ region: 1, primaryGame: 1 });
+teamSchema.index({ 'statistics.tournamentsPlayed': -1 });
+teamSchema.index({ totalEarnings: -1 });
+teamSchema.index({ aegisRating: -1 });
+teamSchema.index({ status: 1, lookingForPlayers: 1 });
+
+// Pre-save middleware to calculate win rate
+teamSchema.pre('save', function(next) {
+  if (this.statistics.matchesPlayed > 0) {
+    this.statistics.winRate = Math.round((this.statistics.matchesWon / this.statistics.matchesPlayed) * 100);
+  }
+  next();
+});
+
+// Static method to find teams by game and region
+teamSchema.statics.findByGameAndRegion = function(game, region, limit = 10) {
+  return this.find({
+    primaryGame: game,
+    region: region,
+    profileVisibility: 'public',
+    status: 'active'
+  })
+  .populate('captain', 'username profilePicture')
+  .populate('players', 'username profilePicture')
+  .sort({ aegisRating: -1 })
+  .limit(limit);
+};
+
+// Static method to find teams looking for players
+teamSchema.statics.findLookingForPlayers = function(game, role, limit = 10) {
+  const query = {
+    lookingForPlayers: true,
+    status: 'active',
+    profileVisibility: 'public'
+  };
+  
+  if (game) query.primaryGame = game;
+  if (role) query.openRoles = role;
+  
+  return this.find(query)
+    .populate('captain', 'username profilePicture')
+    .populate('players', 'username profilePicture')
+    .sort({ aegisRating: -1 })
+    .limit(limit);
+};
 
 const Team = mongoose.model('Team', teamSchema);
 
