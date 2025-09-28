@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
+import { useLocation } from 'react-router-dom';
 
 const socket = io("http://localhost:5000", {
   withCredentials: true,
@@ -14,6 +15,8 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
+  const location = useLocation();
+  const selectedUserId = location.state?.selectedUserId;
 
   const fetchMessages = async (receiverId) => {
     try {
@@ -69,6 +72,16 @@ export default function ChatPage() {
   }, []);
 
   useEffect(scrollToBottom, [messages]);
+
+  useEffect(() => {
+    if (connections.length > 0 && selectedUserId) {
+      const user = connections.find(c => c._id === selectedUserId);
+      if (user) {
+        setSelectedChat(user);
+        fetchMessages(user._id);
+      }
+    }
+  }, [connections, selectedUserId]);
 
   const sendMessage = () => {
     if (!input.trim() || !selectedChat || !userId) {
