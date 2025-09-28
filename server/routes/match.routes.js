@@ -17,15 +17,190 @@ const getPlacementPoints = (position) => {
 router.get('/tournament/:tournamentId', async (req, res) => {
   try {
     const { tournamentId } = req.params;
-    const matches = await Match.find({ tournament: tournamentId })
-      .populate('participatingTeams.team', 'teamName teamTag logo')
-      .populate('tournament', 'tournamentName')
-      .sort({ scheduledStartTime: 1 });
+    const { status, phase, limit = 50 } = req.query;
+    
+    const filter = { tournament: tournamentId };
+    if (status) filter.status = status;
+    if (phase) filter.tournamentPhase = phase;
+    
+    const matches = await Match.find(filter)
+      .populate({
+        path: 'participatingTeams.team',
+        select: 'teamName teamTag logo'
+      })
+      .populate('tournament', 'tournamentName shortName')
+      .sort({ scheduledStartTime: -1 })
+      .limit(parseInt(limit))
+      .lean();
 
-    res.json(matches);
+    const formattedMatches = matches.map(match => ({
+      _id: match._id,
+      matchNumber: match.matchNumber,
+      matchType: match.matchType,
+      phase: match.tournamentPhase,
+      scheduledStartTime: match.scheduledStartTime,
+      actualStartTime: match.actualStartTime,
+      actualEndTime: match.actualEndTime,
+      status: match.status,
+      map: match.map,
+      duration: match.matchDuration,
+      teams: match.participatingTeams?.map(pt => ({
+        _id: pt.team?._id,
+        name: pt.team?.teamName || pt.teamName || 'Unknown Team',
+        tag: pt.team?.teamTag || pt.teamTag,
+        logo: pt.team?.logo,
+        position: pt.finalPosition,
+        kills: pt.kills?.total || 0,
+        points: pt.points?.totalPoints || 0,
+        damage: pt.totalDamage || 0,
+        survivalTime: pt.survivalTime || 0,
+        chickenDinner: pt.chickenDinner || false
+      })) || [],
+      stats: {
+        totalKills: match.matchStats?.totalKills || 0,
+        totalDamage: match.matchStats?.totalDamage || 0,
+        averageSurvivalTime: match.matchStats?.averageSurvivalTime || 0,
+        mostKillsPlayer: match.matchStats?.mostKillsPlayer,
+        mostDamagePlayer: match.matchStats?.mostDamagePlayer
+      }
+    }));
+
+    res.json({ matches: formattedMatches });
   } catch (error) {
     console.error('Error fetching matches:', error);
     res.status(500).json({ error: 'Failed to fetch matches' });
+  }
+});
+
+// Get match results for leaderboard
+router.get('/tournament/:tournamentId/results', async (req, res) => {
+  try {
+    const { tournamentId } = req.params;
+    const { phase } = req.query;
+    
+    const filter = { 
+      tournament: tournamentId,
+      status: 'completed'
+    };
+    if (phase) filter.tournamentPhase = phase;
+    
+    const matches = await Match.find(filter)
+      .populate({
+        path: 'participatingTeams.team',
+        select: 'teamName teamTag logo'
+      })
+      .sort({ actualEndTime: -1 })
+      .lean();
+
+    // Aggregate team performance across matches
+    const teamStats = {};
+    
+    matches.forEach(match => {
+      match.participatingTeams?.forEach(pt => {
+        if (!pt.team) return;
+        
+        const teamId = pt.team._id.toString();
+        if (!teamStats[teamId]) {
+          teamStats[teamId] = {
+            team: {
+              _id: pt.team._id,
+              name: pt.team.teamName,
+              tag: pt.team.teamTag,
+              logo: pt.team.logo
+            },
+            matchesPlayed: 0,
+            totalPoints: 0,
+            totalKills: 0,
+            totalDamage: 0,
+            chickenDinners: 0,
+            averagePlacement: 0,
+            totalPlacement: 0,
+            bestPlacement: 16
+          };
+        }
+        
+        const stats = teamStats[teamId];
+        stats.matchesPlayed += 1;
+        stats.totalPoints += pt.points?.totalPoints || 0;
+        stats.totalKills += pt.kills?.total || 0;
+        stats.totalDamage += pt.totalDamage || 0;
+        if (pt.chickenDinner) stats.chickenDinners += 1;
+        
+        const placement = pt.finalPosition || 16;
+        stats.totalPlacement += placement;
+        if (placement < stats.bestPlacement) {
+          stats.bestPlacement = placement;
+        }
+      });
+    });
+
+    // Calculate averages and sort
+    const leaderboard = Object.values(teamStats)
+      .map(stats => ({
+        ...stats,
+        averagePlacement: stats.matchesPlayed > 0 ? 
+          (stats.totalPlacement / stats.matchesPlayed).toFixed(1) : 16,
+        averagePoints: stats.matchesPlayed > 0 ? 
+          (stats.totalPoints / stats.matchesPlayed).toFixed(1) : 0
+      }))
+      .sort((a, b) => b.totalPoints - a.totalPoints);
+
+    res.json({
+      leaderboard,
+      totalMatches: matches.length,
+      phase: phase || 'Overall'
+    });
+  } catch (error) {
+    console.error('Error fetching match results:', error);
+    res.status(500).json({ error: 'Failed to fetch match results' });
+  }
+});
+
+// Get live match information
+router.get('/tournament/:tournamentId/live', async (req, res) => {
+  try {
+    const { tournamentId } = req.params;
+    
+    const liveMatch = await Match.findOne({
+      tournament: tournamentId,
+      status: 'in_progress'
+    })
+    .populate({
+      path: 'participatingTeams.team',
+      select: 'teamName teamTag logo'
+    })
+    .populate('tournament', 'tournamentName currentCompetitionPhase')
+    .lean();
+
+    if (!liveMatch) {
+      return res.json({ liveMatch: null });
+    }
+
+    const formattedMatch = {
+      _id: liveMatch._id,
+      matchNumber: liveMatch.matchNumber,
+      phase: liveMatch.tournamentPhase,
+      map: liveMatch.map,
+      startTime: liveMatch.actualStartTime || liveMatch.scheduledStartTime,
+              teams: liveMatch.participatingTeams?.slice(0, 4).map(pt => ({
+        _id: pt.team?._id,
+        name: pt.team?.teamName || pt.teamName || 'Unknown Team',
+        tag: pt.team?.teamTag || pt.teamTag,
+        logo: pt.team?.logo,
+        position: pt.finalPosition,
+        kills: pt.kills?.total || 0,
+        status: pt.finalPosition ? 'eliminated' : 'alive'
+      })) || [],
+      tournament: {
+        name: liveMatch.tournament?.tournamentName,
+        phase: liveMatch.tournament?.currentCompetitionPhase
+      }
+    };
+
+    res.json({ liveMatch: formattedMatch });
+  } catch (error) {
+    console.error('Error fetching live match:', error);
+    res.status(500).json({ error: 'Failed to fetch live match' });
   }
 });
 
@@ -151,10 +326,12 @@ router.put('/:matchId/results', async (req, res) => {
           const placementPoints = getPlacementPoints(result.position);
 
           match.participatingTeams[teamIndex].finalPosition = result.position;
-          match.participatingTeams[teamIndex].kills.total = result.kills;
+          match.participatingTeams[teamIndex].kills.total = result.kills || 0;
+          match.participatingTeams[teamIndex].totalDamage = result.damage || 0;
+          match.participatingTeams[teamIndex].survivalTime = result.survivalTime || 0;
           match.participatingTeams[teamIndex].points.placementPoints = placementPoints;
-          match.participatingTeams[teamIndex].points.killPoints = result.kills;
-          match.participatingTeams[teamIndex].points.totalPoints = placementPoints + result.kills;
+          match.participatingTeams[teamIndex].points.killPoints = result.kills || 0;
+          match.participatingTeams[teamIndex].points.totalPoints = placementPoints + (result.kills || 0);
 
           // Mark as chicken dinner if position 1
           if (result.position === 1) {
@@ -180,6 +357,63 @@ router.put('/:matchId/results', async (req, res) => {
   } catch (error) {
     console.error('Error updating match results:', error);
     res.status(500).json({ error: 'Failed to update match results' });
+  }
+});
+
+// Get match statistics for a tournament
+router.get('/tournament/:tournamentId/stats', async (req, res) => {
+  try {
+    const { tournamentId } = req.params;
+    
+    const stats = await Match.aggregate([
+      { $match: { tournament: new mongoose.Types.ObjectId(tournamentId) } },
+      {
+        $group: {
+          _id: null,
+          totalMatches: { $sum: 1 },
+          completedMatches: {
+            $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
+          },
+          totalKills: { $sum: '$matchStats.totalKills' },
+          totalDamage: { $sum: '$matchStats.totalDamage' },
+          avgDuration: { $avg: '$matchDuration' },
+          maps: { $push: '$map' }
+        }
+      }
+    ]);
+
+    const result = stats[0] || {
+      totalMatches: 0,
+      completedMatches: 0,
+      totalKills: 0,
+      totalDamage: 0,
+      avgDuration: 0,
+      maps: []
+    };
+
+    // Calculate map statistics
+    const mapStats = {};
+    result.maps.forEach(map => {
+      if (map) {
+        mapStats[map] = (mapStats[map] || 0) + 1;
+      }
+    });
+
+    result.mapStats = Object.entries(mapStats).map(([mapName, count]) => ({
+      mapName,
+      timesPlayed: count,
+      percentage: ((count / result.totalMatches) * 100).toFixed(1)
+    }));
+
+    result.averageKills = result.completedMatches > 0 ? 
+      Math.round(result.totalKills / result.completedMatches) : 0;
+
+    delete result.maps;
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching match statistics:', error);
+    res.status(500).json({ error: 'Failed to fetch match statistics' });
   }
 });
 

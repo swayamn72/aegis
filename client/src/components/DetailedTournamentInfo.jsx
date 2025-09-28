@@ -5,12 +5,13 @@ import {
   ChevronRight, ExternalLink, Copy, Play, Pause, Volume2,
   Medal, Crown, Shield, Zap, Activity, BarChart3, Globe,
   CheckCircle, XCircle, AlertCircle, ArrowRight, Download,
-  Twitch, Youtube, Twitter, Instagram, Hash
+  Twitch, Youtube, Twitter, Instagram, Hash, X
 } from 'lucide-react';
 
 const DetailedTournamentInfo = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedGroup, setSelectedGroup] = useState('A');
+  const [showPrizeModal, setShowPrizeModal] = useState(false);
 
   // Tournament data based on refined schema
   const tournamentData = {
@@ -622,8 +623,11 @@ const DetailedTournamentInfo = () => {
                           </div>
                         </div>
                       </div>
-                      <button className="mt-3 text-orange-400 text-sm hover:text-orange-300 transition-colors">
-                        View full prize breakdown →
+                      <button 
+                        onClick={() => setShowPrizeModal(true)}
+                        className="mt-3 flex items-center gap-1 text-orange-400 text-sm hover:text-orange-300 transition-colors"
+                      >
+                        View full prize breakdown <ChevronRight className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -694,6 +698,83 @@ const DetailedTournamentInfo = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Prize Breakdown Modal */}
+              {showPrizeModal && (
+                <div 
+                  className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                  onClick={() => setShowPrizeModal(false)}
+                >
+                  <div 
+                    className="bg-zinc-900/95 border border-zinc-700 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="sticky top-0 bg-zinc-900/95 border-b border-zinc-700 p-6 flex items-center justify-between">
+                      <h3 className="text-2xl font-bold text-white">Full Prize Breakdown</h3>
+                      <button 
+                        onClick={() => setShowPrizeModal(false)}
+                        className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                      >
+                        <X className="w-5 h-5 text-zinc-400 hover:text-white" />
+                      </button>
+                    </div>
+
+                    <div className="p-6 space-y-8">
+                      {/* Total Prize Pool */}
+                      <div className="text-center border-b border-zinc-700 pb-6">
+                        <div className="text-4xl font-bold text-green-400 mb-2">
+                          ₹{(tournamentData.prizePool.total / 100000).toFixed(1)}L
+                        </div>
+                        <div className="text-zinc-300 text-lg">Total Prize Pool</div>
+                        <div className="text-zinc-500 text-sm">{tournamentData.prizePool.currency}</div>
+                      </div>
+
+                      {/* Team Prizes */}
+                      <div>
+                        <h4 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                          <Trophy className="w-5 h-5 text-green-400" />
+                          Team Prizes
+                        </h4>
+                        <div className="space-y-3">
+                          {tournamentData.prizePool.distribution.map((prize, index) => (
+                            <div 
+                              key={index} 
+                              className="flex justify-between items-center p-4 bg-zinc-800/50 rounded-lg border-l-4 border-green-500"
+                            >
+                              <span className="text-zinc-300 font-medium">{prize.position}</span>
+                              <span className="text-green-400 font-bold text-lg">₹{prize.amount.toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Individual Awards */}
+                      <div>
+                        <h4 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                          <Award className="w-5 h-5 text-amber-400" />
+                          Individual Awards
+                        </h4>
+                        <div className="space-y-3">
+                          {tournamentData.prizePool.individualAwards.map((award, index) => (
+                            <div 
+                              key={index} 
+                              className="p-4 bg-zinc-800/50 rounded-lg border-l-4 border-amber-500"
+                            >
+                              <div className="flex justify-between items-start mb-2">
+                                <div className="flex-1">
+                                  <div className="text-white font-medium">{award.award}</div>
+                                  <div className="text-zinc-400 text-sm">{award.description}</div>
+                                </div>
+                                <span className="text-amber-400 font-bold text-lg ml-4">₹{award.amount.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Social Media & Quick Links */}
               <div className="space-y-6">

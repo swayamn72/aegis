@@ -213,30 +213,7 @@ const tournamentSchema = new mongoose.Schema(
       },
     ],
 
-    // --- Groups (for group stage tournaments) ---
-    groups: [
-      {
-        name: String, // e.g., "Group Alpha", "Group Beta"
-        teams: [{ // Teams specifically in this group
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'Team',
-        }],
-        standings: [ // Group-specific standings
-          {
-            team: {
-              type: mongoose.Schema.Types.ObjectId,
-              ref: 'Team',
-            },
-            position: Number,
-            matchesPlayed: { type: Number, default: 0 },
-            chickenDinners: { type: Number, default: 0 }, // For BR games
-            points: { type: Number, default: 0 },
-            kills: { type: Number, default: 0 },
-            netChange: { type: Number, default: 0 }, // Position change if tracked live
-          },
-        ],
-      },
-    ],
+
 
     // --- Overall Tournament Results ---
     finalStandings: [
@@ -342,9 +319,11 @@ const tournamentSchema = new mongoose.Schema(
         team: { type: mongoose.Schema.Types.ObjectId, ref: 'Team' },
       },
       viewership: { // Aggregate viewership stats
-        peak: Number,
-        average: Number,
-        totalHoursWatched: Number,
+        currentViewers: { type: Number, default: 0 },
+        peakViewers: { type: Number, default: 0 },
+        averageViewers: { type: Number, default: 0 },
+        totalViews: { type: Number, default: 0 },
+        totalHoursWatched: { type: Number, default: 0 },
       },
     },
 
