@@ -4,7 +4,7 @@ import {
   ArrowLeft, Users, Trophy, Calendar, MapPin, Shield,
   Award, Star, Target, TrendingUp, Share2, MessageCircle,
   Check, Gamepad2, Briefcase, Copy, Twitter, Youtube,
-  Twitch
+  Twitch, Lock, Eye, EyeOff
 } from 'lucide-react';
 import { FaDiscord } from "react-icons/fa"
 
@@ -14,22 +14,34 @@ const DetailedTeamInfo = () => {
   const [teamData, setTeamData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isPrivate, setIsPrivate] = useState(false);
 
   // Fetch team data from API
   useEffect(() => {
     const fetchTeamData = async () => {
       try {
         setLoading(true);
+        setError(null);
+        setIsPrivate(false);
+        
         const response = await fetch(`/api/teams/${id}`, {
           credentials: 'include',
         });
-        if (!response.ok) {
+        
+        if (response.status === 403) {
+          // Handle private team specifically
+          const errorData = await response.json();
+          setIsPrivate(true);
+          setError(errorData.message || 'This team profile is private');
+        } else if (!response.ok) {
           throw new Error('Failed to fetch team data');
+        } else {
+          const data = await response.json();
+          setTeamData(data);
         }
-        const data = await response.json();
-        setTeamData(data);
       } catch (err) {
         setError(err.message);
+        setIsPrivate(false);
       } finally {
         setLoading(false);
       }
@@ -102,14 +114,44 @@ const DetailedTeamInfo = () => {
     </div>
   );
 
-
-
   if (loading) {
     return (
       <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-400 mx-auto mb-4"></div>
           <p className="text-zinc-400 text-lg">Loading team information...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isPrivate) {
+    return (
+      <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-8">
+          <div className="relative mb-8">
+            <div className="w-32 h-32 mx-auto bg-gradient-to-br from-zinc-800/50 to-zinc-900/50 rounded-full flex items-center justify-center border border-zinc-700/50 backdrop-blur-sm">
+              <Lock size={48} className="text-zinc-500" />
+            </div>
+            <div className="absolute inset-0 bg-zinc-500/20 blur-xl rounded-full"></div>
+          </div>
+          
+          <div className="space-y-4">
+            <h2 className="text-3xl font-bold text-white">Private Team Profile</h2>
+            <p className="text-zinc-400 text-lg leading-relaxed">
+              This team profile is set to private and can only be viewed by team members.
+            </p>
+            
+            <div className="flex flex-col gap-4 pt-6">
+              <button 
+                onClick={() => window.history.back()}
+                className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-200 transform hover:scale-105 shadow-lg shadow-orange-500/30 flex items-center justify-center space-x-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span>Go Back</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -148,7 +190,10 @@ const DetailedTeamInfo = () => {
 
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
-          <button className="p-2 bg-zinc-800/50 hover:bg-zinc-700/50 rounded-lg transition-colors">
+          <button 
+            onClick={() => window.history.back()}
+            className="p-2 bg-zinc-800/50 hover:bg-zinc-700/50 rounded-lg transition-colors"
+          >
             <ArrowLeft className="w-5 h-5 text-zinc-300" />
           </button>
           <div>
@@ -166,7 +211,7 @@ const DetailedTeamInfo = () => {
               <div className="flex items-start gap-6 mb-6">
                 <div className="relative">
                   <img
-                    src={teamData.logo || `https://placehold.co/120x120/4A5568/FFFFFF?text=${teamData.tag || teamData.teamName?.charAt(0) || 'T'}`}
+                    src={teamData.logo || `https://placehold.co/120x120/4A5568/FFFFFF?text=${teamData.teamTag || teamData.teamName?.charAt(0) || 'T'}`}
                     alt={teamData.teamName}
                     className="w-24 h-24 rounded-xl object-contain bg-zinc-800/50 p-2"
                   />
@@ -180,9 +225,9 @@ const DetailedTeamInfo = () => {
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h1 className="text-4xl font-bold text-white">{teamData.teamName}</h1>
-                    {teamData.tag && (
+                    {teamData.teamTag && (
                       <span className="bg-orange-500/20 border border-orange-500/30 rounded-lg px-3 py-1 text-orange-400 font-bold">
-                        {teamData.tag}
+                        {teamData.teamTag}
                       </span>
                     )}
                     <div className="flex gap-2">

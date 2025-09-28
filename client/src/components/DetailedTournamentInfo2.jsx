@@ -9,6 +9,10 @@ import {
   Twitch, Youtube, Twitter, Instagram, Hash, X, ChevronDown,
   ChevronUp
 } from 'lucide-react';
+ import ErangelMap from '../assets/mapImages/erangel.jpg';
+  import MiramarMap from '../assets/mapImages/miramar.webp';
+  import SanhokMap from '../assets/mapImages/sanhok.webp';
+  import VikendiMap from '../assets/mapImages/vikendi.jpg';
 
 const DetailedTournamentInfo = () => {
   const { id } = useParams();
@@ -27,14 +31,16 @@ const DetailedTournamentInfo = () => {
   const [error, setError] = useState(null);
 
   // Map images - you can update these paths later
+ 
+  
   const mapImages = {
-    'Erangel': '../assets/mapImages/erangel.jpg',
-    'Miramar': '/assets/mapImages/erangel.jpg',
-    'Sanhok': '/assets/mapImages/erangel.jpg',
-    'Vikendi': '/assets/mapImages/erangel.jpg',
-    'Livik': '/assets/mapImages/erangel.jpg',
-    'Nusa': '/assets/mapImages/erangel.jpg',
-    'Rondo': '/assets/mapImages/erangel.jpg',
+    'Erangel': ErangelMap,
+    'Miramar': MiramarMap,
+    'Sanhok': SanhokMap,
+    'Vikendi': VikendiMap,
+    'Livik': ErangelMap,
+    'Nusa': ErangelMap,
+    'Rondo': ErangelMap
   };
 
   useEffect(() => {

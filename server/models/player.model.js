@@ -87,6 +87,15 @@ const playerSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    statistics: {
+      tournamentsPlayed: { type: Number, default: 0 },
+      matchesPlayed: { type: Number, default: 0 },
+      matchesWon: { type: Number, default: 0 },
+      totalKills: { type: Number, default: 0 },
+      totalDamage: { type: Number, default: 0 },
+      averagePlacement: { type: Number, default: 0 },
+      winRate: { type: Number, default: 0 },
+    },
     qualifiedEvents: {
       type: Boolean,
       default: false,
@@ -107,8 +116,16 @@ const playerSchema = new mongoose.Schema(
     },
     previousTeams: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Team',
+        team: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Team',
+        },
+        startDate: Date,
+        endDate: Date,
+        reason: {
+          type: String,
+          enum: ['left', 'removed', 'team disbanded', 'transferred'],
+        },
       },
     ],
     availability: {
@@ -125,7 +142,12 @@ const playerSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
-    YouTube: {
+    youtube: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    twitter: {
       type: String,
       trim: true,
       default: '',
@@ -140,17 +162,15 @@ const playerSchema = new mongoose.Schema(
       enum: ['orange', 'blue', 'purple', 'red', 'green', 'pink'],
       default: 'orange',
     },
-      posts: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Post", 
-    },
-  ],
-
-  connections: [{ type: mongoose.Schema.Types.ObjectId, ref: "Player" }], // confirmed connections
-  sentRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "Player" }], // requests you sent
-  receivedRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "Player" }], // requests you received
-
+    posts: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Post", 
+      },
+    ],
+    connections: [{ type: mongoose.Schema.Types.ObjectId, ref: "Player" }],
+    sentRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "Player" }],
+    receivedRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "Player" }],
   },
   {
     timestamps: true,

@@ -40,7 +40,7 @@ router.get('/', async (req, res) => {
     const teams = await Team.find(filter)
       .populate('captain', 'username profilePicture primaryGame inGameName realName aegisRating statistics.tournamentsPlayed')
       .populate('players', 'username profilePicture primaryGame inGameName realName aegisRating statistics.tournamentsPlayed inGameRole')
-      .populate('organization', 'name logo description')
+      .populate('organization', 'orgName logo description')
       .sort({ aegisRating: -1, 'statistics.tournamentsPlayed': -1 })
       .skip(skip)
       .limit(parseInt(limit))
@@ -123,34 +123,21 @@ router.get('/looking-for-players', async (req, res) => {
 });
 
 // GET /api/teams/:id - Fetch a single team by ID
+// GET /api/teams/:id - Fetch a single team by ID
+// GET /api/teams/:id - Fetch a single team by ID
 router.get('/:id', async (req, res) => {
   try {
     const team = await Team.findById(req.params.id)
       .populate({
         path: 'captain',
-        select: 'username profilePicture primaryGame inGameName realName age country aegisRating statistics inGameRole discordTag twitch youtube twitter',
-        populate: {
-          path: 'recentPerformance.tournament',
-          select: 'tournamentName startDate'
-        }
+        select: 'username profilePicture primaryGame inGameName realName age country aegisRating statistics inGameRole discordTag twitch youtube twitter verified'
       })
       .populate({
         path: 'players',
-        select: 'username profilePicture primaryGame inGameName realName age country aegisRating statistics inGameRole discordTag verified',
-        populate: {
-          path: 'recentPerformance.tournament',
-          select: 'tournamentName startDate'
-        }
+        select: 'username profilePicture primaryGame inGameName realName age country aegisRating statistics inGameRole discordTag verified'
       })
-      .populate('organization', 'name logo description website establishedDate')
-      .populate({
-        path: 'recentResults.tournament',
-        select: 'tournamentName gameTitle startDate media.logo'
-      })
-      .populate({
-        path: 'qualifiedEvents.tournament',
-        select: 'tournamentName gameTitle startDate media.logo'
-      })
+      .populate('organization', 'orgName logo description website establishedDate')
+      // REMOVED THE PROBLEMATIC POPULATES FOR recentResults.tournament and qualifiedEvents.tournament
       .select('-__v');
 
     if (!team) {
@@ -162,14 +149,14 @@ router.get('/:id', async (req, res) => {
       return res.status(403).json({ message: 'This team profile is private' });
     }
 
-    res.json({ team });
+    res.json(team);
   } catch (error) {
     console.error('Error fetching team:', error);
     res.status(500).json({ message: 'Server error fetching team' });
   }
 });
 
-// GET /api/teams/my-teams - Fetch teams the current user is part of (requires auth)
+// GET /api/teams/user/my-teams - Fetch teams the current user is part of (requires auth)
 router.get('/user/my-teams', auth, async (req, res) => {
   try {
     const teams = await Team.find({ 
@@ -180,7 +167,7 @@ router.get('/user/my-teams', auth, async (req, res) => {
     })
     .populate('captain', 'username profilePicture primaryGame')
     .populate('players', 'username profilePicture primaryGame')
-    .populate('organization', 'name logo')
+    .populate('organization', 'orgName logo')
     .sort({ establishedDate: -1 })
     .select('-__v');
 
@@ -287,7 +274,7 @@ router.put('/:id', auth, async (req, res) => {
     )
     .populate('captain', 'username profilePicture primaryGame')
     .populate('players', 'username profilePicture primaryGame')
-    .populate('organization', 'name logo');
+    .populate('organization', 'orgName logo');
 
     res.json({
       message: 'Team updated successfully',
@@ -476,7 +463,7 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-// GET /api/teams/search - Search teams
+// GET /api/teams/search/:query - Search teams
 router.get('/search/:query', async (req, res) => {
   try {
     const { query } = req.params;
