@@ -1,16 +1,29 @@
 import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
+import { useAuth } from "../context/AuthContext";
 
 const socket = io("http://localhost:5000", {
   withCredentials: true,
 });
 
-export default function ChatPage({ userId }) {
+export default function ChatPage() {
+  const { user } = useAuth();
+  const userId = user?._id;
   const [connections, setConnections] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
+
+  const fetchMessages = async (receiverId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/chat/${receiverId}`, { credentials: 'include' });
+      const msgs = await res.json();
+      setMessages(msgs);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    }
+  };
 
 
   const scrollToBottom = () => {
@@ -30,7 +43,7 @@ export default function ChatPage({ userId }) {
 
    
     socket.on("receiveMessage", (msg) => {
-      
+      console.log('received message', msg);
       if (
         selectedChat &&
         (msg.senderId === selectedChat._id || msg.receiverId === selectedChat._id)
@@ -44,10 +57,24 @@ export default function ChatPage({ userId }) {
     };
   }, [userId, selectedChat?._id]);
 
+  useEffect(() => {
+    const handleConnect = () => console.log('Socket connected');
+    const handleDisconnect = () => console.log('Socket disconnected');
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+    return () => {
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+    };
+  }, []);
+
   useEffect(scrollToBottom, [messages]);
 
   const sendMessage = () => {
-    if (!input.trim() || !selectedChat) return;
+    if (!input.trim() || !selectedChat || !userId) {
+      console.error('Cannot send message: Missing userId or selectedChat');
+      return;
+    }
 
     const msg = {
       senderId: userId,
@@ -56,7 +83,7 @@ export default function ChatPage({ userId }) {
       timestamp: new Date(),
     };
 
-   
+    console.log('sending message', msg);
     socket.emit("sendMessage", msg);
 
     
@@ -74,7 +101,7 @@ export default function ChatPage({ userId }) {
             key={conn._id}
             onClick={() => {
               setSelectedChat(conn);
-              setMessages([]); 
+              fetchMessages(conn._id);
             }}
             className={`p-2 rounded cursor-pointer hover:bg-zinc-800 ${
               selectedChat?._id === conn._id ? "bg-zinc-700" : ""
@@ -99,7 +126,7 @@ export default function ChatPage({ userId }) {
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {messages.map((msg, idx) => (
                 <div
-                  key={idx}
+                  key={msg._id || idx}
                   className={`p-2 rounded max-w-xs ${
                     msg.senderId === userId
                       ? "bg-blue-600 ml-auto"
