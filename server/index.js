@@ -18,6 +18,7 @@ import feedRoutes from './routes/feed.routes.js';
 import connectionRoutes from './routes/connection.routes.js';
 import chatRoutes from './routes/message.routes.js';
 import teamRoutes from './routes/team.routes.js';
+import postRoutes from './routes/post.routes.js';
 import ChatMessage from './models/chat.model.js';
 
 // Import Models to register with Mongoose
@@ -35,7 +36,7 @@ dotenv.config();
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_SECRET_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 // Configure Multer for memory storage
@@ -86,6 +87,7 @@ app.use('/api/feed', feedRoutes);
 app.use('/api/connections', connectionRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/teams', teamRoutes);
+app.use('/api/posts', postRoutes);
 
 
 

@@ -8,6 +8,7 @@ import {
   BarChart3, PieChart, LineChart, Hash, Globe
 } from 'lucide-react';
 import CreatePost from './CreatePost';
+import PostList from './PostList';
 
 
 const DetailedPlayerProfile = () => {
@@ -449,7 +450,7 @@ const handleConnect = async () => {
           <TabButton id="achievements" label="Achievements" isActive={activeTab === 'achievements'} onClick={setActiveTab} />
           <TabButton id="ratings" label="Rating History" isActive={activeTab === 'ratings'} onClick={setActiveTab} />
           <TabButton id="additional" label="Additional Info" isActive={activeTab === 'additional'} onClick={setActiveTab} />
-          {/* <TabButton id="posts" label="Posts" isActive={activeTab === 'posts'} onClick={(id) => setActiveTab(id)}/> */}
+          <TabButton id="posts" label="Posts" isActive={activeTab === 'posts'} onClick={setActiveTab} />
         </div>
 
         {/* Tab Content */}
@@ -674,9 +675,16 @@ const handleConnect = async () => {
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
             </div>
+          )}
+
+          {activeTab === 'posts' && (
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+              <h2 className="text-2xl font-bold text-white mb-6">Posts</h2>
+              <PostList playerId={playerId} />
+            </div>
+          )}
+        </div>
           )}
         </div>
                 ))}

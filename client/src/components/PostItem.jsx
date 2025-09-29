@@ -1,46 +1,83 @@
 import React from 'react';
+import { useAuth } from '../context/AuthContext';
+import { Edit, Trash2 } from 'lucide-react';
 
-const PostItem = ({ post }) => {
+const PostItem = ({ post, onEdit, onDelete }) => {
+  const { user } = useAuth();
+  const isOwner = user && post.author && user._id === post.author._id;
+
   return (
-    <div style={{ border: '1px solid #e0e0e0', padding: '15px', margin: '15px 0', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-        <h4 style={{ margin: 0, color: '#333' }}>
-          {post.author?.inGameName || post.author?.username || 'Unknown Player'}
-        </h4>
-        <span style={{ fontSize: '0.8em', color: '#888', marginLeft: 'auto' }}>
-          {new Date(post.createdAt).toLocaleDateString()}
-        </span>
-      </div>
-      
-      <p style={{ margin: '0 0 10px 0', color: '#555' }}>{post.caption}</p>
-      
-      <div style={{ marginBottom: '10px' }}>
-        {post.media.map((item, index) => (
-          <div key={index} style={{ marginBottom: '5px' }}>
-            {item.type === 'image' ? (
-              <img 
-                src={item.url} 
-                alt="Post media" 
-                style={{ width: '100%', maxWidth: '600px', height: 'auto', display: 'block', borderRadius: '4px' }} 
-              />
-            ) : (
-              <video 
-                controls 
-                src={item.url} 
-                style={{ width: '100%', maxWidth: '600px', height: 'auto', display: 'block', borderRadius: '4px' }} 
-              />
-            )}
+    <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
+            <span className="text-white font-bold text-sm">
+              {(post.author?.inGameName || post.author?.username || 'U')[0].toUpperCase()}
+            </span>
           </div>
-        ))}
+          <div>
+            <h4 className="text-white font-medium">
+              {post.author?.inGameName || post.author?.username || 'Unknown Player'}
+            </h4>
+            <span className="text-zinc-400 text-sm">
+              {new Date(post.createdAt).toLocaleDateString()}
+            </span>
+          </div>
+        </div>
+
+        {isOwner && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => onEdit(post)}
+              className="p-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 hover:text-blue-300 rounded-lg transition-colors"
+              title="Edit post"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => onDelete(post._id)}
+              className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 rounded-lg transition-colors"
+              title="Delete post"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
-      
-      <div style={{ fontStyle: 'italic', fontSize: '0.9em', color: '#aaa' }}>
-        {post.tags.map((tag, index) => (
-          <span key={index} style={{ marginRight: '5px', background: '#f0f0f0', padding: '3px 8px', borderRadius: '12px' }}>
-            #{tag}
-          </span>
-        ))}
-      </div>
+
+      <p className="text-zinc-300 mb-4 leading-relaxed">{post.caption}</p>
+
+      {post.media && post.media.length > 0 && (
+        <div className="mb-4 space-y-3">
+          {post.media.map((item, index) => (
+            <div key={index}>
+              {item.type === 'image' ? (
+                <img
+                  src={item.url}
+                  alt="Post media"
+                  className="w-full max-w-md rounded-lg border border-zinc-700"
+                />
+              ) : (
+                <video
+                  controls
+                  src={item.url}
+                  className="w-full max-w-md rounded-lg border border-zinc-700"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {post.tags && post.tags.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {post.tags.map((tag, index) => (
+            <span key={index} className="bg-orange-500/20 text-orange-400 px-3 py-1 rounded-full text-sm">
+              #{tag}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
