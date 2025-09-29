@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import CreatePost from './CreatePost';
+import PostList from './PostList';
 import {
-  User, MapPin, Calendar, Globe, Users, Trophy, Target, 
+  User, MapPin, Calendar, Globe, Users, Trophy, Target,
   TrendingUp, Award, Gamepad2, Settings, Share2, Edit,
   Clock, Zap, Medal, ChevronRight, Hash, Activity,
   ExternalLink, UserPlus, Check, X, Shield, Eye,
-  BarChart3, Sword, Crown, MessageCircle, Bell
+  BarChart3, Sword, Crown, MessageCircle, Bell, Plus
 } from 'lucide-react';
 
 const AegisMyProfile = () => {
@@ -16,17 +18,23 @@ const AegisMyProfile = () => {
   const [recentMatches, setRecentMatches] = useState([]);
   const [recentTournaments, setRecentTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showCreatePostModal, setShowCreatePostModal] = useState(false);
 
   const isLoading = !user || !user.username;
+
+  // Reset modal state when component mounts
+  useEffect(() => {
+    setShowCreatePostModal(false);
+  }, []);
 
   // Fetch additional data
   useEffect(() => {
     const fetchProfileData = async () => {
       if (!user) return;
-      
+
       try {
         setLoading(true);
-        
+
         // Fetch connections
         const connectionsRes = await fetch('/api/connections', {
           credentials: 'include'
@@ -172,8 +180,13 @@ const AegisMyProfile = () => {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white pt-24 pb-12">
+      {/* Create Post Modal - Rendered outside content container for proper overlay */}
+      {showCreatePostModal && (
+        <CreatePost onClose={() => setShowCreatePostModal(false)} />
+      )}
+
       <div className="max-w-7xl mx-auto px-4">
-        
+
         {/* Profile Header */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-6">
           {/* Cover Photo */}
@@ -218,6 +231,13 @@ const AegisMyProfile = () => {
                 <button className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg flex items-center gap-2 transition-colors">
                   <Edit className="w-4 h-4" />
                   <span className="hidden sm:inline">Edit Profile</span>
+                </button>
+                <button
+                  onClick={() => setShowCreatePostModal(true)}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg flex items-center gap-2 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Create Post</span>
                 </button>
                 <button className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors">
                   <Share2 className="w-4 h-4" />
@@ -312,7 +332,7 @@ const AegisMyProfile = () => {
         {/* Tabs */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-1 mb-6">
           <div className="flex gap-1 overflow-x-auto">
-            {['overview', 'matches', 'tournaments', 'connections', 'social'].map(tab => (
+            {['overview', 'matches', 'tournaments', 'connections', 'social', 'posts'].map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -462,6 +482,13 @@ const AegisMyProfile = () => {
                     color="red"
                   />
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'posts' && (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                <h2 className="text-xl font-bold mb-4">Posts</h2>
+                <PostList playerId={user._id} />
               </div>
             )}
           </div>

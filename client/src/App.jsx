@@ -54,7 +54,7 @@ function App() {
             <Route path='/connections' element={<ConnectionsPage />} />
             <Route path="/chat" element={<ChatPage  />} />
             <Route path='/scrims' element={<ScrimsPage />} />
-            <Route path='/profile' element={<ProfilePlayer/>} />
+            {/* <Route path='/profile' element={<ProfilePlayer/>} /> */}
             <Route path='/detailed/:playerId' element={<DetailedPlayerProfileDN/>} />
             <Route path='/match' element={<DetailedMatchInfoDN/>} />
             <Route path='/org' element={<DetailedOrgInfoDN/>} />
