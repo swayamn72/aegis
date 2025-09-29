@@ -15,34 +15,64 @@ const MyTeams = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('current');
+  const [recentMatches, setRecentMatches] = useState([]);
+  const [ongoingTournaments, setOngoingTournaments] = useState([]);
+  const [recentTournaments, setRecentTournaments] = useState([]);
+  const [teamInvitations, setTeamInvitations] = useState([]);
 
   useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+  if (!user) {
+    setLoading(false);
+    return;
+  }
 
-    const fetchPlayer = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/players/me', {
+  const fetchPlayerAndTeamData = async () => {
+    try {
+      // Fetch player data
+      const playerResponse = await fetch('http://localhost:5000/api/players/me', {
+        credentials: 'include',
+      });
+
+      if (playerResponse.ok) {
+        const playerData = await playerResponse.json();
+        setPlayer(playerData);
+
+        // If player has a team, fetch team details with matches and tournaments
+        if (playerData.team) {
+          const teamResponse = await fetch(`http://localhost:5000/api/teams/${playerData.team._id || playerData.team}`, {
+            credentials: 'include',
+          });
+
+          if (teamResponse.ok) {
+            const teamData = await teamResponse.json();
+            setPlayer(prev => ({ ...prev, team: teamData.team }));
+            setRecentMatches(teamData.recentMatches || []);
+            setOngoingTournaments(teamData.ongoingTournaments || []);
+            setRecentTournaments(teamData.recentTournaments || []);
+          }
+        }
+
+        // Fetch team invitations
+        const invitationsResponse = await fetch('http://localhost:5000/api/teams/invitations/received', {
           credentials: 'include',
         });
 
-        if (response.ok) {
-          const playerData = await response.json();
-          setPlayer(playerData);
-        } else {
-          setError('Failed to fetch player data');
+        if (invitationsResponse.ok) {
+          const invitationsData = await invitationsResponse.json();
+          setTeamInvitations(invitationsData.invitations || []);
         }
-      } catch (err) {
-        setError('Network error fetching player data');
-      } finally {
-        setLoading(false);
+      } else {
+        setError('Failed to fetch player data');
       }
-    };
+    } catch (err) {
+      setError('Network error fetching player data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchPlayer();
-  }, [user]);
+  fetchPlayerAndTeamData();
+}, [user]);
 
   // Aegis Mascot Component
   const AegisMascot = ({ size = "w-12 h-12" }) => (
@@ -67,6 +97,8 @@ const MyTeams = () => {
       <div className="absolute inset-0 bg-orange-400/40 rounded-t-full rounded-b-lg blur-md -z-10 animate-pulse" />
     </div>
   );
+
+  
 
   const StatCard = ({ icon: Icon, label, value, color = "orange", trend }) => (
     <div className={`bg-zinc-800/40 backdrop-blur-sm border border-${color}-400/30 rounded-xl p-4 hover:bg-zinc-800/60 transition-all duration-300 hover:scale-105 shadow-lg shadow-${color}-500/10`}>
