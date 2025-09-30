@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const HeroComponent = () => {
+  const navigate = useNavigate();
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -112,7 +114,7 @@ const HeroComponent = () => {
         <div className={`mt-12 flex flex-col sm:flex-row justify-center gap-6 transition-all duration-1000 delay-500 ${isLoaded ? 'transform translate-y-0 opacity-100' : 'transform translate-y-8 opacity-0'}`}>
           
           {/* Create Profile Button */}
-          <button className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-lg rounded-full overflow-hidden transition-all duration-300 hover:from-blue-700 hover:to-cyan-600 hover:scale-105 hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] border border-blue-500/30">
+          <button onClick={() => navigate('/signup')} className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-lg rounded-full overflow-hidden transition-all duration-300 hover:from-blue-700 hover:to-cyan-600 hover:scale-105 hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] border border-blue-500/30">
             <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
             <span className="relative z-10 flex items-center justify-center space-x-2">
               <span>Create Profile</span>

@@ -1,87 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
   Check, Star, Trophy, Calendar, MapPin, Users, Target, TrendingUp,
-  Award, Gamepad2, Eye, Settings, Share2, MessageCircle, UserPlus,
+  Award, Gamepad2, Settings, Share2, MessageCircle, UserPlus,
   ArrowUp, ArrowDown, Activity, Clock, Zap, Shield, Sword,
-  Medal, Crown, ChevronRight, ExternalLink, Copy,
-  BarChart3, PieChart, LineChart, Hash, Globe
+  Medal, Crown, ChevronRight, ExternalLink, Hash, Globe, Mail,
+  Flame, Timer, Crosshair
 } from 'lucide-react';
-import CreatePost from './CreatePost';
-import PostList from './PostList';
-
 
 const DetailedPlayerProfile = () => {
   const { playerId } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
-  const [ratingPeriod, setRatingPeriod] = useState('6months');
   const [playerData, setPlayerData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-const [posts, setPosts] = useState([]);
-  const [status, setStatus] = useState(null);
-const loggedInPlayerId = "123";
-const profilePlayerId = playerId; 
+  const [connectionStatus, setConnectionStatus] = useState(null);
+  const [matchHistory, setMatchHistory] = useState([]);
+  const [tournamentHistory, setTournamentHistory] = useState([]);
+  const [connections, setConnections] = useState([]);
+  const [currentTeam, setCurrentTeam] = useState(null);
 
+  const loggedInPlayerId = user?._id;
 
-
-
-const fetchPlayerPosts = async () => {
-  try {
-    const res = await fetch(`http://localhost:5000/api/posts/player/${playerId}`, {
-      credentials: "include",
-    });
-    if (!res.ok) throw new Error("Failed to fetch posts");
-    const data = await res.json();
-    setPosts(data.posts || []);
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-useEffect(() => {
-  fetchPlayerPosts();
-}, [playerId]);
-
-
-const handleConnect = async () => {
-  try {
-    console.log("Sending connection request..."); // ✅ log request start
-    const res = await fetch(
-      `http://localhost:5000/api/connections/send/${playerId}`,
-      {
-        method: "POST",
-        credentials: "include", // only works if JWT is stored in cookie
-        headers: {
-          "Content-Type": "application/json",
-          // "Authorization": `Bearer ${token}`, // use if JWT is in localStorage
-        },
-      }
-    );
-
-    const contentType = res.headers.get("content-type");
-    let data;
-    if (contentType && contentType.includes("application/json")) {
-      data = await res.json();
-    } else {
-      data = { message: await res.text() }; // fallback
-    }
-
-    if (res.ok) {
-      console.log("Request sent successfully:", data);
-      setStatus("pending");
-    } else {
-      console.error("Error sending request:", data.message);
-    }
-  } catch (err) {
-    console.error("Connect error:", err);
-  }
-};
-
-
-
-
-
+  // Fetch player data
   useEffect(() => {
     const fetchPlayer = async () => {
       try {
@@ -89,760 +33,567 @@ const handleConnect = async () => {
         const response = await fetch(`http://localhost:5000/api/players/${playerId}`, {
           credentials: 'include',
         });
-        if (!response.ok) {
-          throw new Error('Failed to fetch player data');
-        }
+        if (!response.ok) throw new Error('Failed to fetch player data');
+        
         const data = await response.json();
         setPlayerData(data.player);
-        setLoading(false);
+        
+        // Check connection status
+        if (data.player.connections?.includes(loggedInPlayerId)) {
+          setConnectionStatus('connected');
+        } else if (data.player.sentRequests?.includes(loggedInPlayerId)) {
+          setConnectionStatus('pending');
+        }
       } catch (err) {
         setError(err.message);
+      } finally {
         setLoading(false);
       }
     };
     fetchPlayer();
   }, [playerId]);
 
-  if (loading) {
-    return <div className="text-white p-6">Loading player profile...</div>;
-  }
+  // Fetch player's current team
+  useEffect(() => {
+    const fetchTeam = async () => {
+      if (!playerData?.team) return;
+      try {
+        const response = await fetch(`http://localhost:5000/api/teams/${playerData.team}`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentTeam(data.team);
+        }
+      } catch (error) {
+        console.error('Error fetching team:', error);
+      }
+    };
+    if (playerData) fetchTeam();
+  }, [playerData]);
 
-  if (error) {
-    return <div className="text-red-500 p-6">Error: {error}</div>;
-  }
+  // Fetch matches
+  useEffect(() => {
+    const fetchMatches = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/matches/player/${playerId}/recent`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setMatchHistory(data.matches || []);
+        }
+      } catch (error) {
+        console.error('Error fetching matches:', error);
+      }
+    };
+    if (playerId) fetchMatches();
+  }, [playerId]);
 
-  if (!playerData) {
-    return <div className="text-white p-6">No player data found.</div>;
-  }
+  // Fetch tournaments
+  useEffect(() => {
+    const fetchTournaments = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/tournaments/player/${playerId}/recent`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setTournamentHistory(data.tournaments || []);
+        }
+      } catch (error) {
+        console.error('Error fetching tournaments:', error);
+      }
+    };
+    if (playerId) fetchTournaments();
+  }, [playerId]);
 
-  // Map playerData fields to expected variables for UI
-  const mappedPlayer = {
-    realName: playerData.realName || 'N/A',
-    inGameName: playerData.inGameName || playerData.username || 'N/A',
-    age: playerData.age || 'N/A',
-    location: playerData.location || playerData.country || 'N/A',
-    country: playerData.country || 'N/A',
-    game: playerData.primaryGame || 'N/A',
-    rank: 'N/A', // Not in schema
-    aegisRating: playerData.aegisRating || 0,
-    peakRating: 0, // Not in schema
-    role: playerData.inGameRole?.join(', ') || 'N/A',
-    team: playerData.teamStatus || 'N/A',
-    tournamentsPlayed: playerData.tournamentsPlayed || 0,
-    winRate: 0, // Not in schema
-    avgKDA: 0, // Not in schema
-    joinDate: playerData.createdAt ? new Date(playerData.createdAt).toLocaleDateString() : 'N/A',
-    verified: playerData.verified || false,
-    status: playerData.teamStatus || 'N/A',
-    bio: playerData.bio || '',
-    primaryAgent: 'N/A', // Not in schema
-    secondaryAgent: 'N/A', // Not in schema
-    playstyle: 'N/A', // Not in schema
-    languages: playerData.languages || [],
-    discord: playerData.discordTag || '',
-    twitch: playerData.twitch || '',
-    youtube: playerData.YouTube || '',
-    currentStreak: 0, // Not in schema
-    followers: 0, // Not in schema
-    following: 0, // Not in schema
-    earnings: playerData.earnings || 0,
-    matchesPlayed: playerData.matchesPlayed || 0,
-    qualifiedEvents: playerData.qualifiedEvents || false,
-    qualifiedEventDetails: playerData.qualifiedEventDetails || [],
-    availability: playerData.availability || 'N/A',
-    profileVisibility: playerData.profileVisibility || 'public',
-    cardTheme: playerData.cardTheme || 'orange',
-    profilePicture: playerData.profilePicture || null,
+  // Fetch connections
+  useEffect(() => {
+    const fetchConnections = async () => {
+      if (!playerData?.connections) return;
+      try {
+        const connectionPromises = playerData.connections.slice(0, 6).map(connId =>
+          fetch(`http://localhost:5000/api/players/${connId}`, { credentials: 'include' })
+            .then(res => res.ok ? res.json() : null)
+        );
+        const results = await Promise.all(connectionPromises);
+        setConnections(results.filter(r => r).map(r => r.player));
+      } catch (error) {
+        console.error('Error fetching connections:', error);
+      }
+    };
+    if (playerData) fetchConnections();
+  }, [playerData]);
+
+  const handleConnect = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/connections/send/${playerId}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        setConnectionStatus('pending');
+        alert('Connection request sent!');
+      }
+    } catch (error) {
+      console.error('Error sending request:', error);
+    }
   };
 
-  // Match history data
-  const matchHistory = [
-    { id: 1, date: "2025-08-24", opponent: "Team Vitality", result: "Win", score: "13-9", map: "Ascent", kda: "24/12/8", rating: 1.8, ratingChange: +12 },
-    { id: 2, date: "2025-08-23", opponent: "FunPlus Phoenix", result: "Loss", score: "11-13", map: "Bind", kda: "18/15/6", rating: 1.2, ratingChange: -8 },
-    { id: 3, date: "2025-08-22", opponent: "Paper Rex", result: "Win", score: "13-7", map: "Split", kda: "26/10/5", rating: 2.1, ratingChange: +15 },
-    { id: 4, date: "2025-08-21", opponent: "Team Liquid", result: "Win", score: "13-11", map: "Haven", kda: "22/14/9", rating: 1.6, ratingChange: +9 },
-    { id: 5, date: "2025-08-20", opponent: "LOUD", result: "Loss", score: "8-13", map: "Fracture", kda: "15/18/7", rating: 0.9, ratingChange: -11 }
-  ];
+  if (loading) {
+    return (
+      <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen flex items-center justify-center">
+        <div className="text-white text-xl">Loading profile...</div>
+      </div>
+    );
+  }
 
-  // Tournament history
-  const tournamentHistory = [
-    { 
-      id: 1, 
-      name: "Valorant Champions 2024", 
-      placement: "2nd", 
-      prize: "$45,000", 
-      date: "2024-12-15", 
-      teams: 32,
-      ratingChange: +87,
-      status: "completed"
-    },
-    { 
-      id: 2, 
-      name: "VCT Stage 2 Masters", 
-      placement: "5-6th", 
-      prize: "$12,000", 
-      date: "2024-11-20", 
-      teams: 16,
-      ratingChange: +23,
-      status: "completed"
-    },
-    { 
-      id: 3, 
-      name: "Regional Qualifier", 
-      placement: "1st", 
-      prize: "$8,500", 
-      date: "2024-10-10", 
-      teams: 64,
-      ratingChange: +54,
-      status: "completed"
-    },
-    { 
-      id: 4, 
-      name: "Aegis Championship Series 1", 
-      placement: "TBD", 
-      prize: "$50,000", 
-      date: "2025-08-25", 
-      teams: 32,
-      ratingChange: 0,
-      status: "ongoing"
-    }
-  ];
-
-  // Rating history data (simplified)
-  const ratingHistory = [
-    { date: "2025-02", rating: 2756 },
-    { date: "2025-03", rating: 2789 },
-    { date: "2025-04", rating: 2812 },
-    { date: "2025-05", rating: 2834 },
-    { date: "2025-06", rating: 2801 },
-    { date: "2025-07", rating: 2847 },
-    { date: "2025-08", rating: 2847 }
-  ];
-
-  const achievements = [
-    { icon: "🏆", title: "Champion - Winter Circuit 2024", date: "2 days ago", rarity: "legendary" },
-    { icon: "🎯", title: "MVP - Regional Qualifier", date: "1 week ago", rarity: "epic" },
-    { icon: "⚡", title: "10-Game Win Streak", date: "2 weeks ago", rarity: "rare" },
-    { icon: "🔥", title: "Clutch Master", date: "1 month ago", rarity: "epic" },
-    { icon: "⭐", title: "Rising Star Award", date: "2 months ago", rarity: "rare" }
-  ];
+  if (error || !playerData) {
+    return (
+      <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen flex items-center justify-center">
+        <div className="text-red-500 text-xl">{error || 'Player not found'}</div>
+      </div>
+    );
+  }
 
   const AegisMascot = () => (
     <div className="relative">
-      <div className="w-20 h-24 bg-gradient-to-b from-orange-400 via-red-500 to-amber-600 rounded-t-full rounded-b-lg border-2 border-orange-300 relative overflow-hidden shadow-lg shadow-orange-500/50">
-        <div className="absolute inset-0">
-          <div className="absolute top-2 left-1/2 transform -translate-x-1/2 w-8 h-8 bg-yellow-300/30 rounded-full" />
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-orange-200/40 rounded-full" />
-        </div>
-        <div className="absolute inset-1 bg-gradient-to-b from-orange-300/20 to-red-400/20 rounded-t-full rounded-b-lg border border-yellow-400/30" />
-        <div className="absolute top-7 left-4 w-2 h-2 bg-yellow-300 rounded-full animate-pulse shadow-lg shadow-yellow-400/80" />
-        <div className="absolute top-7 right-4 w-2 h-2 bg-yellow-300 rounded-full animate-pulse shadow-lg shadow-yellow-400/80" />
-        <div className="absolute top-11 left-1/2 transform -translate-x-1/2 w-4 h-1 bg-yellow-200/90 rounded-full shadow-sm shadow-yellow-300/60" />
+      <div className="w-24 h-28 bg-gradient-to-b from-orange-400 via-red-500 to-amber-600 rounded-t-full rounded-b-lg border-2 border-orange-300 relative overflow-hidden shadow-xl shadow-orange-500/50">
+        <div className="absolute inset-0 bg-gradient-to-b from-orange-300/20 to-red-400/20 rounded-t-full rounded-b-lg border border-yellow-400/30" />
+        <div className="absolute top-8 left-5 w-2 h-2 bg-yellow-300 rounded-full animate-pulse shadow-lg shadow-yellow-400/80" />
+        <div className="absolute top-8 right-5 w-2 h-2 bg-yellow-300 rounded-full animate-pulse shadow-lg shadow-yellow-400/80" />
+        <div className="absolute top-12 left-1/2 transform -translate-x-1/2 w-4 h-1 bg-yellow-200/90 rounded-full" />
       </div>
-      <div className="absolute top-10 -left-2 w-3 h-6 bg-gradient-to-b from-orange-300 to-red-400 rounded-full transform rotate-12 shadow-md shadow-orange-400/50" />
-      <div className="absolute top-10 -right-2 w-3 h-6 bg-gradient-to-b from-orange-300 to-red-400 rounded-full transform -rotate-12 shadow-md shadow-orange-400/50" />
-      <div className="absolute inset-0 bg-orange-400/40 rounded-t-full rounded-b-lg blur-md -z-10 animate-pulse" />
-      <div className="absolute inset-0 bg-red-500/20 rounded-t-full rounded-b-lg blur-lg -z-20" />
-    </div>
-  );
-
-  const TabButton = ({ id, label, isActive, onClick }) => (
-    <button
-      onClick={() => onClick(id)}
-      className={`px-6 py-3 font-medium rounded-lg transition-all duration-200 ${
-        isActive 
-          ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg shadow-orange-500/30' 
-          : 'bg-zinc-800/50 text-zinc-300 hover:bg-zinc-700/50 hover:text-white'
-      }`}
-    >
-      {label}
-    </button>
-  );
-
-  const StatCard = ({ icon: Icon, label, value, change, color = "orange" }) => (
-    <div className={`bg-zinc-800/50 border border-${color}-400/30 rounded-xl p-4 shadow-lg shadow-${color}-500/10`}>
-      <div className="flex items-center justify-between mb-2">
-        <Icon className={`w-6 h-6 text-${color}-400`} />
-        {change && (
-          <div className={`flex items-center gap-1 text-sm ${change > 0 ? 'text-green-400' : 'text-red-400'}`}>
-            {change > 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
-            {Math.abs(change)}
-            </div>
-          )}
-
-
-        </div>
-      <div className={`text-2xl font-bold text-${color}-400 mb-1`}>{value}</div>
-      <div className="text-zinc-400 text-sm">{label}</div>
+      <div className="absolute top-12 -left-2 w-3 h-6 bg-gradient-to-b from-orange-300 to-red-400 rounded-full transform rotate-12" />
+      <div className="absolute top-12 -right-2 w-3 h-6 bg-gradient-to-b from-orange-300 to-red-400 rounded-full transform -rotate-12" />
     </div>
   );
 
   return (
-    
-   
-    <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans mt-[100px]">
-      <div className="container mx-auto px-6 py-8">
-       
-        {/* Header Section */}
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-8 mb-8">
-          <div className="flex flex-col lg:flex-row gap-8">
-            
-            {/* Left Side - Player Info */}
-            <div className="flex-1">
-              <div className="flex items-start gap-6 mb-6">
-                <div className="relative">
-                  {playerData.profilePicture ? (
-                    <img
-                      src={playerData.profilePicture}
-                      alt="Profile Picture"
-                      className="w-20 h-24 rounded-t-full rounded-b-lg border-2 border-orange-300 object-cover shadow-lg shadow-orange-500/50"
-                    />
-                  ) : (
-                    <AegisMascot />
-                  )}
-                  <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-orange-400 to-red-500 p-2 rounded-full shadow-lg shadow-orange-400/50">
-                    <Check className="w-4 h-4 text-white" />
+    <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans pt-24 pb-12">
+      <div className="container mx-auto px-4 max-w-7xl">
+        
+        {/* Hero Section */}
+        <div className="relative mb-8 rounded-3xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-orange-600/20 via-red-600/20 to-amber-600/20 backdrop-blur-3xl" />
+          <div className="relative p-8 md:p-12">
+            <div className="flex flex-col md:flex-row gap-8 items-start">
+              
+              {/* Profile Picture */}
+              <div className="relative flex-shrink-0">
+                {playerData.profilePicture ? (
+                  <img
+                    src={playerData.profilePicture}
+                    alt={playerData.inGameName}
+                    className="w-32 h-32 md:w-40 md:h-40 rounded-2xl object-cover border-4 border-orange-400/50 shadow-2xl"
+                  />
+                ) : (
+                  <div className="w-32 h-32 md:w-40 md:h-40"><AegisMascot /></div>
+                )}
+                {playerData.verified && (
+                  <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-orange-400 to-red-500 p-3 rounded-full shadow-lg">
+                    <Check className="w-5 h-5 text-white" />
                   </div>
+                )}
+              </div>
+
+              {/* Player Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-4 mb-3">
+                  <h1 className="text-4xl md:text-5xl font-bold text-white">{playerData.inGameName || playerData.username}</h1>
+                  {playerData.teamStatus && (
+                    <div className="bg-green-500/20 border border-green-500/30 rounded-full px-4 py-1 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                      <span className="text-green-400 text-sm font-medium">{playerData.teamStatus}</span>
+                    </div>
+                  )}
                 </div>
                 
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-4xl font-bold text-white">{playerData.inGameName}</h1>
-                    <div className="flex gap-2">
-                      <button className="p-2 bg-zinc-700/50 hover:bg-zinc-600/50 rounded-lg transition-colors group">
-                        <Share2 className="w-5 h-5 text-zinc-300 group-hover:text-orange-400" />
-                      </button>
-                      <button className="p-2 bg-zinc-700/50 hover:bg-zinc-600/50 rounded-lg transition-colors group">
-                        <MessageCircle className="w-5 h-5 text-zinc-300 group-hover:text-orange-400" />
-                      </button>
-                      {/* <button className="p-2 bg-zinc-700/50 hover:bg-zinc-600/50 rounded-lg transition-colors group"> */}
-                        {/* <UserPlus className="w-5 h-5 text-zinc-300 group-hover:text-orange-400" /> */}
-                      {/* </button> */}
-                            {status === "pending" ? (
-        <button className="bg-gray-600 px-4 py-2 rounded" disabled>
-          Request Sent
-        </button>
-      ) : (
-        <button
-          onClick={handleConnect}
-          className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600"
-        >
-          Link Up
-        </button>
-      )}
-                    </div>
-                  </div>
-                  
-                  <p className="text-xl text-zinc-300 mb-2">{playerData.realName}</p>
-                  
-                  <div className="flex flex-wrap items-center gap-4 text-zinc-400 mb-4">
+                {playerData.realName && (
+                  <p className="text-xl text-zinc-300 mb-4">{playerData.realName}</p>
+                )}
+
+                <div className="flex flex-wrap gap-4 text-zinc-400 mb-6">
+                  {playerData.location && (
                     <span className="flex items-center gap-2">
                       <MapPin className="w-4 h-4" />
                       {playerData.location}
                     </span>
+                  )}
+                  {playerData.age && (
                     <span className="flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
-                      {playerData.age} years old
+                      {playerData.age} years
                     </span>
+                  )}
+                  {playerData.languages?.length > 0 && (
                     <span className="flex items-center gap-2">
                       <Globe className="w-4 h-4" />
                       {playerData.languages.join(', ')}
                     </span>
-                  </div>
+                  )}
+                  {playerData.primaryGame && (
+                    <span className="flex items-center gap-2">
+                      <Gamepad2 className="w-4 h-4" />
+                      {playerData.primaryGame}
+                    </span>
+                  )}
+                </div>
 
-                  <div className="flex flex-wrap gap-3 mb-4">
-                    <div className="bg-green-500/20 border border-green-500/30 rounded-full px-3 py-1 flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                      <span className="text-green-400 text-sm font-medium">{mappedPlayer.status}</span>
-                    </div>
-                    <div className="bg-blue-500/20 border border-blue-500/30 rounded-full px-3 py-1">
-                      <span className="text-blue-400 text-sm font-medium">{mappedPlayer.availability}</span>
-                    </div>
-                  </div>
+                {playerData.bio && (
+                  <p className="text-zinc-300 mb-6 max-w-3xl">{playerData.bio}</p>
+                )}
 
-                  <p className="text-zinc-300 text-sm mb-6 max-w-2xl">{playerData.bio}</p>
-
-                  {/* Social Links */}
-                  <div className="flex gap-3">
-                    <button className={`flex items-center gap-2 rounded-lg px-3 py-2 transition-colors ${
-                      mappedPlayer.discord
-                        ? 'bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-600/30'
-                        : 'bg-zinc-700/50 border border-zinc-600/50 text-zinc-500 cursor-not-allowed'
-                    }`}>
-                      <Hash className="w-4 h-4" />
-                      <span>{mappedPlayer.discord || 'Discord'}</span>
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-3">
+                  {connectionStatus === 'connected' ? (
+                    <button className="bg-zinc-700 px-6 py-2 rounded-lg cursor-not-allowed" disabled>
+                      Connected
                     </button>
-                    <button className={`flex items-center gap-2 rounded-lg px-3 py-2 transition-colors ${
-                      mappedPlayer.twitch
-                        ? 'bg-purple-600/20 border border-purple-500/30 text-purple-400 hover:bg-purple-600/30'
-                        : 'bg-zinc-700/50 border border-zinc-600/50 text-zinc-500 cursor-not-allowed'
-                    }`}>
-                      <Activity className="w-4 h-4" />
-                      <span>{mappedPlayer.twitch || 'Twitch'}</span>
+                  ) : connectionStatus === 'pending' ? (
+                    <button className="bg-zinc-700 px-6 py-2 rounded-lg cursor-not-allowed" disabled>
+                      Request Sent
                     </button>
-                    <button className={`flex items-center gap-2 rounded-lg px-3 py-2 transition-colors ${
-                      mappedPlayer.youtube
-                        ? 'bg-red-600/20 border border-red-500/30 text-red-400 hover:bg-red-600/30'
-                        : 'bg-zinc-700/50 border border-zinc-600/50 text-zinc-500 cursor-not-allowed'
-                    }`}>
-                      <ExternalLink className="w-4 h-4" />
-                      <span>{mappedPlayer.youtube || 'YouTube'}</span>
+                  ) : (
+                    <button
+                      onClick={handleConnect}
+                      className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 px-6 py-2 rounded-lg transition-all flex items-center gap-2"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      Connect
                     </button>
-                  </div>
+                  )}
+                  <button className="bg-zinc-800/50 hover:bg-zinc-700/50 px-6 py-2 rounded-lg transition-colors flex items-center gap-2">
+                    <MessageCircle className="w-4 h-4" />
+                    Message
+                  </button>
+                  <button className="bg-zinc-800/50 hover:bg-zinc-700/50 px-4 py-2 rounded-lg transition-colors">
+                    <Share2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-            </div>
 
-            {/* Right Side - Quick Stats */}
-            <div className="lg:w-80">
-              <div className="bg-gradient-to-r from-orange-600/20 to-red-500/20 border border-orange-400/30 rounded-xl p-6 mb-6">
+              {/* Stats Card */}
+              <div className="bg-zinc-900/80 border border-orange-400/30 rounded-2xl p-6 min-w-[280px]">
                 <div className="text-center mb-4">
                   <div className="flex items-center justify-center gap-2 mb-2">
                     <Trophy className="w-6 h-6 text-amber-400" />
-                    <span className="text-amber-400 font-semibold text-lg">Aegis Rating</span>
+                    <span className="text-amber-400 font-semibold">Aegis Rating</span>
                   </div>
-                  <div className="text-4xl font-bold text-white mb-1">{playerData.aegisRating}</div>
-                  <div className="text-amber-400 text-sm">Peak: {playerData.peakRating}</div>
+                  <div className="text-5xl font-bold text-white mb-1">{playerData.aegisRating || 0}</div>
+                  <div className="flex items-center justify-center gap-2 text-green-400 text-sm">
+                    <TrendingUp className="w-4 h-4" />
+                    <span>Active Player</span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-center gap-2 text-green-400 text-sm">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>+127 this month</span>
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-700">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-white">{playerData.statistics?.tournamentsPlayed || 0}</div>
+                    <div className="text-xs text-zinc-400">Tournaments</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-white">{playerData.connections?.length || 0}</div>
+                    <div className="text-xs text-zinc-400">Connections</div>
+                  </div>
                 </div>
               </div>
-
-
-
-              <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-                <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-orange-400" />
-                  Community
-                </h3>
-                <div className="grid grid-cols-2 gap-4 text-center">
-                  <div>
-                    <div className="text-lg font-bold text-white">{playerData.followers}</div>
-                    <div className="text-xs text-zinc-400">Followers</div>
-                  </div>
-                  <div>
-                    <div className="text-lg font-bold text-white">{playerData.following}</div>
-                    <div className="text-xs text-zinc-400">Following</div>
-                  </div>
-                </div>
-
-              </div>
-              
             </div>
-            
+
+            {/* Social Links */}
+            <div className="flex flex-wrap gap-3 mt-6">
+              {playerData.discordTag && (
+                <a href={`https://discord.com/users/${playerData.discordTag}`} target="_blank" rel="noopener noreferrer"
+                  className="bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-600/30 rounded-lg px-4 py-2 transition-colors flex items-center gap-2">
+                  <Hash className="w-4 h-4" />
+                  {playerData.discordTag}
+                </a>
+              )}
+              {playerData.twitch && (
+                <a href={playerData.twitch} target="_blank" rel="noopener noreferrer"
+                  className="bg-purple-600/20 border border-purple-500/30 text-purple-400 hover:bg-purple-600/30 rounded-lg px-4 py-2 transition-colors flex items-center gap-2">
+                  <Activity className="w-4 h-4" />
+                  Twitch
+                </a>
+              )}
+              {playerData.youtube && (
+                <a href={playerData.youtube} target="_blank" rel="noopener noreferrer"
+                  className="bg-red-600/20 border border-red-500/30 text-red-400 hover:bg-red-600/30 rounded-lg px-4 py-2 transition-colors flex items-center gap-2">
+                  <ExternalLink className="w-4 h-4" />
+                  YouTube
+                </a>
+              )}
+              {playerData.twitter && (
+                <a href={playerData.twitter} target="_blank" rel="noopener noreferrer"
+                  className="bg-blue-600/20 border border-blue-500/30 text-blue-400 hover:bg-blue-600/30 rounded-lg px-4 py-2 transition-colors flex items-center gap-2">
+                  <ExternalLink className="w-4 h-4" />
+                  Twitter
+                </a>
+              )}
+            </div>
           </div>
-            <div className="grid grid-cols-5 gap-4 mb-6 mt-6">
-                <StatCard icon={Target} label="Win Rate" value={`${playerData.winRate}%`} change={2.3} color="green" />
-                <StatCard icon={Zap} label="Avg K/D/A" value={playerData.avgKDA} change={0.2} color="blue" />
-                <StatCard icon={Gamepad2} label="Matches Played" value={playerData.matchesPlayed} change={3} color="purple" />
-                <StatCard icon={Trophy} label="Tournaments" value={playerData.tournamentsPlayed} change={2} color="amber" />
-                <StatCard icon={Trophy} label="Earnings" value={`$${playerData.earnings}`} color="green" />
-              </div>
+        </div>
+
+        {/* Quick Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+          <div className="bg-zinc-900/50 border border-green-400/30 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="w-5 h-5 text-green-400" />
+              <span className="text-xs text-zinc-400">Win Rate</span>
+            </div>
+            <div className="text-2xl font-bold text-green-400">{playerData.statistics?.winRate || 0}%</div>
+          </div>
+          <div className="bg-zinc-900/50 border border-blue-400/30 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Crosshair className="w-5 h-5 text-blue-400" />
+              <span className="text-xs text-zinc-400">Avg K/D</span>
+            </div>
+            <div className="text-2xl font-bold text-blue-400">{(playerData.statistics?.totalKills / (playerData.statistics?.matchesPlayed || 1)).toFixed(1)}</div>
+          </div>
+          <div className="bg-zinc-900/50 border border-purple-400/30 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Gamepad2 className="w-5 h-5 text-purple-400" />
+              <span className="text-xs text-zinc-400">Matches</span>
+            </div>
+            <div className="text-2xl font-bold text-purple-400">{playerData.statistics?.matchesPlayed || 0}</div>
+          </div>
+          <div className="bg-zinc-900/50 border border-amber-400/30 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Trophy className="w-5 h-5 text-amber-400" />
+              <span className="text-xs text-zinc-400">Tournaments</span>
+            </div>
+            <div className="text-2xl font-bold text-amber-400">{playerData.statistics?.tournamentsPlayed || 0}</div>
+          </div>
+          <div className="bg-zinc-900/50 border border-green-400/30 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Flame className="w-5 h-5 text-green-400" />
+              <span className="text-xs text-zinc-400">Earnings</span>
+            </div>
+            <div className="text-2xl font-bold text-green-400">₹{playerData.earnings || 0}</div>
+          </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex flex-wrap gap-3 mb-8">
-          <TabButton id="overview" label="Overview" isActive={activeTab === 'overview'} onClick={setActiveTab} />
-          <TabButton id="matches" label="Match History" isActive={activeTab === 'matches'} onClick={setActiveTab} />
-          <TabButton id="tournaments" label="Tournaments" isActive={activeTab === 'tournaments'} onClick={setActiveTab} />
-          <TabButton id="achievements" label="Achievements" isActive={activeTab === 'achievements'} onClick={setActiveTab} />
-          <TabButton id="ratings" label="Rating History" isActive={activeTab === 'ratings'} onClick={setActiveTab} />
-          <TabButton id="additional" label="Additional Info" isActive={activeTab === 'additional'} onClick={setActiveTab} />
-          <TabButton id="posts" label="Posts" isActive={activeTab === 'posts'} onClick={setActiveTab} />
+        <div className="flex flex-wrap gap-3 mb-8 border-b border-zinc-800 pb-4">
+          {['overview', 'matches', 'tournaments', 'connections'].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-6 py-3 font-medium rounded-lg transition-all ${
+                activeTab === tab
+                  ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg'
+                  : 'bg-zinc-800/50 text-zinc-300 hover:bg-zinc-700/50'
+              }`}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          ))}
         </div>
 
         {/* Tab Content */}
-        <div className="min-h-[500px]">
+        <div className="min-h-[400px]">
           {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Game Stats */}
-              <div className="lg:col-span-2 bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
-                <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-                  <Gamepad2 className="w-6 h-6 text-orange-400" />
-                  Game Statistics
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-orange-400 mb-2">{playerData.aegisRating}</div>
-                    <div className="text-zinc-400 text-sm">Current Rating</div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Current Team */}
+              <div className="lg:col-span-2 bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
+                <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                  <Users className="w-6 h-6 text-orange-400" />
+                  Current Team
+                </h3>
+                {currentTeam ? (
+                  <div 
+                    onClick={() => navigate(`/team/${currentTeam._id}`)}
+                    className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-6 hover:border-orange-500/50 transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-4">
+                      {currentTeam.logo && (
+                        <img src={currentTeam.logo} alt={currentTeam.teamName} className="w-16 h-16 rounded-lg" />
+                      )}
+                      <div>
+                        <h4 className="text-xl font-bold text-white">{currentTeam.teamName}</h4>
+                        <p className="text-zinc-400">{currentTeam.teamTag}</p>
+                        <div className="flex gap-4 mt-2 text-sm">
+                          <span className="text-orange-400">{currentTeam.aegisRating || 0} Rating</span>
+                          <span className="text-zinc-400">{currentTeam.players?.length || 0} Players</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-400 mb-2">{playerData.winRate}%</div>
-                    <div className="text-zinc-400 text-sm">Win Rate</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-blue-400 mb-2">{playerData.avgKDA}</div>
-                    <div className="text-zinc-400 text-sm">Avg K/D/A</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-purple-400 mb-2">{playerData.tournamentsPlayed}</div>
-                    <div className="text-zinc-400 text-sm">Tournaments</div>
-                  </div>
-                </div>
+                ) : (
+                  <p className="text-zinc-400">Not currently in a team</p>
+                )}
 
-                <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
-                    <h3 className="text-white font-semibold mb-3">Primary Agent</h3>
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center">
-                        <Sword className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <div className="text-white font-medium">{playerData.primaryAgent}</div>
-                        <div className="text-zinc-400 text-sm">87% Pick Rate</div>
-                      </div>
+                {/* Previous Teams */}
+                {playerData.previousTeams?.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="text-lg font-semibold mb-4">Previous Teams</h4>
+                    <div className="space-y-3">
+                      {playerData.previousTeams.slice(0, 3).map((prevTeam, idx) => (
+                        <div key={idx} className="bg-zinc-800/30 border border-zinc-700 rounded-lg p-4">
+                          <div className="flex justify-between items-center">
+                            <span className="text-white font-medium">Team #{idx + 1}</span>
+                            <span className="text-zinc-400 text-sm">{prevTeam.reason || 'Left'}</span>
+                          </div>
+                          {prevTeam.endDate && (
+                            <span className="text-zinc-500 text-xs">
+                              Until {new Date(prevTeam.endDate).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  
-                  <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
-                    <h3 className="text-white font-semibold mb-3">Secondary Agent</h3>
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
-                        <Shield className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <div className="text-white font-medium">{playerData.secondaryAgent}</div>
-                        <div className="text-zinc-400 text-sm">13% Pick Rate</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
 
-              {/* Recent Activity */}
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
-                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-orange-400" />
-                  Recent Activity
-                </h3>
+              {/* Role & Info */}
+              <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
+                <h3 className="text-xl font-bold mb-6">Player Info</h3>
                 <div className="space-y-4">
-                  {matchHistory.slice(0, 3).map((match, index) => (
-                    <div key={match.id} className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg border border-zinc-700">
-                      <div>
-                        <div className={`font-medium text-sm ${match.result === 'Win' ? 'text-green-400' : 'text-red-400'}`}>
-                          {match.result} vs {match.opponent}
-                        </div>
-                        <div className="text-zinc-400 text-xs">{match.map} • {match.kda}</div>
-                      </div>
-                      <div className={`text-sm font-medium ${match.ratingChange > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {match.ratingChange > 0 ? '+' : ''}{match.ratingChange}
+                  {playerData.inGameRole?.length > 0 && (
+                    <div>
+                      <p className="text-zinc-400 text-sm mb-2">Roles</p>
+                      <div className="flex flex-wrap gap-2">
+                        {playerData.inGameRole.map((role, idx) => (
+                          <span key={idx} className="bg-orange-500/20 border border-orange-500/30 px-3 py-1 rounded-full text-orange-400 text-sm">
+                            {role}
+                          </span>
+                        ))}
                       </div>
                     </div>
-                  ))}
+                  )}
+                  {playerData.availability && (
+                    <div>
+                      <p className="text-zinc-400 text-sm mb-2">Availability</p>
+                      <span className="bg-blue-500/20 border border-blue-500/30 px-3 py-1 rounded-full text-blue-400 text-sm">
+                        {playerData.availability}
+                      </span>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-zinc-400 text-sm mb-2">Member Since</p>
+                    <p className="text-white">{new Date(playerData.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
           {activeTab === 'matches' && (
-            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
-              <h2 className="text-2xl font-bold text-white mb-6">Match History</h2>
-              <div className="space-y-4">
-                {matchHistory.map((match) => (
-                  <div key={match.id} className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4 hover:border-orange-500/50 transition-colors">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-3 h-3 rounded-full ${match.result === 'Win' ? 'bg-green-500' : 'bg-red-500'}`} />
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
+              <h2 className="text-2xl font-bold mb-6">Recent Matches</h2>
+              {matchHistory.length > 0 ? (
+                <div className="space-y-4">
+                  {matchHistory.map((match) => (
+                    <div
+                      key={match._id}
+                      onClick={() => navigate(`/matches/${match._id}`)}
+                      className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-5 hover:border-orange-500/50 transition-all cursor-pointer"
+                    >
+                      <div className="flex justify-between items-start mb-3">
                         <div>
-                          <div className="text-white font-medium">{match.opponent}</div>
-                          <div className="text-zinc-400 text-sm">{match.date} • {match.map}</div>
+                          <h4 className="text-white font-medium">{match.tournament?.name || 'Tournament'}</h4>
+                          <p className="text-zinc-400 text-sm">{match.map} • {new Date(match.date).toLocaleDateString()}</p>
                         </div>
+                        <span className={`px-3 py-1 rounded-full text-sm ${
+                          match.position <= 3 ? 'bg-green-500/20 text-green-400' : 'bg-zinc-700 text-zinc-300'
+                        }`}>
+                          #{match.position}
+                        </span>
                       </div>
-                      <div className="text-right">
-                        <div className={`text-lg font-bold ${match.result === 'Win' ? 'text-green-400' : 'text-red-400'}`}>
-                          {match.score}
+                      <div className="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                          <div className="text-white font-medium">{match.kills || 0}</div>
+                          <div className="text-zinc-400 text-xs">Kills</div>
                         </div>
-                        <div className="text-zinc-400 text-sm">{match.result}</div>
+                        <div>
+                          <div className="text-orange-400 font-medium">{match.points || 0}</div>
+                          <div className="text-zinc-400 text-xs">Points</div>
+                        </div>
+                        <div>
+                          <div className={`font-medium ${match.chickenDinner ? 'text-amber-400' : 'text-zinc-400'}`}>
+                            {match.chickenDinner ? '🏆' : '-'}
+                          </div>
+                          <div className="text-zinc-400 text-xs">Winner</div>
+                        </div>
                       </div>
                     </div>
-                    
-                    <div className="grid grid-cols-3 gap-4 pt-3 border-t border-zinc-600">
-                      <div className="text-center">
-                        <div className="text-white font-medium">{match.kda}</div>
-                        <div className="text-zinc-400 text-xs">K/D/A</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-orange-400 font-medium">{match.rating}</div>
-                        <div className="text-zinc-400 text-xs">Rating</div>
-                      </div>
-                      <div className="text-center">
-                        <div className={`font-medium ${match.ratingChange > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {match.ratingChange > 0 ? '+' : ''}{match.ratingChange}
-                        </div>
-                        <div className="text-zinc-400 text-xs">Aegis ∆</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-zinc-400 text-center py-8">No recent matches found</p>
+              )}
             </div>
           )}
 
           {activeTab === 'tournaments' && (
-            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
-              <h2 className="text-2xl font-bold text-white mb-6">Tournament History</h2>
-              <div className="space-y-4">
-                {tournamentHistory.map((tournament) => (
-                  <div key={tournament.id} className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4 hover:border-orange-500/50 transition-colors">
-                    <div className="flex items-center justify-between mb-3">
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
+              <h2 className="text-2xl font-bold mb-6">Tournament History</h2>
+              {tournamentHistory.length > 0 ? (
+                <div className="space-y-4">
+                  {tournamentHistory.map((tournament) => (
+                    <div
+                      key={tournament._id}
+                      onClick={() => navigate(`/tournament/${tournament._id}`)}
+                      className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-5 hover:border-orange-500/50 transition-all cursor-pointer"
+                    >
                       <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                          tournament.status === 'ongoing' ? 'bg-red-500/20 border border-red-500/50' : 'bg-zinc-700'
-                        }`}>
-                          {tournament.status === 'ongoing' ? (
-                            <Activity className="w-6 h-6 text-red-400 animate-pulse" />
-                          ) : (
-                            <Trophy className="w-6 h-6 text-orange-400" />
-                          )}
+                        <Trophy className="w-12 h-12 text-orange-400" />
+                        <div className="flex-1">
+                          <h4 className="text-white font-medium">{tournament.name}</h4>
+                          <p className="text-zinc-400 text-sm">
+                            {new Date(tournament.startDate).toLocaleDateString()} • {tournament.placement || 'Participated'}
+                          </p>
                         </div>
-                        <div>
-                          <div className="text-white font-medium">{tournament.name}</div>
-                          <div className="text-zinc-400 text-sm">{tournament.date} • {tournament.teams} Teams</div>
-                        </div>
+                        {tournament.prize && (
+                          <div className="text-right">
+                            <div className="text-green-400 font-bold">₹{tournament.prize}</div>
+                            <div className="text-zinc-400 text-xs">Prize</div>
+                          </div>
+                        )}
                       </div>
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-white">{tournament.placement}</div>
-                        <div className="text-green-400 text-sm">{tournament.prize}</div>
-                      </div>
-                    </div>
-                    
-                    {tournament.ratingChange !== 0 && (
-                      <div className="flex justify-end pt-3 border-t border-zinc-600">
-                        <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
-                          tournament.ratingChange > 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                        }`}>
-                          {tournament.ratingChange > 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
-                          {Math.abs(tournament.ratingChange)} Aegis Rating
-                        </div>
-            </div>
-          )}
-
-
-
-
-
-
-          {activeTab === 'additional' && (
-            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
-              <h2 className="text-2xl font-bold text-white mb-6">Additional Information</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
-                  <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
-                    <Trophy className="w-5 h-5 text-green-400" />
-                    Earnings
-                  </h3>
-                  <div className="text-2xl font-bold text-green-400">${mappedPlayer.earnings}</div>
-                  <div className="text-zinc-400 text-sm">Total Prize Money</div>
-                </div>
-
-                <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
-                  <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
-                    <Gamepad2 className="w-5 h-5 text-blue-400" />
-                    Matches Played
-                  </h3>
-                  <div className="text-2xl font-bold text-blue-400">{mappedPlayer.matchesPlayed}</div>
-                  <div className="text-zinc-400 text-sm">Total Matches</div>
-                </div>
-
-                <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
-                  <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
-                    <Check className="w-5 h-5 text-purple-400" />
-                    Qualified Events
-                  </h3>
-                  <div className="text-2xl font-bold text-purple-400">{mappedPlayer.qualifiedEvents ? 'Yes' : 'No'}</div>
-                  <div className="text-zinc-400 text-sm">Event Qualification</div>
-                </div>
-
-                <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
-                  <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-orange-400" />
-                    Availability
-                  </h3>
-                  <div className="text-2xl font-bold text-orange-400">{mappedPlayer.availability}</div>
-                  <div className="text-zinc-400 text-sm">Current Status</div>
-                </div>
-              </div>
-
-              {mappedPlayer.qualifiedEventDetails && mappedPlayer.qualifiedEventDetails.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="text-xl font-bold text-white mb-4">Qualified Event Details</h3>
-                  <div className="space-y-3">
-                    {mappedPlayer.qualifiedEventDetails.map((event, index) => (
-                      <div key={index} className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
-                        <div className="text-white font-medium">{event}</div>
-                      </div>
-                    ))}
-                  </div>
-            </div>
-          )}
-
-          {activeTab === 'posts' && (
-            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
-              <h2 className="text-2xl font-bold text-white mb-6">Posts</h2>
-              <PostList playerId={playerId} />
-            </div>
-          )}
-        </div>
-          )}
-        </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'achievements' && (
-            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
-              <h2 className="text-2xl font-bold text-white mb-6">Achievements & Awards</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {achievements.map((achievement, index) => (
-                  <div key={index} className={`p-4 rounded-lg border transition-all duration-200 hover:scale-105 ${
-                    achievement.rarity === 'legendary' ? 'bg-amber-500/10 border-amber-500/30 shadow-lg shadow-amber-500/20' :
-                    achievement.rarity === 'epic' ? 'bg-purple-500/10 border-purple-500/30 shadow-lg shadow-purple-500/20' :
-                    'bg-blue-500/10 border-blue-500/30 shadow-lg shadow-blue-500/20'
-                  }`}>
-                    <div className="flex items-start gap-4">
-                      <div className="text-3xl">{achievement.icon}</div>
-                      <div className="flex-1">
-                        <h3 className={`font-semibold mb-1 ${
-                          achievement.rarity === 'legendary' ? 'text-amber-400' :
-                          achievement.rarity === 'epic' ? 'text-purple-400' :
-                          'text-blue-400'
-                        }`}>
-                          {achievement.title}
-                        </h3>
-                        <p className="text-zinc-400 text-sm">{achievement.date}</p>
-                      </div>
-                      <div className={`px-2 py-1 rounded text-xs font-medium ${
-                        achievement.rarity === 'legendary' ? 'bg-amber-500/20 text-amber-300' :
-                        achievement.rarity === 'epic' ? 'bg-purple-500/20 text-purple-300' :
-                        'bg-blue-500/20 text-blue-300'
-                      }`}>
-                        {achievement.rarity}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'ratings' && (
-            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white">Aegis Rating History</h2>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setRatingPeriod('3months')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      ratingPeriod === '3months' ? 'bg-orange-500 text-white' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
-                    }`}
-                  >
-                    3M
-                  </button>
-                  <button
-                    onClick={() => setRatingPeriod('6months')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      ratingPeriod === '6months' ? 'bg-orange-500 text-white' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
-                    }`}
-                  >
-                    6M
-                  </button>
-                  <button
-                    onClick={() => setRatingPeriod('1year')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      ratingPeriod === '1year' ? 'bg-orange-500 text-white' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
-                    }`}
-                  >
-                    1Y
-                  </button>
-                </div>
-              </div>
-
-              {/* Rating Chart Placeholder */}
-              <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-6 mb-6">
-                <div className="h-64 flex items-center justify-center">
-                  <div className="text-center">
-                    <LineChart className="w-16 h-16 text-zinc-500 mx-auto mb-4" />
-                    <p className="text-zinc-400">Rating chart visualization would go here</p>
-                    <p className="text-zinc-500 text-sm mt-2">Current: {playerData.aegisRating} | Peak: {playerData.peakRating}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Rating Milestones */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-zinc-800/50 border border-amber-400/30 rounded-lg p-4 text-center">
-                  <Trophy className="w-8 h-8 text-amber-400 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-amber-400 mb-1">{playerData.peakRating}</div>
-                  <div className="text-zinc-400 text-sm">All-Time Peak</div>
-                </div>
-                
-                <div className="bg-zinc-800/50 border border-orange-400/30 rounded-lg p-4 text-center">
-                  <TrendingUp className="w-8 h-8 text-orange-400 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-orange-400 mb-1">{playerData.aegisRating}</div>
-                  <div className="text-zinc-400 text-sm">Current Rating</div>
-                </div>
-
-                <div className="bg-zinc-800/50 border border-green-400/30 rounded-lg p-4 text-center">
-                  <ArrowUp className="w-8 h-8 text-green-400 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-green-400 mb-1">+187</div>
-                  <div className="text-zinc-400 text-sm">Monthly Gain</div>
-                </div>
-              </div>
-
-              {/* Recent Rating Changes */}
-              <div className="mt-6">
-                <h3 className="text-xl font-bold text-white mb-4">Recent Rating Changes</h3>
-                <div className="space-y-3">
-                  {tournamentHistory.slice(0, 5).map((tournament) => (
-                    <div key={tournament.id} className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg border border-zinc-700">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-3 h-3 rounded-full ${
-                          tournament.ratingChange > 0 ? 'bg-green-500' : 
-                          tournament.ratingChange < 0 ? 'bg-red-500' : 'bg-zinc-500'
-                        }`} />
-                        <div>
-                          <div className="text-white font-medium text-sm">{tournament.name}</div>
-                          <div className="text-zinc-400 text-xs">{tournament.date} • {tournament.placement}</div>
-                        </div>
-                      </div>
-                      {tournament.ratingChange !== 0 && (
-                        <div className={`text-sm font-medium ${
-                          tournament.ratingChange > 0 ? 'text-green-400' : 'text-red-400'
-                        }`}>
-                          {tournament.ratingChange > 0 ? '+' : ''}{tournament.ratingChange}
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
-              </div>
+              ) : (
+                <p className="text-zinc-400 text-center py-8">No tournament history found</p>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'connections' && (
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
+              <h2 className="text-2xl font-bold mb-6">Connections ({connections.length})</h2>
+              {connections.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {connections.map((connection) => (
+                    <div
+                      key={connection._id}
+                      onClick={() => navigate(`/detailed/${connection._id}`)}
+                      className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4 hover:border-orange-500/50 transition-all cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        {connection.profilePicture ? (
+                          <img src={connection.profilePicture} alt={connection.username} className="w-12 h-12 rounded-lg object-cover" />
+                        ) : (
+                          <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-lg" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-white font-medium truncate">{connection.inGameName || connection.username}</h4>
+                          <p className="text-zinc-400 text-sm truncate">{connection.aegisRating || 0} Rating</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-zinc-400 text-center py-8">No connections yet</p>
+              )}
             </div>
           )}
         </div>
-
-        {/* Action Buttons Section */}
-        <div className="mt-8 flex flex-wrap gap-4 justify-center">
-          <button className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold px-8 py-3 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg shadow-orange-500/30">
-            Send Friend Request
-          </button>
-          <button className="bg-zinc-700 hover:bg-zinc-600 text-white font-medium px-8 py-3 rounded-lg transition-colors border border-orange-400/30">
-            Message Player
-          </button>
-          <button className="bg-zinc-700 hover:bg-zinc-600 text-white font-medium px-6 py-3 rounded-lg transition-colors border border-zinc-600 flex items-center gap-2">
-            <Share2 className="w-4 h-4" />
-            Share Profile
-          </button>
-          <button className="bg-zinc-700 hover:bg-zinc-600 text-white font-medium px-6 py-3 rounded-lg transition-colors border border-zinc-600 flex items-center gap-2">
-            <Copy className="w-4 h-4" />
-            Copy Profile URL
-          </button>
-        </div>
       </div>
     </div>
-    
   );
 };
 

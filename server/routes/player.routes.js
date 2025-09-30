@@ -172,6 +172,9 @@ router.get("/all", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const playerId = req.params.id;
+    if (!playerId || playerId === 'undefined') {
+      return res.status(400).json({ message: "Invalid player ID" });
+    }
     const player = await Player.findById(playerId).select("-password");
     if (!player) {
       return res.status(404).json({ message: "Player not found" });

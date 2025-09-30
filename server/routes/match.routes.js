@@ -2,6 +2,7 @@ import express from 'express';
 import Match from '../models/match.model.js';
 import Tournament from '../models/tournament.model.js';
 import Team from '../models/team.model.js';
+import Player from '../models/player.model.js';
 
 const router = express.Router();
 
@@ -431,6 +432,46 @@ router.delete('/:matchId', async (req, res) => {
   } catch (error) {
     console.error('Error deleting match:', error);
     res.status(500).json({ error: 'Failed to delete match' });
+  }
+});
+
+// Get recent matches for a specific player
+router.get('/player/:playerId/recent', async (req, res) => {
+  try {
+    const { playerId } = req.params;
+    const { limit = 10 } = req.query;
+    
+    const matches = await Match.find({
+      'participatingTeams.players.player': playerId,
+      status: 'completed'
+    })
+      .sort({ actualEndTime: -1 })
+      .limit(parseInt(limit))
+      .populate('tournament', 'tournamentName shortName')
+      .lean();
+
+    const formattedMatches = matches.map(match => {
+      // Find the team this player was on
+      const playerTeam = match.participatingTeams.find(team => 
+        team.players?.some(p => p.player.toString() === playerId)
+      );
+
+      return {
+        _id: match._id,
+        tournament: match.tournament,
+        map: match.map,
+        date: match.actualEndTime || match.scheduledStartTime,
+        position: playerTeam?.finalPosition,
+        kills: playerTeam?.kills?.total || 0,
+        points: playerTeam?.points?.totalPoints || 0,
+        chickenDinner: playerTeam?.chickenDinner || false
+      };
+    });
+
+    res.json({ matches: formattedMatches });
+  } catch (error) {
+    console.error('Error fetching player matches:', error);
+    res.status(500).json({ error: 'Failed to fetch player matches' });
   }
 });
 

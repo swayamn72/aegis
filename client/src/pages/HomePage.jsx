@@ -23,9 +23,7 @@ function HomePage() {
         <Carousel/>
       </main>
       <Footer />
-      <DetailedTournamentInfo/>
-      <DetailedMatchInfo/>
-      <DetailedTeamInfo/>
+
     </>
   );
 }

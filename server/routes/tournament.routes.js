@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import Tournament from '../models/tournament.model.js';
 import Match from '../models/match.model.js';
 import Team from '../models/team.model.js';
+import Player from '../models/player.model.js';
 
 const router = express.Router();
 
@@ -456,6 +457,60 @@ router.get('/:id', async (req, res) => {
   } catch (error) {
     console.error('Error fetching tournament:', error);
     res.status(500).json({ error: 'Failed to fetch tournament details' });
+  }
+});
+
+// Get tournaments a player has participated in
+router.get('/player/:playerId/recent', async (req, res) => {
+  try {
+    const { playerId } = req.params;
+    const { limit = 10 } = req.query;
+
+    // First, find teams the player is/was on
+    const player = await Player.findById(playerId).select('team previousTeams');
+    if (!player) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+
+    const teamIds = [
+      player.team,
+      ...(player.previousTeams?.map(pt => pt.team) || [])
+    ].filter(Boolean);
+
+    // Find tournaments these teams participated in
+    const tournaments = await Tournament.find({
+      'participatingTeams.team': { $in: teamIds }
+    })
+      .sort({ startDate: -1 })
+      .limit(parseInt(limit))
+      .select('tournamentName shortName startDate endDate prizePool participatingTeams finalStandings')
+      .lean();
+
+    const formattedTournaments = tournaments.map(tournament => {
+      // Find team's placement
+      const teamParticipation = tournament.participatingTeams.find(pt => 
+        teamIds.some(tid => tid?.toString() === pt.team.toString())
+      );
+      
+      const standing = tournament.finalStandings?.find(fs =>
+        teamIds.some(tid => tid?.toString() === fs.team.toString())
+      );
+
+      return {
+        _id: tournament._id,
+        name: tournament.tournamentName,
+        shortName: tournament.shortName,
+        startDate: tournament.startDate,
+        endDate: tournament.endDate,
+        placement: standing?.position || teamParticipation?.currentStage || 'Participated',
+        prize: standing?.prize?.amount || 0
+      };
+    });
+
+    res.json({ tournaments: formattedTournaments });
+  } catch (error) {
+    console.error('Error fetching player tournaments:', error);
+    res.status(500).json({ error: 'Failed to fetch player tournaments' });
   }
 });
 

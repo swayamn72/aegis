@@ -20,6 +20,7 @@ import chatRoutes from './routes/message.routes.js';
 import teamRoutes from './routes/team.routes.js';
 import postRoutes from './routes/post.routes.js';
 import ChatMessage from './models/chat.model.js';
+import organizationRoutes from './routes/organization.routes.js';
 
 // Import Models to register with Mongoose
 import './models/player.model.js';
@@ -27,7 +28,7 @@ import './models/team.model.js';
 import './models/tournament.model.js';
 import './models/match.model.js';
 import './models/admin.model.js';
-import './models/org.model.js';
+import './models/organization.model.js';
 
 // Load environment variables
 dotenv.config();
@@ -62,6 +63,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
+
 // Debugging middleware: log all incoming requests
 app.use((req, res, next) => {
   console.log(`Incoming request: ${req.method} ${req.url}`);
@@ -88,6 +90,7 @@ app.use('/api/connections', connectionRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/organizations', organizationRoutes)
 
 
 
