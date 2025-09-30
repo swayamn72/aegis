@@ -9,10 +9,19 @@ const organizationSchema = new mongoose.Schema(
       trim: true,
       index: true,
     },
-    owner: { // The individual or entity that owns the organization
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Player', // Could also be a separate 'User' schema if owners aren't necessarily players
+    ownerName: {
+      type: String,
       required: true,
+      trim: true,
+    },
+    ownerSocial: {
+      instagram: { type: String, trim: true, default: '' },
+      twitter: { type: String, trim: true, default: '' },
+      facebook: { type: String, trim: true, default: '' },
+      linkedin: { type: String, trim: true, default: '' },
+      youtube: { type: String, trim: true, default: '' },
+      twitch: { type: String, trim: true, default: '' },
+      website: { type: String, trim: true, default: '' },
     },
     email: {
       type: String,
@@ -22,11 +31,17 @@ const organizationSchema = new mongoose.Schema(
       lowercase: true,
       index: true,
     },
+    password: {
+      type: String,
+      required: true,
+      select: false, // Don't include password in queries by default
+    },
     country: {
       type: String,
       trim: true,
+      required: true,
     },
-    headquarters: { // Physical location of the organization
+    headquarters: {
       type: String,
       trim: true,
     },
@@ -35,7 +50,7 @@ const organizationSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
-    logo: { // URL to the organization's main logo
+    logo: {
       type: String,
       trim: true,
       default: '',
@@ -44,19 +59,19 @@ const organizationSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
-    activeGames: [ // List of games the organization currently operates teams in
+    activeGames: [
       {
         type: String,
         enum: ['BGMI', 'VALO', 'CS2'],
       },
     ],
-    teams: [ // References to teams owned by this organization
+    teams: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Team',
       },
     ],
-    totalEarnings: { // Aggregate earnings across all teams/ventures
+    totalEarnings: {
       type: Number,
       default: 0,
       min: 0,
@@ -79,11 +94,46 @@ const organizationSchema = new mongoose.Schema(
       enum: ['public', 'private'],
       default: 'public',
     },
+    // Admin approval fields
+    approvalStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending',
+      index: true,
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Admin',
+    },
+    approvalDate: {
+      type: Date,
+    },
+    rejectionReason: {
+      type: String,
+      trim: true,
+    },
+    // Verification
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verificationToken: {
+      type: String,
+      select: false,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Index for faster queries on approval status
+organizationSchema.index({ approvalStatus: 1, createdAt: -1 });
+
+// Method to check if organization can login
+organizationSchema.methods.canLogin = function() {
+  return this.approvalStatus === 'approved' && this.emailVerified;
+};
 
 const Organization = mongoose.model('Organization', organizationSchema);
 

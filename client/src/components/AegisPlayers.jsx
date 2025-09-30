@@ -243,7 +243,7 @@ const PlayerCard = ({ player }) => {
                 {/* Action Buttons */}
                 <div className="flex gap-3">
                     <button
-                        onClick={() => navigate(`/detailed/${player._id}`)}
+                        onClick={() => { if (player._id) navigate(`/detailed/${player._id}`); else console.error('Player _id is undefined'); }}
                         className={`flex-1 bg-gradient-to-r ${themeColors.buttonBg} text-white py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg ${themeColors.buttonShadow}`}
                     >
                         View Profile

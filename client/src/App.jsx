@@ -25,6 +25,7 @@ import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminTournaments from './pages/AdminTournaments';
 import AdminMatches from './pages/AdminMatches';
+import AdminOrganizations from './pages/AdminOrganizations';
 import CommunityPage from './pages/CommunityPage';
 import CreatePost from './components/CreatePost';
 import PostList from './components/PostList';
@@ -35,6 +36,7 @@ import ChatPage from './pages/ChatPage';
 import MyTeamsPage from './pages/MyTeamsPage';
 import DetailedTeamInfo from './components/DetailedTeamInfo';
 import DetailedMatchInfoBGMI from './components/DetailedMatchInfoBGMI'
+
 function App() {
   return (
     <div>
@@ -72,6 +74,7 @@ function App() {
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/tournaments" element={<AdminTournaments />} />
             <Route path="/admin/matches" element={<AdminMatches />} />
+            <Route path="/admin/organizations" element={<AdminOrganizations />} />
             <Route path="/my-teams" element={<ProtectedRoute><MyTeamsPage /></ProtectedRoute>} />
           </Routes>
           <ToastContainer

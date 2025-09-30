@@ -11,7 +11,8 @@ import {
   X,
   Shield,
   Settings,
-  BarChart3
+  BarChart3,
+  Building2
 } from 'lucide-react';
 
 const AdminLayout = ({ children }) => {
@@ -43,6 +44,12 @@ const AdminLayout = ({ children }) => {
       href: '/admin/matches',
       icon: Gamepad2,
       current: location.pathname === '/admin/matches'
+    },
+    {
+      name: 'Organizations',
+      href: '/admin/organizations',
+      icon: Building2,
+      current: location.pathname === '/admin/organizations'
     },
     {
       name: 'Analytics',
@@ -121,7 +128,7 @@ const AdminLayout = ({ children }) => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2">
+          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
             {navigation.map((item) => {
               const Icon = item.icon;
               return (
