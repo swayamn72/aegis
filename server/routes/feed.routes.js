@@ -51,13 +51,18 @@ router.get("/myfeed", auth, async (req, res) => {
     const connectionIds = user.connections.map(conn => conn._id);
     const authorIds = [req.user.id, ...connectionIds];
 
-    const posts = await Post.find({ author: { $in: authorIds } })
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .populate("author", "username email");
+const posts = await Post.find({ author: { $in: authorIds } })
+  .sort({ createdAt: -1 })
+  .skip((page - 1) * limit)
+  .limit(limit)
+  .populate("author", "username email")
+  .populate("likes", "username profilePic")
+  .populate({
+    path: "comments.player",
+    select: "username profilePic"
+  });
 
-    res.status(200).json(posts);
+res.status(200).json(posts);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });

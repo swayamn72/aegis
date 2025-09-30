@@ -220,6 +220,78 @@ router.delete("/:id", auth, async (req, res) => {
   }
 });
 
+// Like/Unlike a post
+router.post("/:id/like", auth, async (req, res) => {
+  try {
+    const postId = req.params.id;
+    const userId = req.user.id;
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    const likeIndex = post.likes.indexOf(userId);
+    if (likeIndex > -1) {
+      // User already liked, remove like
+      post.likes.splice(likeIndex, 1);
+    } else {
+      // User hasn't liked, add like
+      post.likes.push(userId);
+    }
+
+    await post.save();
+    await post.populate("likes", "username profilePic");
+
+    res.json({
+      message: likeIndex > -1 ? "Like removed" : "Post liked",
+      likes: post.likes
+    });
+  } catch (error) {
+    console.error("Error toggling like:", error);
+    res.status(500).json({ message: "Error toggling like", error: error.message });
+  }
+});
+
+// Add a comment to a post
+router.post("/:id/comment", auth, async (req, res) => {
+  try {
+    const postId = req.params.id;
+    const userId = req.user.id;
+    const { content } = req.body;
+
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({ message: "Comment content is required" });
+    }
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    const newComment = {
+      player: userId,
+      content: content.trim(),
+      createdAt: new Date()
+    };
+
+    post.comments.push(newComment);
+    await post.save();
+    await post.populate({
+      path: "comments.player",
+      select: "username profilePic"
+    });
+
+    res.status(201).json({
+      message: "Comment added successfully",
+      comment: post.comments[post.comments.length - 1]
+    });
+  } catch (error) {
+    console.error("Error adding comment:", error);
+    res.status(500).json({ message: "Error adding comment", error: error.message });
+  }
+});
+
 export default router;
 
 
