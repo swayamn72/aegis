@@ -35,7 +35,8 @@ import DetailedTournamentInfo2 from './components/DetailedTournamentInfo2';
 import ChatPage from './pages/ChatPage';
 import MyTeamsPage from './pages/MyTeamsPage';
 import DetailedTeamInfo from './components/DetailedTeamInfo';
-import DetailedMatchInfoBGMI from './components/DetailedMatchInfoBGMI'
+import DetailedMatchInfoBGMI from './components/DetailedMatchInfoBGMI';
+import OrgDashboard from './pages/OrgDashboard';
 
 function App() {
   return (
@@ -76,6 +77,7 @@ function App() {
             <Route path="/admin/matches" element={<AdminMatches />} />
             <Route path="/admin/organizations" element={<AdminOrganizations />} />
             <Route path="/my-teams" element={<ProtectedRoute><MyTeamsPage /></ProtectedRoute>} />
+            <Route path="/org-dashboard" element={<ProtectedRoute><OrgDashboard /></ProtectedRoute>} />
           </Routes>
           <ToastContainer
             position="bottom-right"

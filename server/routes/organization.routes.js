@@ -3,8 +3,24 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import Organization from '../models/organization.model.js';
 import { verifyAdminToken } from '../middleware/adminAuth.js'; // Use your existing admin auth
+import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
 
 const router = express.Router();
+
+// Multer setup for memory storage
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  },
+});
 
 // Register a new organization (pending approval)
 router.post('/register', async (req, res) => {
@@ -162,6 +178,58 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Route to upload organization logo
+router.post('/upload-logo', upload.single('logo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    // Verify organization from token
+    const token = req.cookies.token;
+    if (!token) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    if (decoded.type !== 'organization') {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    // Upload to Cloudinary
+    const uploadResult = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: 'organization_logos' },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      stream.end(req.file.buffer);
+    });
+
+    // Update organization logo URL in DB
+    const organization = await Organization.findById(decoded.id);
+    if (!organization) {
+      return res.status(404).json({ message: 'Organization not found' });
+    }
+
+    organization.logo = uploadResult.secure_url;
+    await organization.save();
+
+    res.json({
+      message: 'Logo uploaded successfully',
+      logoUrl: uploadResult.secure_url,
+    });
+
+  } catch (error) {
+    console.error('Logo upload error:', error);
+    res.status(500).json({
+      message: 'Error uploading logo',
+      error: error.message,
+    });
+  }
+});
+
 // Get all pending organizations (Admin only)
 router.get('/pending', verifyAdminToken, async (req, res) => {
   try {
@@ -299,6 +367,17 @@ router.get('/profile', async (req, res) => {
       error: error.message
     });
   }
+});
+
+// Organization logout
+router.post('/logout', (req, res) => {
+  // Clear the token cookie
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+  });
+  res.json({ message: 'Logout successful' });
 });
 
 export default router;

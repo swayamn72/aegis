@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, Shield, CheckCircle, ArrowRight, UserCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import AegisOrgPendingApproval from './AegisOrgPendingApproval';
+import AegisOrgRejected from './AegisOrgRejected';
 
 const AegisLogin = () => {
   const [formData, setFormData] = useState({
@@ -12,6 +14,9 @@ const AegisLogin = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [orgStatus, setOrgStatus] = useState(null); // 'pending', 'rejected', or null
+  const [orgData, setOrgData] = useState(null);
+  const [orgReason, setOrgReason] = useState('');
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -80,36 +85,50 @@ const AegisLogin = () => {
     setIsLoading(false);
 
     if (result.success) {
-      // Check if profile is complete and redirect accordingly
-      const userDataResponse = await fetch('http://localhost:5000/api/players/me', {
-        credentials: 'include',
-      });
-      if (userDataResponse.ok) {
-        const userData = await userDataResponse.json();
-        // Import useAuth to get isProfileComplete or replicate logic here
-        const isProfileComplete = (user) => {
-          if (!user) return false;
-          return !!(
-            user.realName &&
-            user.age &&
-            user.location &&
-            user.country &&
-            user.primaryGame &&
-            user.teamStatus &&
-            user.availability
-          );
-        };
-        if (isProfileComplete(userData)) {
-          navigate('/my-profile');
+      // Check if it's an organization login
+      if (result.userType === 'organization') {
+        // For organizations, redirect to organization dashboard or profile
+        navigate('/org-dashboard'); // You might need to create this route
+      } else {
+        // Player login - check if profile is complete and redirect accordingly
+        const userDataResponse = await fetch('http://localhost:5000/api/players/me', {
+          credentials: 'include',
+        });
+        if (userDataResponse.ok) {
+          const userData = await userDataResponse.json();
+          // Import useAuth to get isProfileComplete or replicate logic here
+          const isProfileComplete = (user) => {
+            if (!user) return false;
+            return !!(
+              user.realName &&
+              user.age &&
+              user.location &&
+              user.country &&
+              user.primaryGame &&
+              user.teamStatus &&
+              user.availability
+            );
+          };
+          if (isProfileComplete(userData)) {
+            navigate('/my-profile');
+          } else {
+            navigate('/complete-profile');
+          }
         } else {
+          // fallback redirect
           navigate('/complete-profile');
         }
-      } else {
-        // fallback redirect
-        navigate('/complete-profile');
       }
     } else {
-      setErrors({ general: result.message });
+      // Check if it's an organization with pending/rejected status
+      if (result.userType === 'organization' && result.status) {
+        setOrgStatus(result.status);
+        setOrgData(result.organization || {});
+        setOrgReason(result.reason || '');
+        setErrors({});
+      } else {
+        setErrors({ general: result.message });
+      }
     }
   };
 
@@ -117,20 +136,29 @@ const AegisLogin = () => {
     alert('Forgot password clicked');
   };
 
+  // Show organization status screens if applicable
+  if (orgStatus === 'pending') {
+    return <AegisOrgPendingApproval organization={orgData} />;
+  }
+
+  if (orgStatus === 'rejected') {
+    return <AegisOrgRejected organization={orgData} reason={orgReason} />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-blue-950 relative overflow-hidden">
       {/* Background Animations */}
       <div className="absolute inset-0 opacity-30">
         {[...Array(80)].map((_, i) => (
-          <div 
-            key={i} 
-            className="absolute w-1 h-1 bg-cyan-400 rounded-full animate-pulse" 
-            style={{ 
-              left: `${Math.random() * 100}%`, 
-              top: `${Math.random() * 100}%`, 
+          <div
+            key={i}
+            className="absolute w-1 h-1 bg-cyan-400 rounded-full animate-pulse"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
               animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${1.5 + Math.random() * 4}s` 
-            }} 
+              animationDuration: `${1.5 + Math.random() * 4}s`
+            }}
           />
         ))}
       </div>
@@ -139,13 +167,13 @@ const AegisLogin = () => {
       <div className="absolute -bottom-40 left-1/4 w-72 h-72 bg-gradient-to-t from-cyan-500/20 to-blue-500/20 rounded-full blur-3xl animate-pulse" style={{animationDelay: '4s'}} />
 
       <div className="relative z-10 min-h-screen flex">
-        
+
         {/* Left Column: Marketing Text & Mascot */}
         <div className="flex-1 flex-col justify-center items-center text-center px-8 lg:px-16 xl:px-24 max-w-2xl hidden lg:flex">
           <div className="mb-8">
             <AegisLoginMascot />
           </div>
-          
+
           <div className="space-y-6">
             <div className="space-y-4">
               <h1 className="text-6xl lg:text-7xl font-black text-white leading-none tracking-tight">
@@ -155,7 +183,7 @@ const AegisLogin = () => {
                 </span>
               </h1>
             </div>
-            
+
             <div className="flex items-center justify-center space-x-4 text-gray-400">
               <div className="flex items-center space-x-2">
                 <UserCheck className="w-5 h-5 text-green-400" />
@@ -173,14 +201,14 @@ const AegisLogin = () => {
         {/* Right Column: Login Form */}
         <div className="flex-1 flex items-center justify-center px-4 sm:px-8">
           <div className="w-full max-w-md space-y-8 bg-black/20 backdrop-blur-md p-8 rounded-2xl border border-white/10">
-            
+
             <div className="text-center space-y-3">
               <h2 className="text-3xl font-bold text-white">Sign In</h2>
               <p className="text-gray-400">Enter your credentials to continue</p>
             </div>
 
             <div className="space-y-6">
-              
+
               <div className="relative group">
                 <div className="absolute left-6 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-blue-400 transition-colors duration-200">
                   <Mail className="w-6 h-6" />
@@ -192,8 +220,8 @@ const AegisLogin = () => {
                   onChange={handleInputChange}
                   placeholder="Enter your email address"
                   className={`w-full pl-16 pr-6 py-4 bg-gray-900/30 backdrop-blur-sm border-2 rounded-xl text-white text-lg placeholder-gray-400 focus:outline-none focus:ring-4 transition-all duration-300 ${
-                    errors.email 
-                      ? 'border-red-500/50 focus:ring-red-500/20 focus:border-red-400' 
+                    errors.email
+                      ? 'border-red-500/50 focus:ring-red-500/20 focus:border-red-400'
                       : 'border-gray-600/50 focus:ring-blue-500/20 focus:border-blue-400 hover:border-gray-500/70'
                   }`}
                 />
@@ -210,8 +238,8 @@ const AegisLogin = () => {
                   onChange={handleInputChange}
                   placeholder="Enter your password"
                   className={`w-full pl-16 pr-16 py-4 bg-gray-900/30 backdrop-blur-sm border-2 rounded-xl text-white text-lg placeholder-gray-400 focus:outline-none focus:ring-4 transition-all duration-300 ${
-                    errors.password 
-                      ? 'border-red-500/50 focus:ring-red-500/20 focus:border-red-400' 
+                    errors.password
+                      ? 'border-red-500/50 focus:ring-red-500/20 focus:border-red-400'
                       : 'border-gray-600/50 focus:ring-blue-500/20 focus:border-blue-400 hover:border-gray-500/70'
                   }`}
                 />
@@ -251,7 +279,7 @@ const AegisLogin = () => {
                     Remember me
                   </span>
                 </label>
-                
+
                 <button
                   type="button"
                   onClick={handleForgotPassword}

@@ -13,6 +13,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [userType, setUserType] = useState(null); // 'player' or 'organization'
   const [loading, setLoading] = useState(true);
 
   // Check for existing session on app load
@@ -49,18 +50,32 @@ export const AuthProvider = ({ children }) => {
 
       // Regular user authentication check
       try {
-        const response = await fetch('http://localhost:5000/api/players/me', {
+        // First check player auth
+        let response = await fetch('http://localhost:5000/api/players/me', {
           credentials: 'include',
         });
         if (response.ok) {
           const userData = await response.json();
           setUser(userData);
+          setUserType('player');
           setIsAuthenticated(true);
-        } else if (response.status === 401) {
-          // This is expected when user is not logged in
-          console.log('User not authenticated - this is normal');
-        } else {
-          console.error('Auth check failed with status:', response.status);
+          setLoading(false);
+          return;
+        } else if (response.status !== 401) {
+          console.error('Player auth check failed with status:', response.status);
+        }
+
+        // If player auth fails, check organization auth
+        response = await fetch('http://localhost:5000/api/organizations/profile', {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.organization);
+          setUserType('organization');
+          setIsAuthenticated(true);
+        } else if (response.status !== 401) {
+          console.error('Organization auth check failed with status:', response.status);
         }
       } catch (error) {
         // Only log actual network errors, not 401s
@@ -78,7 +93,9 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/players/login', {
+
+      // First try player login
+      let response = await fetch('http://localhost:5000/api/players/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,37 +104,76 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ email, password }),
       });
 
-      if (response.ok) {
-        // After login, re-fetch user data to ensure fresh state
-        const checkAuth = async () => {
-          try {
-            const response = await fetch('http://localhost:5000/api/players/me', {
-              credentials: 'include',
-            });
-            if (response.ok) {
-              const userData = await response.json();
-              setUser(userData);
-              setIsAuthenticated(true);
-            } else if (response.status === 401) {
-              setUser(null);
-              setIsAuthenticated(false);
-            } else {
-              console.error('Auth check failed with status:', response.status);
-            }
-          } catch (error) {
-            if (!error.message?.includes('401')) {
-              console.error('Auth check network error:', error);
-            }
-          } finally {
-            setLoading(false);
-          }
-        };
-        await checkAuth();
+      let isPlayer = true;
 
-        return { success: true };
+      if (!response.ok) {
+        // If player login fails, try organization login
+        response = await fetch('http://localhost:5000/api/organizations/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({ email, password }),
+        });
+        isPlayer = false;
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+
+        if (isPlayer) {
+          // After login, re-fetch user data to ensure fresh state
+          const checkAuth = async () => {
+            try {
+              const response = await fetch('http://localhost:5000/api/players/me', {
+                credentials: 'include',
+              });
+              if (response.ok) {
+                const userData = await response.json();
+                setUser(userData);
+                setUserType('player');
+                setIsAuthenticated(true);
+              } else if (response.status === 401) {
+                setUser(null);
+                setUserType(null);
+                setIsAuthenticated(false);
+              } else {
+                console.error('Auth check failed with status:', response.status);
+              }
+            } catch (error) {
+              if (!error.message?.includes('401')) {
+                console.error('Auth check network error:', error);
+              }
+            } finally {
+              setLoading(false);
+            }
+          };
+          await checkAuth();
+        } else {
+          // Organization login successful
+          setUser(data.organization);
+          setUserType('organization');
+          setIsAuthenticated(true);
+          setLoading(false);
+        }
+
+        return { success: true, userType: isPlayer ? 'player' : 'organization' };
       } else {
         const errorData = await response.json();
         setLoading(false);
+
+        // Handle organization-specific error messages
+        if (!isPlayer && response.status === 403) {
+          return {
+            success: false,
+            message: errorData.message,
+            reason: errorData.reason,
+            userType: 'organization',
+            status: errorData.message.includes('pending') ? 'pending' : 'rejected'
+          };
+        }
+
         return { success: false, message: errorData.message };
       }
     } catch (error) {
@@ -129,7 +185,12 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await fetch('http://localhost:5000/api/players/logout', {
+      const logoutUrl =
+        userType === 'organization'
+          ? 'http://localhost:5000/api/organizations/logout'
+          : 'http://localhost:5000/api/players/logout';
+
+      await fetch(logoutUrl, {
         method: 'POST',
         credentials: 'include',
       });
@@ -137,6 +198,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Logout failed:', error);
     } finally {
       setUser(null);
+      setUserType(null);
       setIsAuthenticated(false);
     }
   };
@@ -182,6 +244,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     isAuthenticated,
     user,
+    userType,
     loading,
     login,
     logout,
