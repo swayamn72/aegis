@@ -12,6 +12,7 @@ const Navbar = () => {
 
   // I've updated your links to use "to" for routing instead of "href"
   const navLinks = [
+    {to: "/myfeed", text: "MyFeed"},
     { to: "/players", text: "Players" },
     { to: "/opportunities", text: "Opportunities" },
     { to: "/tournaments", text: "Tournaments" },

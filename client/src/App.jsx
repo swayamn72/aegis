@@ -27,6 +27,7 @@ import AdminTournaments from './pages/AdminTournaments';
 import AdminMatches from './pages/AdminMatches';
 import AdminOrganizations from './pages/AdminOrganizations';
 import CommunityPage from './pages/CommunityPage';
+import CreateCommunityPage from './pages/CreateCommunityPage';
 import CreatePost from './components/CreatePost';
 import PostList from './components/PostList';
 import NotificationsPage from './components/NotificationsPage';
@@ -63,6 +64,7 @@ function App() {
             <Route path='/org' element={<DetailedOrgInfoDN/>} />
             <Route path="/myfeed" element={<MyFeed/>} />
             <Route path='/community/:communityId' element={<CommunityPage/>}/>
+            <Route path='/create-community' element={<CreateCommunityPage />} />
             <Route path='/complete-profile' element={<ProtectedRoute><CompleteProfilePage/></ProtectedRoute>} />
             <Route path='/my-profile' element={<ProtectedRoute><MyProfilePage/></ProtectedRoute>} />
             <Route path='/settings' element={<ProtectedRoute><SettingsPage/></ProtectedRoute>} />

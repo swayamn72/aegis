@@ -1,5 +1,6 @@
 import express from "express";
 import Community from "../models/community.model.js";
+import auth from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -14,10 +15,40 @@ router.get("/", async (req, res) => {
   }
 });
 
+// Create a new community
+router.post("/", auth, async (req, res) => {
+  try {
+    const { name, description, image } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ message: "Community name is required" });
+    }
+
+    const newCommunity = new Community({
+      name,
+      description: description || "",
+      image: image || "",
+      admin: req.user.id,
+      members: [req.user.id],
+      membersCount: 1,
+    });
+
+    await newCommunity.save();
+    res.status(201).json(newCommunity);
+  } catch (error) {
+    console.error("Error creating community:", error);
+    if (error.code === 11000) {
+      res.status(400).json({ message: "Community name already exists" });
+    } else {
+      res.status(500).json({ message: "Error creating community", error: error.message });
+    }
+  }
+});
+
 // Get community by ID
 router.get("/:id", async (req, res) => {
   try {
-    const community = await Community.findById(req.params.id);
+    const community = await Community.findById(req.params.id).populate("admin", "username profilePic").populate("members", "username profilePic");
     if (!community) {
       return res.status(404).json({ message: "Community not found" });
     }

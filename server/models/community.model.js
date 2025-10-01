@@ -20,6 +20,15 @@ const communitySchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    admin: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Player",
+      required: true,
+    },
+    members: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Player",
+    }],
     createdAt: {
       type: Date,
       default: Date.now,
