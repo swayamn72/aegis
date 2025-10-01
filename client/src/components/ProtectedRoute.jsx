@@ -2,8 +2,8 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+const ProtectedRoute = ({ children, allowedUserTypes }) => {
+  const { isAuthenticated, loading, userType } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -16,6 +16,11 @@ const ProtectedRoute = ({ children }) => {
 
   if (!isAuthenticated) {
     // Redirect to login page with return url
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (allowedUserTypes && !allowedUserTypes.includes(userType)) {
+    // Redirect unauthorized users to login or home page
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
