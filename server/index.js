@@ -21,6 +21,8 @@ import teamRoutes from './routes/team.routes.js';
 import postRoutes from './routes/post.routes.js';
 import ChatMessage from './models/chat.model.js';
 import organizationRoutes from './routes/organization.routes.js';
+import communityRoutes from './routes/community.routes.js';
+import communityPostRoutes from './routes/communityPost.routes.js';
 
 // Import Models to register with Mongoose
 import './models/player.model.js';
@@ -90,7 +92,9 @@ app.use('/api/connections', connectionRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/posts', postRoutes);
-app.use('/api/organizations', organizationRoutes)
+app.use('/api/organizations', organizationRoutes);
+app.use('/api/communities', communityRoutes);
+app.use('/api/community-posts', communityPostRoutes);
 
 
 

@@ -1,9 +1,26 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {Link} from "react-router-dom";
+import axios from "axios";
 
 
 export default function RightSidebar({ tournaments, news, communities }) {
+  const [realCommunities, setRealCommunities] = useState([]);
+
+  useEffect(() => {
+    async function fetchCommunities() {
+      try {
+        const res = await axios.get("/api/communities");
+        setRealCommunities(res.data.slice(0, 3)); // Show first 3 communities
+      } catch (error) {
+        console.error("Error fetching communities:", error);
+        // Fallback to mock data if API fails
+        setRealCommunities(communities);
+      }
+    }
+
+    fetchCommunities();
+  }, [communities]);
   return (
     <aside className="hidden lg:flex flex-col w-80 ml-6 mt-5 space-y-6 sticky top-10">
 
@@ -53,13 +70,13 @@ export default function RightSidebar({ tournaments, news, communities }) {
 <div className="bg-zinc-900/80 backdrop-blur-md rounded-2xl p-4 border border-cyan-500/30 shadow-md">
   <h2 className="text-white font-bold text-lg mb-3">🌐 Trending Communities</h2>
   <ul className="space-y-3">
-    {communities.map((com, i) => (
+    {realCommunities.map((com, i) => (
       <li
-        key={i}
+        key={com._id || i}
         className="flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-800 transition cursor-pointer"
       >
 
-         <Link to={`/community/${com.id}`} className="flex items-center gap-3 flex-1">
+         <Link to={`/community/${com._id}`} className="flex items-center gap-3 flex-1">
         <img
           src={com.image}
           alt={com.name}
@@ -67,7 +84,7 @@ export default function RightSidebar({ tournaments, news, communities }) {
         />
         <div className="flex-1">
           <p className="text-gray-200 font-medium">{com.name}</p>
-          <p className="text-gray-400 text-xs">{com.members}</p>
+          <p className="text-gray-400 text-xs">{com.membersCount} members</p>
         </div>
           </Link>
         <button className="text-xs px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded-full">
