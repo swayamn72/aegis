@@ -1,13 +1,27 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import logo from '../assets/logo.png';
-import { Home, Users, Trophy, Calendar } from 'lucide-react'; // icons for nav items
-import { mockCommunities } from '../data/mockCommunities';
+import { Home, Users, Trophy, Calendar, Plus } from 'lucide-react'; // icons for nav items
+import axios from 'axios';
 const Sidebar = () => {
   const location = useLocation();
+  const [communities, setCommunities] = useState([]);
+
+  useEffect(() => {
+    const fetchCommunities = async () => {
+      try {
+        const res = await axios.get('/api/communities');
+        setCommunities(res.data);
+      } catch (error) {
+        console.error('Error fetching communities:', error);
+      }
+    };
+    fetchCommunities();
+  }, []);
 
   const navLinks = [
     { to: "/myfeed", text: "My Feed", icon: <Home size={20} /> },
+    { to: "/my-profile", text: "My Profile", icon: <Users size={20} /> },
     { to: "/players", text: "Players", icon: <Users size={20} /> },
     { to: "/tournaments", text: "Tournaments", icon: <Trophy size={20} /> },
     { to: "/scrims", text: "Scrims", icon: <Calendar size={20} /> },
@@ -45,29 +59,38 @@ const Sidebar = () => {
 
 
 <div className="mt-8 px-4">
-        <h2 className="text-gray-400 font-semibold text-sm mb-3">
-          Your Communities
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-gray-400 font-semibold text-sm">
+            Your Communities
+          </h2>
+          <NavLink
+            to="/create-community"
+            className="text-gray-400 hover:text-white p-1 rounded"
+            title="Create Community"
+          >
+            <Plus size={16} />
+          </NavLink>
+        </div>
         <ul className="space-y-2">
-          {mockCommunities.map((com) => (
-            <li
-              key={com.id}
+          {communities.map((com) => (
+            <NavLink
+              key={com._id}
+              to={`/community/${com._id}`}
               className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-800 cursor-pointer"
             >
               <img
-                src={com.image}
+                src={com.image || "https://via.placeholder.com/32"}
                 alt={com.name}
                 className="w-8 h-8 rounded-full border border-zinc-700"
               />
               <div>
                 <p className="text-gray-200 font-medium text-sm">{com.name}</p>
-                <p className="text-gray-500 text-xs">{com.members}</p>
+                <p className="text-gray-500 text-xs">{com.membersCount} members</p>
               </div>
-            </li>
+            </NavLink>
           ))}
         </ul>
       </div>
-
     </aside>
   );
 };
