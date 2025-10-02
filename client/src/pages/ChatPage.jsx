@@ -217,8 +217,8 @@ export default function ChatPage() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="relative">
-                      <img 
-                        src={conn.profilePicture || conn.avatar || `https://api.dicebear.com/7.x/avatars/svg?seed=${conn.username}`}
+                      <img
+                        src={conn.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${conn.username}`}
                         alt={conn.username} 
                         className="w-12 h-12 rounded-xl object-cover border-2 border-zinc-700 group-hover:border-orange-400/50 transition-colors"
                       />
@@ -293,8 +293,8 @@ export default function ChatPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <img 
-                      src={selectedChat.profilePicture || selectedChat.avatar || `https://api.dicebear.com/7.x/avatars/svg?seed=${selectedChat.username}`}
+                    <img
+                      src={selectedChat.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${selectedChat.username}`}
                       alt={selectedChat.username} 
                       className="w-10 h-10 rounded-lg object-cover border border-zinc-700"
                     />
@@ -364,8 +364,8 @@ export default function ChatPage() {
                     
                     {msg.senderId !== userId && (
                       <div className="order-0 mr-2">
-                        <img 
-                          src={selectedChat.profilePicture || selectedChat.avatar || `https://api.dicebear.com/7.x/avatars/svg?seed=${selectedChat.username}`}
+                        <img
+                          src={selectedChat.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${selectedChat.username}`}
                           alt={selectedChat.username} 
                           className="w-8 h-8 rounded-lg object-cover"
                         />

@@ -10,36 +10,38 @@ export default function MyFeedPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
+  const loadMorePosts = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/feed/myfeed?page=${page}&limit=2`,
+        {
+          method: "GET",
+          credentials: "include", // important!
+        }
+      );
 
-const loadMorePosts = async () => {
-  setLoading(true);
-  try {
-    const res = await fetch(
-      `http://localhost:5000/api/feed/myfeed?page=${page}&limit=2`,
-      {
-        method: "GET",
-        credentials: "include", // important!
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "Failed to fetch feed");
       }
-    );
 
-    if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.message || "Failed to fetch feed");
+      const data = await res.json();
+
+      // Filter out duplicates by _id before appending
+      setPosts((prev) => {
+        const existingIds = new Set(prev.map((post) => post._id));
+        const filteredNewPosts = data.filter((post) => !existingIds.has(post._id));
+        return [...prev, ...filteredNewPosts];
+      });
+
+      setPage((prev) => prev + 1);
+    } catch (err) {
+      console.error("Error fetching feed:", err.message);
+    } finally {
+      setLoading(false);
     }
-
-    const data = await res.json();
-    setPosts((prev) => [...prev, ...data]);
-    setPage((prev) => prev + 1);
-  } catch (err) {
-    console.error("Error fetching feed:", err.message);
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-
-
+  };
 
   useEffect(() => {
     loadMorePosts();

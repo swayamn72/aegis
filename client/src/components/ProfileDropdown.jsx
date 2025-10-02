@@ -42,9 +42,17 @@ const ProfileDropdown = ({ user, logout }) => {
     <div className="relative" ref={dropdownRef}>
       {/* Profile Icon and Dropdown Button */}
       <div className="flex items-center space-x-2">
-        <div className="flex items-center justify-center w-12 h-12 bg-orange-500 hover:bg-orange-600 rounded-full text-white font-bold text-lg transition-all duration-200 transform hover:scale-105">
-          {getInitials(user?.username)}
-        </div>
+        {user?.profilePicture ? (
+          <img
+            src={user.profilePicture}
+            alt={user.username}
+            className="w-12 h-12 rounded-full object-cover"
+          />
+        ) : (
+          <div className="flex items-center justify-center w-12 h-12 bg-orange-500 hover:bg-orange-600 rounded-full text-white font-bold text-lg transition-all duration-200 transform hover:scale-105">
+            {getInitials(user?.username)}
+          </div>
+        )}
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center justify-center w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded-full text-white transition-all duration-200 transform hover:scale-105"
@@ -60,9 +68,17 @@ const ProfileDropdown = ({ user, logout }) => {
           {/* User Info Header */}
           <div className="p-4 border-b border-zinc-800/50 bg-gradient-to-r from-[#120E0E] to-[#1a1414]">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                {getInitials(user?.username)}
-              </div>
+              {user?.profilePicture ? (
+                <img
+                  src={user.profilePicture}
+                  alt={user.username}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  {getInitials(user?.username)}
+                </div>
+              )}
               <div>
                 <h3 className="text-white font-semibold text-lg">{user?.username || 'User Name'}</h3>
                 <p className="text-gray-400 text-sm">Pro Player</p>

@@ -33,7 +33,6 @@ export const AuthProvider = ({ children }) => {
 
             if (response.ok) {
               const data = await response.json();
-              // Admin is authenticated, but we don't set user state for admin context
               console.log('Admin authenticated:', data.admin.username);
             } else {
               console.log('Admin token invalid or expired');

@@ -70,7 +70,7 @@ router.post("/invitations/:id/accept", auth, async (req, res) => {
       return res.status(400).json({ message: 'Invitation has expired' });
     }
 
-    // Import Player and Team models here to avoid circular dependencies
+
     const Player = (await import('../models/player.model.js')).default;
     const Team = (await import('../models/team.model.js')).default;
 

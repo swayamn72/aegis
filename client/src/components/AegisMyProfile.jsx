@@ -45,13 +45,6 @@ const AegisMyProfile = () => {
           setPendingRequests(data.pendingRequests || []);
         }
 
-        // Fetch recent matches (mock for now)
-        // const matchesRes = await fetch(`/api/matches/player/${user._id}`);
-        // if (matchesRes.ok) {
-        //   const data = await matchesRes.json();
-        //   setRecentMatches(data.matches || []);
-        // }
-
         setLoading(false);
       } catch (error) {
         console.error('Error fetching profile data:', error);
