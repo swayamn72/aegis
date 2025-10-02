@@ -10,7 +10,7 @@ const teamSchema = new mongoose.Schema(
       index: true,
       maxlength: 100,
     },
-    teamTag: { // Changed from 'tag' to match usage in other files
+    teamTag: { 
       type: String,
       unique: true,
       trim: true,
@@ -18,7 +18,7 @@ const teamSchema = new mongoose.Schema(
       minlength: 2,
       maxlength: 5,
     },
-    logo: { // URL to the team's logo
+    logo: { 
       type: String,
       trim: true,
       default: 'https://placehold.co/200x200/1a1a1a/ffffff?text=TEAM',
@@ -28,7 +28,7 @@ const teamSchema = new mongoose.Schema(
       ref: 'Player',
       required: true,
     },
-    players: [ // Roster of players in the team
+    players: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Player',
@@ -80,7 +80,7 @@ const teamSchema = new mongoose.Schema(
       totalDamage: { type: Number, default: 0 },
       chickenDinners: { type: Number, default: 0 },
       averagePlacement: { type: Number, default: 0 },
-      winRate: { type: Number, default: 0 }, // Calculated field
+      winRate: { type: Number, default: 0 }, 
     },
     
     // Recent tournament results
@@ -97,7 +97,7 @@ const teamSchema = new mongoose.Schema(
       }
     ],
     
-    qualifiedEvents: [ // List of events they've qualified for
+    qualifiedEvents: [ 
       {
         tournament: {
           type: mongoose.Schema.Types.ObjectId,

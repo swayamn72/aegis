@@ -29,7 +29,7 @@ import adminOrgTournamentRoutes from './routes/adminOrgTournament.routes.js';
 import supportRoutes from './routes/support.routes.js';
 
 
-// Import Models to register with Mongoose
+// Import Models
 import './models/player.model.js';
 import './models/team.model.js';
 import './models/tournament.model.js';
@@ -71,7 +71,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
 
-// Debugging middleware: log all incoming requests
 app.use((req, res, next) => {
   console.log(`Incoming request: ${req.method} ${req.url}`);
   next();

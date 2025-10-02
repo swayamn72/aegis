@@ -128,8 +128,8 @@ router.get("/", auth, async (req, res) => {
   try {
     const playerId = req.user.id;
     const player = await Player.findById(playerId)
-      .populate("connections", "username avatar name") // confirmed connections
-      .populate("receivedRequests", "username avatar name"); // pending requests
+      .populate("connections", "username profilePicture name") // confirmed connections
+      .populate("receivedRequests", "username profilePicture name"); // pending requests
 
     if (!player) return res.status(404).json({ message: "User not found" });
 

@@ -88,7 +88,7 @@ const AegisLogin = () => {
       // Check if it's an organization login
       if (result.userType === 'organization') {
         // For organizations, redirect to organization dashboard or profile
-        navigate('/org-dashboard'); // You might need to create this route
+        navigate('/org-dashboard'); 
       } else {
         // Player login - check if profile is complete and redirect accordingly
         const userDataResponse = await fetch('http://localhost:5000/api/players/me', {
@@ -96,7 +96,6 @@ const AegisLogin = () => {
         });
         if (userDataResponse.ok) {
           const userData = await userDataResponse.json();
-          // Import useAuth to get isProfileComplete or replicate logic here
           const isProfileComplete = (user) => {
             if (!user) return false;
             return !!(
@@ -115,7 +114,6 @@ const AegisLogin = () => {
             navigate('/complete-profile');
           }
         } else {
-          // fallback redirect
           navigate('/complete-profile');
         }
       }

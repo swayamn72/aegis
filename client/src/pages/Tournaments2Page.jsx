@@ -1,5 +1,3 @@
-// src/pages/Tournaments2Page.jsx
-
 import React from 'react';
 import Navbar from '../components/Navbar';
 import Tournaments2 from '../components/Tournaments2'; // Import the new database-driven component

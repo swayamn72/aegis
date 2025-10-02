@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Search, ChevronDown, MapPin, Gamepad2, Trophy, Calendar, Users, Star, TrendingUp, Award, Eye, Check } from 'lucide-react';
 import AegisProfileCardBGMI from './AegisProfileCardBGMI';
 
-// --- API CALL ---
 const fetchPlayers = async () => {
   try {
     const response = await fetch('/api/players/all');
