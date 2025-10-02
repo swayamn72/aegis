@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext';
 import AdminLayout from '../components/AdminLayout';
 import {
@@ -115,6 +116,7 @@ const RecentActivity = ({ activities }) => {
 
 const AdminDashboard = () => {
   const { admin, token } = useAdmin();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalTournaments: 0,
     activeMatches: 0,
@@ -221,15 +223,24 @@ const AdminDashboard = () => {
             <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
               <div className="space-y-3">
-                <button className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-2 px-4 rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors">
-                  Create Tournament
-                </button>
-                <button className="w-full bg-zinc-800 text-white py-2 px-4 rounded-lg hover:bg-zinc-700 transition-colors">
-                  Schedule Match
-                </button>
-                <button className="w-full bg-zinc-800 text-white py-2 px-4 rounded-lg hover:bg-zinc-700 transition-colors">
-                  View Reports
-                </button>
+          <button
+            onClick={() => navigate('/admin/tournaments/create')}
+            className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-2 px-4 rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors"
+          >
+            Create Tournament
+          </button>
+          <button
+            onClick={() => navigate('/admin/matches/create')}
+            className="w-full bg-zinc-800 text-white py-2 px-4 rounded-lg hover:bg-zinc-700 transition-colors"
+          >
+            Schedule Match
+          </button>
+          <button
+            onClick={() => navigate('/admin/bug-reports')}
+            className="w-full bg-zinc-800 text-white py-2 px-4 rounded-lg hover:bg-zinc-700 transition-colors"
+          >
+            View Reports
+          </button>
               </div>
             </div>
 

@@ -23,6 +23,11 @@ import ChatMessage from './models/chat.model.js';
 import organizationRoutes from './routes/organization.routes.js';
 import communityRoutes from './routes/community.routes.js';
 import communityPostRoutes from './routes/communityPost.routes.js';
+import orgTournamentRoutes from './routes/orgTournament.routes.js';
+import teamTournamentRoutes from './routes/teamTournament.routes.js';
+import adminOrgTournamentRoutes from './routes/adminOrgTournament.routes.js';
+import supportRoutes from './routes/support.routes.js';
+
 
 // Import Models to register with Mongoose
 import './models/player.model.js';
@@ -95,6 +100,12 @@ app.use('/api/posts', postRoutes);
 app.use('/api/organizations', organizationRoutes);
 app.use('/api/communities', communityRoutes);
 app.use('/api/community-posts', communityPostRoutes);
+app.use('/api/org-tournaments', orgTournamentRoutes);
+// Team tournament invitation and registration routes
+app.use('/api/team-tournaments', teamTournamentRoutes);
+// Admin routes for org tournament approval
+app.use('/api/admin/org-tournaments', adminOrgTournamentRoutes);
+app.use('/api/support', supportRoutes);
 
 
 

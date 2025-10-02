@@ -8,20 +8,16 @@ import { toast } from 'react-toastify';
 import {
   Plus,
   Search,
-  Filter,
   Edit,
   Trash2,
   Eye,
-  Calendar,
   Trophy,
-  Users,
-  MapPin,
-  MoreHorizontal,
   UserPlus,
-  Maximize2
+  Bell,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 
-// API functions
 const fetchTournaments = async (params = {}, token) => {
   try {
     const queryString = new URLSearchParams(params).toString();
@@ -35,7 +31,13 @@ const fetchTournaments = async (params = {}, token) => {
       throw new Error('Failed to fetch tournaments');
     }
     const data = await response.json();
-    return data;
+    
+    // Filter out pending org tournaments (they're shown separately)
+    const filteredTournaments = data.tournaments.filter(
+      t => t._approvalStatus !== 'pending'
+    );
+    
+    return { ...data, tournaments: filteredTournaments };
   } catch (error) {
     console.error('Error fetching tournaments:', error);
     throw error;
@@ -80,28 +82,14 @@ const enterTournament = async (tournamentId, entryData) => {
   }
 };
 
-const fetchTournamentParticipants = async (tournamentId) => {
-  try {
-    const response = await fetch(`/api/admin/tournaments/${tournamentId}/participants`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch participants');
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching participants:', error);
-    throw error;
-  }
-};
-
 const createTournament = async (tournamentData, token) => {
   try {
     const response = await fetch('/api/admin/tournaments', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`
-        // Remove Content-Type header to let browser set it for FormData
       },
-      body: tournamentData // tournamentData is now FormData
+      body: tournamentData
     });
     if (!response.ok) {
       const errorData = await response.json();
@@ -120,9 +108,8 @@ const editTournament = async (tournamentData, tournamentId, token) => {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`
-        // Remove Content-Type header to let browser set it for FormData
       },
-      body: tournamentData // tournamentData is now FormData
+      body: tournamentData
     });
     if (!response.ok) {
       const errorData = await response.json();
@@ -136,18 +123,6 @@ const editTournament = async (tournamentData, tournamentId, token) => {
 };
 
 const TournamentTable = ({ tournaments, onEdit, onDelete, onView, onEnter }) => {
-  const [sortBy, setSortBy] = useState('createdAt');
-  const [sortOrder, setSortOrder] = useState('desc');
-
-  const handleSort = (column) => {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(column);
-      setSortOrder('asc');
-    }
-  };
-
   const getStatusColor = (status) => {
     switch (status) {
       case 'in_progress':
@@ -308,13 +283,13 @@ const TournamentTable = ({ tournaments, onEdit, onDelete, onView, onEnter }) => 
                     >
                       <Edit className="w-4 h-4" />
                     </button>
-        <button
-          onClick={() => onDelete(tournament)}
-          className="text-zinc-400 hover:text-red-400 p-1"
-          title="Delete Tournament"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+                    <button
+                      onClick={() => onDelete(tournament)}
+                      className="text-zinc-400 hover:text-red-400 p-1"
+                      title="Delete Tournament"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -338,12 +313,10 @@ const AdminTournaments = () => {
   const [showEnterModal, setShowEnterModal] = useState(false);
   const [showTournamentWindow, setShowTournamentWindow] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState(null);
-
-  // New state for ConfirmModal
+  const [pendingOrgTournaments, setPendingOrgTournaments] = useState([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [tournamentToDelete, setTournamentToDelete] = useState(null);
 
-  // ConfirmModal component
   const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel }) => {
     if (!isOpen) return null;
     return (
@@ -370,14 +343,78 @@ const AdminTournaments = () => {
     );
   };
 
-
-
-  // Handler to show toast for 3 seconds
-  const showErrorToast = (message) => {
-    toast.error(message);
+  const fetchPendingOrgTournaments = async () => {
+    if (!token) return;
+    try {
+      const response = await fetch('/api/admin/org-tournaments/pending-org-tournaments', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPendingOrgTournaments(data.tournaments || []);
+      }
+    } catch (error) {
+      console.error('Error fetching pending org tournaments:', error);
+    }
   };
 
-  // Modified handleDelete to use ConfirmModal
+  const handleApproveOrgTournament = async (tournamentId) => {
+    try {
+      const response = await fetch(`/api/admin/org-tournaments/approve-org-tournament/${tournamentId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ featured: false, verified: true })
+      });
+      if (response.ok) {
+        toast.success('Tournament approved successfully!');
+        fetchPendingOrgTournaments();
+        // Refresh main tournament list
+        const params = {};
+        if (searchTerm) params.search = searchTerm;
+        if (statusFilter) params.status = statusFilter;
+        if (gameFilter) params.gameTitle = gameFilter;
+        const data = await fetchTournaments(params, token);
+        setTournaments(data.tournaments || []);
+      } else {
+        toast.error('Failed to approve tournament');
+      }
+    } catch (error) {
+      console.error('Error approving tournament:', error);
+      toast.error('Error approving tournament');
+    }
+  };
+
+  const handleRejectOrgTournament = async (tournamentId) => {
+    const reason = prompt('Enter rejection reason:');
+    if (!reason) return;
+    
+    try {
+      const response = await fetch(`/api/admin/org-tournaments/reject-org-tournament/${tournamentId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason })
+      });
+      if (response.ok) {
+        toast.success('Tournament rejected');
+        fetchPendingOrgTournaments();
+      } else {
+        toast.error('Failed to reject tournament');
+      }
+    } catch (error) {
+      console.error('Error rejecting tournament:', error);
+      toast.error('Error rejecting tournament');
+    }
+  };
+
   const handleDeleteClick = (tournament) => {
     setTournamentToDelete(tournament);
     setShowConfirmModal(true);
@@ -388,17 +425,16 @@ const AdminTournaments = () => {
     setShowConfirmModal(false);
     try {
       await deleteTournament(tournamentToDelete._id, token);
-      // Refresh the tournaments list after successful deletion
       const params = {};
       if (searchTerm) params.search = searchTerm;
       if (statusFilter) params.status = statusFilter;
       if (gameFilter) params.gameTitle = gameFilter;
-
       const data = await fetchTournaments(params, token);
       setTournaments(data.tournaments || []);
+      toast.success('Tournament deleted successfully');
     } catch (error) {
       console.error('Error deleting tournament:', error);
-      showErrorToast('Failed to delete tournament. Please try again.');
+      toast.error('Failed to delete tournament');
     } finally {
       setTournamentToDelete(null);
     }
@@ -409,24 +445,19 @@ const AdminTournaments = () => {
     setTournamentToDelete(null);
   };
 
-
-
   useEffect(() => {
     const loadTournaments = async () => {
-      if (!token) return; // Don't make API calls if no token
-
+      if (!token) return;
       setLoading(true);
       try {
         const params = {};
         if (searchTerm) params.search = searchTerm;
         if (statusFilter) params.status = statusFilter;
         if (gameFilter) params.gameTitle = gameFilter;
-
         const data = await fetchTournaments(params, token);
         setTournaments(data.tournaments || []);
       } catch (error) {
         console.error('Error loading tournaments:', error);
-        // Show empty state if API fails
         setTournaments([]);
       } finally {
         setLoading(false);
@@ -434,16 +465,13 @@ const AdminTournaments = () => {
     };
 
     loadTournaments();
+    fetchPendingOrgTournaments();
   }, [searchTerm, statusFilter, gameFilter, token]);
 
   const handleEdit = (tournament) => {
     setSelectedTournament(tournament);
     setShowEditModal(true);
   };
-
-  // Remove old handleDelete and replace with handleDeleteClick
-  // const handleDelete = async (tournament) => { ... }  // removed
-
 
   const handleView = (tournament) => {
     setSelectedTournament(tournament);
@@ -456,108 +484,41 @@ const AdminTournaments = () => {
 
   const handleCreateSubmit = async (tournamentData) => {
     try {
-      const result = await createTournament(tournamentData, token);
-      console.log('Tournament creation result:', result);
-
-      // Refresh the tournaments list after successful creation
+      await createTournament(tournamentData, token);
       const params = {};
       if (searchTerm) params.search = searchTerm;
       if (statusFilter) params.status = statusFilter;
       if (gameFilter) params.gameTitle = gameFilter;
-
       const data = await fetchTournaments(params, token);
       setTournaments(data.tournaments || []);
-
-      // Close the modal
       setShowCreateModal(false);
-
       toast.success('Tournament created successfully!');
     } catch (error) {
       console.error('Error creating tournament:', error);
-      console.error('Error details:', error.message, error.stack);
-
-      // Even if there's an error, refresh the list in case it was created
-      try {
-        const params = {};
-        if (searchTerm) params.search = searchTerm;
-        if (statusFilter) params.status = statusFilter;
-        if (gameFilter) params.gameTitle = gameFilter;
-
-        const data = await fetchTournaments(params, token);
-        setTournaments(data.tournaments || []);
-      } catch (refreshError) {
-        console.error('Error refreshing tournaments:', refreshError);
-      }
-
-      // Close the modal anyway since the tournament might have been created
       setShowCreateModal(false);
-
-      // Show a more informative message
-      if (error.message.includes('Failed to create tournament')) {
-        toast.info('Tournament may have been created successfully. Please check the tournaments list.');
-      } else {
-        toast.error(`Error: ${error.message}`);
-      }
+      toast.error('Error creating tournament');
     }
   };
 
   const handleEditSubmit = async (tournamentData) => {
     if (!selectedTournament) return;
     try {
-      const result = await editTournament(tournamentData, selectedTournament._id, token);
-      console.log('Tournament update result:', result);
-
-      // Refresh the tournaments list after successful update
+      await editTournament(tournamentData, selectedTournament._id, token);
       const params = {};
       if (searchTerm) params.search = searchTerm;
       if (statusFilter) params.status = statusFilter;
       if (gameFilter) params.gameTitle = gameFilter;
-
       const data = await fetchTournaments(params, token);
       setTournaments(data.tournaments || []);
-
-      // Close the modal
       setShowEditModal(false);
       setSelectedTournament(null);
-
       toast.success('Tournament updated successfully!');
     } catch (error) {
       console.error('Error updating tournament:', error);
-      console.error('Error details:', error.message, error.stack);
-
-      // Even if there's an error, refresh the list in case it was updated
-      try {
-        const params = {};
-        if (searchTerm) params.search = searchTerm;
-        if (statusFilter) params.status = statusFilter;
-        if (gameFilter) params.gameTitle = gameFilter;
-
-        const data = await fetchTournaments(params, token);
-        setTournaments(data.tournaments || []);
-      } catch (refreshError) {
-        console.error('Error refreshing tournaments:', refreshError);
-      }
-
-      // Close the modal anyway since the tournament might have been updated
       setShowEditModal(false);
       setSelectedTournament(null);
-
-      // Show a more informative message
-      if (error.message.includes('Failed to update tournament')) {
-        toast.info('Tournament may have been updated successfully. Please check the tournaments list.');
-      } else {
-        toast.error(`Error: ${error.message}`);
-      }
+      toast.error('Error updating tournament');
     }
-  };
-
-  const handleCreateCancel = () => {
-    setShowCreateModal(false);
-  };
-
-  const handleEditCancel = () => {
-    setShowEditModal(false);
-    setSelectedTournament(null);
   };
 
   const handleEnter = (tournament) => {
@@ -578,7 +539,6 @@ const AdminTournaments = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-white">Tournament Management</h1>
@@ -593,7 +553,6 @@ const AdminTournaments = () => {
           </button>
         </div>
 
-        {/* Filters */}
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
@@ -635,7 +594,64 @@ const AdminTournaments = () => {
           </div>
         </div>
 
-        {/* Tournament Table */}
+        {/* PENDING ORG TOURNAMENTS SECTION */}
+        {pendingOrgTournaments.length > 0 && (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-white">
+              <Bell className="w-5 h-5 text-yellow-400" />
+              Pending Organization Tournaments ({pendingOrgTournaments.length})
+            </h3>
+            <div className="space-y-3">
+              {pendingOrgTournaments.map((tournament) => (
+                <div key={tournament._id} className="bg-zinc-800 rounded-lg p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-zinc-700 rounded flex-shrink-0">
+                      {tournament.media?.logo ? (
+                        <img src={tournament.media.logo} alt="" className="w-full h-full object-cover rounded" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Trophy className="w-6 h-6 text-zinc-400" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-white truncate">{tournament.tournamentName}</h4>
+                      <p className="text-sm text-zinc-400">
+                        By {tournament.organizer?.organizationRef?.orgName || 'Unknown'} • {tournament.gameTitle} • {tournament.region}
+                      </p>
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Submitted {new Date(tournament._submittedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => handleView(tournament)}
+                      className="px-3 py-1 bg-zinc-700 hover:bg-zinc-600 rounded text-sm text-white transition"
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={() => handleApproveOrgTournament(tournament._id)}
+                      className="px-3 py-1 bg-green-500 hover:bg-green-600 rounded text-sm text-white transition flex items-center gap-1"
+                    >
+                      <CheckCircle className="w-3 h-3" />
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => handleRejectOrgTournament(tournament._id)}
+                      className="px-3 py-1 bg-red-500 hover:bg-red-600 rounded text-sm text-white transition flex items-center gap-1"
+                    >
+                      <XCircle className="w-3 h-3" />
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <TournamentTable
           tournaments={tournaments}
           onEdit={handleEdit}
@@ -644,7 +660,6 @@ const AdminTournaments = () => {
           onEnter={handleEnter}
         />
 
-        {/* Pagination */}
         <div className="flex items-center justify-between">
           <div className="text-sm text-zinc-400">
             Showing {tournaments.length} tournaments
@@ -666,7 +681,6 @@ const AdminTournaments = () => {
         </div>
       </div>
 
-      {/* Tournament Entry Modal */}
       <TournamentEntryModal
         tournament={selectedTournament}
         isOpen={showEnterModal}
@@ -677,27 +691,27 @@ const AdminTournaments = () => {
         onSubmit={enterTournament}
       />
 
-      {/* Tournament Creation Modal */}
       {showCreateModal && (
         <TournamentForm
           tournament={null}
           onSubmit={handleCreateSubmit}
-          onCancel={handleCreateCancel}
+          onCancel={() => setShowCreateModal(false)}
           isEditing={false}
         />
       )}
 
-      {/* Tournament Edit Modal */}
       {showEditModal && selectedTournament && (
         <TournamentForm
           tournament={selectedTournament}
           onSubmit={handleEditSubmit}
-          onCancel={handleEditCancel}
+          onCancel={() => {
+            setShowEditModal(false);
+            setSelectedTournament(null);
+          }}
           isEditing={true}
         />
       )}
 
-      {/* Confirm Delete Modal */}
       <ConfirmModal
         isOpen={showConfirmModal}
         title="Confirm Delete"
@@ -706,7 +720,6 @@ const AdminTournaments = () => {
         onCancel={handleCancelDelete}
       />
 
-      {/* Tournament Window Modal */}
       {showTournamentWindow && selectedTournament && (
         <TournamentWindow
           tournament={selectedTournament}
@@ -716,17 +729,13 @@ const AdminTournaments = () => {
             setSelectedTournament(null);
           }}
           onSave={async (updatedTournament) => {
-            // Handle save logic here
             console.log('Saving tournament:', updatedTournament);
-            // You can add API call to update the tournament
-            // For now, just close the window
             setShowTournamentWindow(false);
             setSelectedTournament(null);
           }}
-          isAdmin={true} // Enable admin editing features
+          isAdmin={true}
         />
       )}
-
     </AdminLayout>
   );
 };
