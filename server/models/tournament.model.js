@@ -452,7 +452,60 @@ const tournamentSchema = new mongoose.Schema(
       challengermode: String,
       // Add more as needed
     },
+    // --- Organization Tournament Approval System ---
+    _approvalStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected', 'not_applicable'],
+      default: 'not_applicable', // For admin-created tournaments
+      index: true,
+    },
+    _submittedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Organization',
+    },
+    _submittedAt: Date,
+    _approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Admin',
+    },
+    _approvedAt: Date,
+    _rejectedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Admin',
+    },
+    _rejectedAt: Date,
+    _rejectionReason: String,
+
+    // --- Team Invitations System ---
+    _pendingInvitations: [
+      {
+        team: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Team',
+          required: true,
+        },
+        phase: String, // Which phase/stage the team is invited to
+        message: String,
+        invitedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Organization',
+        },
+        invitedAt: {
+          type: Date,
+          default: Date.now,
+        },
+        status: {
+          type: String,
+          enum: ['pending', 'accepted', 'declined', 'cancelled'],
+          default: 'pending',
+        },
+        acceptedAt: Date,
+        declinedAt: Date,
+        cancelledAt: Date,
+      },
+    ],
   },
+  
   {
     timestamps: true, // Adds createdAt and updatedAt
     toJSON: { virtuals: true },

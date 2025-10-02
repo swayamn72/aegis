@@ -26,6 +26,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminTournaments from './pages/AdminTournaments';
 import AdminMatches from './pages/AdminMatches';
 import AdminOrganizations from './pages/AdminOrganizations';
+import AdminBugReports from './pages/AdminBugReports';
 import CommunityPage from './pages/CommunityPage';
 import CreateCommunityPage from './pages/CreateCommunityPage';
 import CreatePost from './components/CreatePost';
@@ -78,6 +79,7 @@ function App() {
             <Route path="/admin/tournaments" element={<AdminTournaments />} />
             <Route path="/admin/matches" element={<AdminMatches />} />
             <Route path="/admin/organizations" element={<AdminOrganizations />} />
+            <Route path="/admin/bug-reports" element={<AdminBugReports />} />
             <Route path="/my-teams" element={<ProtectedRoute><MyTeamsPage /></ProtectedRoute>} />
             <Route path="/org-dashboard" element={<ProtectedRoute><OrgDashboard /></ProtectedRoute>} />
           </Routes>

@@ -6,6 +6,7 @@ import Match from '../models/match.model.js';
 import Team from '../models/team.model.js';
 import Admin from '../models/admin.model.js';
 import { verifyAdminToken, requirePermission, generateAdminToken } from '../middleware/adminAuth.js';
+import { getAllBugReports, updateBugReportStatus } from '../controllers/support.controller.js';
 
 const router = express.Router();
 
@@ -612,6 +613,14 @@ router.get('/teams/search', verifyAdminToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to search teams' });
   }
 });
+
+// BUG REPORT MANAGEMENT
+
+// Get all bug reports
+router.get('/bug-reports', verifyAdminToken, getAllBugReports);
+
+// Update bug report status
+router.put('/bug-reports/:id/status', verifyAdminToken, updateBugReportStatus);
 
 // Get admin profile
 router.get('/profile', verifyAdminToken, (req, res) => {

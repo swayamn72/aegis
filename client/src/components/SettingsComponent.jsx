@@ -17,6 +17,18 @@ const SettingsComponent = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
 
+  // New state for support form
+  const [supportSubject, setSupportSubject] = useState('');
+  const [supportCategory, setSupportCategory] = useState('Account Issues');
+  const [supportMessage, setSupportMessage] = useState('');
+  const [isSubmittingSupport, setIsSubmittingSupport] = useState(false);
+
+  // New state for bug report form
+  const [bugTitle, setBugTitle] = useState('');
+  const [bugSteps, setBugSteps] = useState('');
+  const [bugPriority, setBugPriority] = useState('Low');
+  const [isSubmittingBug, setIsSubmittingBug] = useState(false);
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -1227,13 +1239,18 @@ const SettingsComponent = () => {
                         <input
                           type="text"
                           placeholder="Brief description of your issue"
+                          value={supportSubject}
+                          onChange={(e) => setSupportSubject(e.target.value)}
                           className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
                         />
                       </div>
                       <div>
                         <label className="block text-zinc-300 font-medium mb-2">Category</label>
-                        <select className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none">
-                          <option>Select a category</option>
+                        <select
+                          value={supportCategory}
+                          onChange={(e) => setSupportCategory(e.target.value)}
+                          className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
+                        >
                           <option>Account Issues</option>
                           <option>Technical Problems</option>
                           <option>Billing & Payments</option>
@@ -1246,10 +1263,49 @@ const SettingsComponent = () => {
                         <textarea
                           placeholder="Describe your issue in detail..."
                           rows={4}
+                          value={supportMessage}
+                          onChange={(e) => setSupportMessage(e.target.value)}
                           className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none resize-none"
                         />
                       </div>
-                      <button className="bg-blue-500 hover:bg-blue-600 text-white font-medium px-6 py-2 rounded-lg transition-colors flex items-center gap-2">
+                      <button
+                        onClick={async () => {
+                          if (!supportSubject || !supportCategory || !supportMessage) {
+                            toast.error('Please fill all fields in Contact Support');
+                            return;
+                          }
+                          setIsSubmittingSupport(true);
+                          try {
+                            const response = await fetch('/api/support/contact', {
+                              method: 'POST',
+                              credentials: 'include',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                subject: supportSubject,
+                                category: supportCategory,
+                                message: supportMessage,
+                              }),
+                            });
+                            if (response.ok) {
+                              toast.success('Support request submitted successfully');
+                              setSupportSubject('');
+                              setSupportCategory('Account Issues');
+                              setSupportMessage('');
+                            } else {
+                              const errorData = await response.json();
+                              toast.error(errorData.message || 'Failed to submit support request');
+                            }
+                          } catch (error) {
+                            toast.error('Failed to submit support request');
+                          } finally {
+                            setIsSubmittingSupport(false);
+                          }
+                        }}
+                        disabled={isSubmittingSupport}
+                        className={`bg-blue-500 hover:bg-blue-600 text-white font-medium px-6 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                          isSubmittingSupport ? 'opacity-75 cursor-not-allowed' : ''
+                        }`}
+                      >
                         <MessageSquare className="w-4 h-4" />
                         Send Message
                       </button>
@@ -1268,6 +1324,8 @@ const SettingsComponent = () => {
                         <input
                           type="text"
                           placeholder="Short description of the bug"
+                          value={bugTitle}
+                          onChange={(e) => setBugTitle(e.target.value)}
                           className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-red-500 focus:outline-none"
                         />
                       </div>
@@ -1276,19 +1334,62 @@ const SettingsComponent = () => {
                         <textarea
                           placeholder="1. Go to...&#10;2. Click on...&#10;3. Expected vs Actual result..."
                           rows={4}
+                          value={bugSteps}
+                          onChange={(e) => setBugSteps(e.target.value)}
                           className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-red-500 focus:outline-none resize-none"
                         />
                       </div>
                       <div>
                         <label className="block text-zinc-300 font-medium mb-2">Priority</label>
-                        <select className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-red-500 focus:outline-none">
+                        <select
+                          value={bugPriority}
+                          onChange={(e) => setBugPriority(e.target.value)}
+                          className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-red-500 focus:outline-none"
+                        >
                           <option>Low</option>
                           <option>Medium</option>
                           <option>High</option>
                           <option>Critical</option>
                         </select>
                       </div>
-                      <button className="bg-red-500 hover:bg-red-600 text-white font-medium px-6 py-2 rounded-lg transition-colors flex items-center gap-2">
+                      <button
+                        onClick={async () => {
+                          if (!bugTitle || !bugSteps) {
+                            toast.error('Please fill all required fields in Bug Report');
+                            return;
+                          }
+                          setIsSubmittingBug(true);
+                          try {
+                            const response = await fetch('/api/support/bug', {
+                              method: 'POST',
+                              credentials: 'include',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                title: bugTitle,
+                                stepsToReproduce: bugSteps,
+                                priority: bugPriority,
+                              }),
+                            });
+                            if (response.ok) {
+                              toast.success('Bug report submitted successfully');
+                              setBugTitle('');
+                              setBugSteps('');
+                              setBugPriority('Low');
+                            } else {
+                              const errorData = await response.json();
+                              toast.error(errorData.message || 'Failed to submit bug report');
+                            }
+                          } catch (error) {
+                            toast.error('Failed to submit bug report');
+                          } finally {
+                            setIsSubmittingBug(false);
+                          }
+                        }}
+                        disabled={isSubmittingBug}
+                        className={`bg-red-500 hover:bg-red-600 text-white font-medium px-6 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                          isSubmittingBug ? 'opacity-75 cursor-not-allowed' : ''
+                        }`}
+                      >
                         <Bug className="w-4 h-4" />
                         Submit Bug Report
                       </button>

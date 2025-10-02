@@ -12,7 +12,8 @@ import {
   Shield,
   Settings,
   BarChart3,
-  Building2
+  Building2,
+  AlertCircle
 } from 'lucide-react';
 
 const AdminLayout = ({ children }) => {
@@ -50,6 +51,12 @@ const AdminLayout = ({ children }) => {
       href: '/admin/organizations',
       icon: Building2,
       current: location.pathname === '/admin/organizations'
+    },
+    {
+      name: 'Bug Reports',
+      href: '/admin/bug-reports',
+      icon: AlertCircle,
+      current: location.pathname === '/admin/bug-reports'
     },
     {
       name: 'Analytics',
