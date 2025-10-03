@@ -1,20 +1,19 @@
-# Support and Bug Report Feature Implementation
+# TODO: Add Create Team Functionality to MyTeams.jsx
 
-## Completed Tasks
-- [x] Frontend: Added support and bug report forms to SettingsComponent.jsx
-- [x] Frontend: Integrated API calls with toast notifications
-- [x] Backend: Created SupportRequest Mongoose model
-- [x] Backend: Created BugReport Mongoose model
-- [x] Backend: Created support controller with validation and error handling
-- [x] Backend: Created support routes with authentication middleware
-- [x] Backend: Integrated support routes into main server app
+## Tasks
+- [x] Add state for create team modal visibility
+- [x] Add state for form data (teamName, teamTag, primaryGame, region, bio, logo)
+- [x] Create modal/form UI for team creation
+- [x] Add form validation
+- [x] Implement form submission handler to call POST /api/teams
+- [x] Handle API response: success (close modal, refresh data, navigate to team page), error (show error message)
+- [x] Update "Create Team" button to open modal
+- [x] Test the functionality
 
-## Summary
-The support and bug report feature has been fully implemented with:
-- Frontend forms in the settings page for submitting support requests and bug reports
-- Backend API endpoints at /api/support/contact and /api/support/bug
-- Proper authentication, validation, and error handling
-- Consistent Mongoose models with timestamps and references to Player model
-- Toast notifications for user feedback on form submissions
+## Dependent Files
+- client/src/components/MyTeams.jsx
 
-The feature is ready for testing and deployment.
+## Follow-up Steps
+- [x] Test team creation end-to-end
+- [ ] Handle file upload for logo if needed
+- [ ] Add more validation or features if required

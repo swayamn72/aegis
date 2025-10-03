@@ -225,7 +225,7 @@ router.post('/', auth, async (req, res) => {
       }
     }
 
-    const existingCaptaincy = await Team.findOne({ captain: req.user._id });
+    const existingCaptaincy = await Team.findOne({ captain: req.user.id });
     if (existingCaptaincy) {
       return res.status(400).json({ message: 'You are already a captain of another team' });
     }
@@ -237,13 +237,13 @@ router.post('/', auth, async (req, res) => {
       region: region || 'India',
       bio,
       logo,
-      captain: req.user._id,
-      players: [req.user._id]
+      captain: req.user.id,
+      players: [req.user.id]
     });
 
     await newTeam.save();
 
-    await Player.findByIdAndUpdate(req.user._id, {
+    await Player.findByIdAndUpdate(req.user.id, {
       team: newTeam._id,
       teamStatus: 'in a team'
     });
