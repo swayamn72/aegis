@@ -12,12 +12,17 @@ import {
   Users,
   Hash,
   ChevronDown,
-  Circle,
-  Gamepad2,
+  Activity,
   Crown,
   Shield,
-  Activity
+  Gamepad2,
+  Bell,
+  Check,
+  X,
+  Eye,
+  UserPlus
 } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const socket = io("http://localhost:5000", {
   withCredentials: true,
@@ -28,14 +33,19 @@ export default function ChatPage() {
   const userId = user?._id;
   const [connections, setConnections] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
+  const [chatType, setChatType] = useState('direct'); // 'direct' or 'tryout'
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [onlineUsers, setOnlineUsers] = useState(new Set());
+  const [teamApplications, setTeamApplications] = useState([]);
+  const [tryoutChats, setTryoutChats] = useState([]);
+  const [showApplications, setShowApplications] = useState(false);
   const messagesEndRef = useRef(null);
   const location = useLocation();
   const selectedUserId = location.state?.selectedUserId;
 
+  // Fetch messages for direct chat
   const fetchMessages = async (receiverId) => {
     try {
       const res = await fetch(`http://localhost:5000/api/chat/${receiverId}`, { credentials: 'include' });
@@ -43,6 +53,46 @@ export default function ChatPage() {
       setMessages(msgs);
     } catch (error) {
       console.error('Error fetching messages:', error);
+    }
+  };
+
+  // Fetch messages for tryout chat
+  const fetchTryoutMessages = async (chatId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/tryout-chats/${chatId}`, { credentials: 'include' });
+      const data = await res.json();
+      setMessages(data.chat.messages || []);
+      setSelectedChat(data.chat);
+    } catch (error) {
+      console.error('Error fetching tryout messages:', error);
+    }
+  };
+
+  // Fetch team applications (for captains)
+  const fetchTeamApplications = async () => {
+    if (!user?.team) return;
+    
+    try {
+      const res = await fetch(`http://localhost:5000/api/team-applications/team/${user.team._id}`, { 
+        credentials: 'include' 
+      });
+      const data = await res.json();
+      setTeamApplications(data.applications || []);
+    } catch (error) {
+      console.error('Error fetching applications:', error);
+    }
+  };
+
+  // Fetch tryout chats
+  const fetchTryoutChats = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/tryout-chats/my-chats', { 
+        credentials: 'include' 
+      });
+      const data = await res.json();
+      setTryoutChats(data.chats || []);
+    } catch (error) {
+      console.error('Error fetching tryout chats:', error);
     }
   };
 
@@ -57,25 +107,31 @@ export default function ChatPage() {
 
     if (userId) {
       socket.emit("join", userId);
+      fetchTeamApplications();
+      fetchTryoutChats();
     }
 
     socket.on("receiveMessage", (msg) => {
-      console.log('received message', msg);
-      if (
-        selectedChat &&
+      if (chatType === 'direct' && selectedChat &&
         (msg.senderId === selectedChat._id || msg.receiverId === selectedChat._id)
       ) {
         setMessages((prev) => [...prev, msg]);
       }
     });
 
-    // Mock online users - in real app, this would come from socket events
+    socket.on("tryoutMessage", (data) => {
+      if (chatType === 'tryout' && selectedChat && data.chatId === selectedChat._id) {
+        setMessages((prev) => [...prev, data.message]);
+      }
+    });
+
     setOnlineUsers(new Set(['user1', 'user2', 'user3']));
 
     return () => {
       socket.off("receiveMessage");
+      socket.off("tryoutMessage");
     };
-  }, [userId, selectedChat?._id]);
+  }, [userId, selectedChat?._id, chatType]);
 
   useEffect(() => {
     const handleConnect = () => console.log('Socket connected');
@@ -95,28 +151,43 @@ export default function ChatPage() {
       const user = connections.find(c => c._id === selectedUserId);
       if (user) {
         setSelectedChat(user);
+        setChatType('direct');
         fetchMessages(user._id);
       }
     }
   }, [connections, selectedUserId]);
 
   const sendMessage = () => {
-    if (!input.trim() || !selectedChat || !userId) {
-      console.error('Cannot send message: Missing userId or selectedChat');
-      return;
+    if (!input.trim() || !selectedChat || !userId) return;
+
+    if (chatType === 'direct') {
+      const msg = {
+        senderId: userId,
+        receiverId: selectedChat._id,
+        message: input,
+        timestamp: new Date(),
+      };
+      socket.emit("sendMessage", msg);
+      setMessages((prev) => [...prev, msg]);
+    } else if (chatType === 'tryout') {
+      // Send tryout chat message
+      fetch(`http://localhost:5000/api/tryout-chats/${selectedChat._id}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ message: input }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          socket.emit("tryoutMessage", {
+            chatId: selectedChat._id,
+            message: data.chatMessage,
+          });
+          setMessages(prev => [...prev, data.chatMessage]);
+        })
+        .catch(error => console.error('Error sending tryout message:', error));
     }
 
-    const msg = {
-      senderId: userId,
-      receiverId: selectedChat._id,
-      message: input,
-      timestamp: new Date(),
-    };
-
-    console.log('sending message', msg);
-    socket.emit("sendMessage", msg);
-
-    setMessages((prev) => [...prev, msg]);
     setInput("");
   };
 
@@ -124,6 +195,79 @@ export default function ChatPage() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
+    }
+  };
+
+  const handleStartTryout = async (applicationId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/team-applications/${applicationId}/start-tryout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        toast.success('Tryout started!');
+        fetchTeamApplications();
+        fetchTryoutChats();
+        
+        // Switch to tryout chat
+        setSelectedChat(data.tryoutChat);
+        setChatType('tryout');
+        setMessages(data.tryoutChat.messages || []);
+        setShowApplications(false);
+      } else {
+        const error = await res.json();
+        toast.error(error.error || 'Failed to start tryout');
+      }
+    } catch (error) {
+      console.error('Error starting tryout:', error);
+      toast.error('Failed to start tryout');
+    }
+  };
+
+  const handleRejectApplication = async (applicationId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/team-applications/${applicationId}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ reason: 'Not suitable at this time' }),
+      });
+      
+      if (res.ok) {
+        toast.success('Application rejected');
+        fetchTeamApplications();
+      } else {
+        const error = await res.json();
+        toast.error(error.error || 'Failed to reject application');
+      }
+    } catch (error) {
+      console.error('Error rejecting application:', error);
+      toast.error('Failed to reject application');
+    }
+  };
+
+  const handleAcceptPlayer = async (applicationId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/team-applications/${applicationId}/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ notes: 'Great performance during tryout' }),
+      });
+      
+      if (res.ok) {
+        toast.success('Player accepted to team!');
+        fetchTeamApplications();
+        fetchTryoutChats();
+      } else {
+        const error = await res.json();
+        toast.error(error.error || 'Failed to accept player');
+      }
+    } catch (error) {
+      console.error('Error accepting player:', error);
+      toast.error('Failed to accept player');
     }
   };
 
@@ -164,11 +308,104 @@ export default function ChatPage() {
     return null;
   };
 
+  const ApplicationsPanel = () => (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end justify-center z-50 p-4 md:items-center">
+      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+        <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <UserPlus className="w-5 h-5 text-orange-400" />
+            Team Applications ({teamApplications.length})
+          </h2>
+          <button onClick={() => setShowApplications(false)} className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
+            <X className="w-5 h-5 text-zinc-400" />
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {teamApplications.length === 0 ? (
+            <div className="text-center py-12 text-zinc-400">
+              <UserPlus className="w-12 h-12 mx-auto mb-3 text-zinc-600" />
+              <p>No pending applications</p>
+            </div>
+          ) : (
+            teamApplications.map(app => (
+              <div key={app._id} className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
+                <div className="flex items-start gap-4">
+                  <img 
+                    src={app.player.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${app.player.username}`}
+                    alt={app.player.username}
+                    className="w-16 h-16 rounded-xl object-cover"
+                  />
+                  
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-lg font-bold text-white">{app.player.inGameName || app.player.username}</h3>
+                      {getRankIcon(app.player.aegisRating)}
+                      <span className="text-sm text-zinc-400">@{app.player.username}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-4 text-sm text-zinc-400 mb-2">
+                      <span>{app.player.primaryGame}</span>
+                      <span>•</span>
+                      <span>Rating: {app.player.aegisRating}</span>
+                      <span>•</span>
+                      <span>Applied {formatTime(app.createdAt)}</span>
+                    </div>
+
+                    <div className="mb-3">
+                      <p className="text-sm text-zinc-400 mb-1">Applying for:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {app.appliedRoles.map(role => (
+                          <span key={role} className="px-2 py-1 bg-orange-500/20 border border-orange-400/30 rounded-md text-orange-400 text-xs">
+                            {role}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {app.message && (
+                      <div className="bg-zinc-900/50 border border-zinc-700 rounded-lg p-3 mb-3">
+                        <p className="text-sm text-zinc-300">{app.message}</p>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      {app.status === 'pending' && (
+                        <>
+                          <button
+                            onClick={() => handleStartTryout(app._id)}
+                            className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg font-medium transition-all text-sm"
+                          >
+                            Start Tryout
+                          </button>
+                          <button
+                            onClick={() => handleRejectApplication(app._id)}
+                            className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg transition-colors text-sm"
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
+                      {app.status === 'in_tryout' && (
+                        <span className="px-4 py-2 bg-blue-500/20 border border-blue-400/30 text-blue-400 rounded-lg text-sm font-medium">
+                          Tryout in Progress
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex h-screen bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 text-white font-sans">
-      {/* Left Sidebar: Connections */}
+      {/* Left Sidebar */}
       <div className="w-80 bg-zinc-900/50 border-r border-zinc-800 backdrop-blur-sm flex flex-col">
-        {/* Sidebar Header */}
         <div className="p-4 border-b border-zinc-800">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -176,16 +413,25 @@ export default function ChatPage() {
               Chats
             </h2>
             <div className="flex items-center gap-2">
+              {user?.team && (
+                <button 
+                  onClick={() => setShowApplications(true)}
+                  className="relative p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                >
+                  <Bell className="w-4 h-4 text-zinc-400" />
+                  {teamApplications.length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs flex items-center justify-center">
+                      {teamApplications.length}
+                    </span>
+                  )}
+                </button>
+              )}
               <button className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
                 <Settings className="w-4 h-4 text-zinc-400" />
-              </button>
-              <button className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
-                <MoreVertical className="w-4 h-4 text-zinc-400" />
               </button>
             </div>
           </div>
           
-          {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-400" />
             <input
@@ -198,19 +444,72 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Connections List */}
+        {/* Tryout Chats Section */}
+        {tryoutChats.length > 0 && (
+          <div className="border-b border-zinc-800">
+            <div className="p-3 bg-zinc-800/30">
+              <h3 className="text-sm font-semibold text-orange-400 flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Active Tryouts
+              </h3>
+            </div>
+            <div className="p-2">
+              {tryoutChats.map(chat => (
+                <div
+                  key={chat._id}
+                  onClick={() => {
+                    setSelectedChat(chat);
+                    setChatType('tryout');
+                    fetchTryoutMessages(chat._id);
+                  }}
+                  className={`p-3 rounded-xl cursor-pointer transition-all mb-2 ${
+                    selectedChat?._id === chat._id && chatType === 'tryout'
+                      ? "bg-gradient-to-r from-orange-500/20 to-red-600/20 border border-orange-500/30"
+                      : "hover:bg-zinc-800/30"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <img
+                        src={chat.team.logo}
+                        alt={chat.team.teamName}
+                        className="w-10 h-10 rounded-lg object-cover"
+                      />
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-orange-500 rounded-full border-2 border-zinc-900" />
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-white truncate text-sm">
+                        {chat.team.teamName} Tryout
+                      </div>
+                      <div className="text-xs text-zinc-400 truncate">
+                        Tryout: {chat.applicant.username}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Direct Messages */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-2">
+            <div className="px-3 py-2">
+              <h3 className="text-sm font-semibold text-zinc-400">Direct Messages</h3>
+            </div>
             {filteredConnections.length > 0 ? (
               filteredConnections.map((conn) => (
                 <div
                   key={conn._id}
                   onClick={() => {
                     setSelectedChat(conn);
+                    setChatType('direct');
                     fetchMessages(conn._id);
                   }}
                   className={`p-3 rounded-xl cursor-pointer transition-all duration-200 mb-2 group hover:bg-zinc-800/50 ${
-                    selectedChat?._id === conn._id 
+                    selectedChat?._id === conn._id && chatType === 'direct'
                       ? "bg-gradient-to-r from-orange-500/20 to-red-600/20 border border-orange-500/30" 
                       : "hover:bg-zinc-800/30"
                   }`}
@@ -235,33 +534,7 @@ export default function ChatPage() {
                       
                       <div className="flex items-center gap-2 text-sm">
                         <span className="text-zinc-400">@{conn.username}</span>
-                        {conn.primaryGame && (
-                          <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded-md text-xs font-medium">
-                            {conn.primaryGame}
-                          </span>
-                        )}
                       </div>
-                      
-                      {conn.teamStatus && (
-                        <div className="text-xs text-zinc-500 mt-1 truncate">
-                          {conn.teamStatus}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="text-right">
-                      <div className="text-xs text-zinc-400">
-                        {getUserStatus(conn._id) === 'online' ? (
-                          <span className="text-green-400 font-medium">Online</span>
-                        ) : (
-                          'Offline'
-                        )}
-                      </div>
-                      {conn.aegisRating && (
-                        <div className="text-xs text-orange-400 font-medium">
-                          {conn.aegisRating}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -275,7 +548,6 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Online Users Count */}
         <div className="p-4 border-t border-zinc-800">
           <div className="flex items-center gap-2 text-sm text-zinc-400">
             <Activity className="w-4 h-4 text-green-400" />
@@ -294,36 +566,67 @@ export default function ChatPage() {
                 <div className="flex items-center gap-3">
                   <div className="relative">
                     <img
-                      src={selectedChat.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${selectedChat.username}`}
-                      alt={selectedChat.username} 
+                      src={
+                        chatType === 'tryout'
+                          ? selectedChat.team?.logo
+                          : (selectedChat.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${selectedChat.username}`)
+                      }
+                      alt={chatType === 'tryout' ? selectedChat.team?.teamName : selectedChat.username}
                       className="w-10 h-10 rounded-lg object-cover border border-zinc-700"
                     />
-                    <div className={`absolute -bottom-1 -right-1 w-3 h-3 ${getStatusColor(getUserStatus(selectedChat._id))} rounded-full border border-zinc-900`} />
+                    {chatType === 'direct' && (
+                      <div className={`absolute -bottom-1 -right-1 w-3 h-3 ${getStatusColor(getUserStatus(selectedChat._id))} rounded-full border border-zinc-900`} />
+                    )}
                   </div>
                   
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-white">
-                        {selectedChat.realName || selectedChat.username}
+                        {chatType === 'tryout' 
+                          ? `${selectedChat.team?.teamName} Tryout`
+                          : (selectedChat.realName || selectedChat.username)
+                        }
                       </span>
-                      {getRankIcon(selectedChat.aegisRating)}
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-zinc-400">@{selectedChat.username}</span>
-                      {getUserStatus(selectedChat._id) === 'online' && (
-                        <span className="text-green-400 text-xs">• Online</span>
+                      {chatType === 'tryout' && (
+                        <span className="px-2 py-0.5 bg-orange-500/20 border border-orange-400/30 text-orange-400 rounded-md text-xs font-medium">
+                          Tryout Active
+                        </span>
                       )}
+                    </div>
+                    <div className="text-sm text-zinc-400">
+                      {chatType === 'tryout'
+                        ? `Applicant: ${selectedChat.applicant?.username}`
+                        : `@${selectedChat.username}`
+                      }
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <button className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
-                    <Phone className="w-5 h-5 text-zinc-400" />
-                  </button>
-                  <button className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
-                    <Video className="w-5 h-5 text-zinc-400" />
-                  </button>
+                  {chatType === 'tryout' && user?.team && (
+                    <div className="flex gap-2 mr-4">
+                      <button
+                        onClick={() => {
+                          const app = teamApplications.find(a => a.tryoutChatId?.toString() === selectedChat._id);
+                          if (app) handleAcceptPlayer(app._id);
+                        }}
+                        className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-all flex items-center gap-1"
+                      >
+                        <Check className="w-4 h-4" />
+                        Accept Player
+                      </button>
+                      <button
+                        onClick={() => {
+                          const app = teamApplications.find(a => a.tryoutChatId?.toString() === selectedChat._id);
+                          if (app) handleRejectApplication(app._id);
+                        }}
+                        className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-all flex items-center gap-1"
+                      >
+                        <X className="w-4 h-4" />
+                        Reject
+                      </button>
+                    </div>
+                  )}
                   <button className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
                     <MoreVertical className="w-5 h-5 text-zinc-400" />
                   </button>
@@ -331,62 +634,77 @@ export default function ChatPage() {
               </div>
             </div>
 
-            {/* Messages Area */}
+            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-zinc-950/20">
               {messages.length > 0 ? (
-                messages.map((msg, idx) => (
-                  <div
-                    key={msg._id || idx}
-                    className={`flex ${
-                      msg.senderId === userId ? 'justify-end' : 'justify-start'
-                    }`}
-                  >
-                    <div className={`max-w-xs lg:max-w-md xl:max-w-lg ${
-                      msg.senderId === userId 
-                        ? 'order-2' 
-                        : 'order-1'
-                    }`}>
-                      <div className={`p-3 rounded-2xl shadow-lg ${
-                        msg.senderId === userId
-                          ? "bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-br-md"
-                          : "bg-zinc-800/80 text-white border border-zinc-700 rounded-bl-md"
-                      }`}>
-                        <p className="break-words">{msg.message}</p>
-                        <div className={`text-xs mt-1 ${
-                          msg.senderId === userId 
-                            ? 'text-orange-100' 
-                            : 'text-zinc-400'
-                        }`}>
-                          {formatTime(msg.timestamp)}
+                messages.map((msg, idx) => {
+                  const isSystem = msg.messageType === 'system';
+                  const isMine = chatType === 'direct' 
+                    ? msg.senderId === userId 
+                    : msg.sender._id === userId || msg.sender === userId;
+
+                  if (isSystem) {
+                    return (
+                      <div key={msg._id || idx} className="flex justify-center">
+                        <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-sm text-zinc-300">
+                          {msg.message}
                         </div>
                       </div>
-                    </div>
-                    
-                    {msg.senderId !== userId && (
-                      <div className="order-0 mr-2">
-                        <img
-                          src={selectedChat.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${selectedChat.username}`}
-                          alt={selectedChat.username} 
-                          className="w-8 h-8 rounded-lg object-cover"
-                        />
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={msg._id || idx}
+                      className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div className={`max-w-xs lg:max-w-md xl:max-w-lg ${isMine ? 'order-2' : 'order-1'}`}>
+                        {chatType === 'tryout' && !isMine && (
+                          <div className="text-xs text-zinc-400 mb-1 ml-2">
+                            {msg.sender?.username || 'Unknown'}
+                          </div>
+                        )}
+                        <div className={`p-3 rounded-2xl shadow-lg ${
+                          isMine
+                            ? "bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-br-md"
+                            : "bg-zinc-800/80 text-white border border-zinc-700 rounded-bl-md"
+                        }`}>
+                          <p className="break-words">{msg.message}</p>
+                          <div className={`text-xs mt-1 ${isMine ? 'text-orange-100' : 'text-zinc-400'}`}>
+                            {formatTime(msg.timestamp)}
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                ))
+                      
+                      {chatType === 'tryout' && !isMine && (
+                        <div className="order-0 mr-2">
+                          <img
+                            src={msg.sender?.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${msg.sender?.username}`}
+                            alt={msg.sender?.username}
+                            className="w-8 h-8 rounded-lg object-cover"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               ) : (
                 <div className="flex-1 flex items-center justify-center">
                   <div className="text-center">
-                    <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Hash className="w-8 h-8 text-zinc-600" />
-                    </div>
-                    <p className="text-zinc-400">Start a conversation with {selectedChat.username}</p>
+                    <Hash className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
+                    <p className="text-zinc-400">
+                      {chatType === 'tryout' 
+                        ? 'Start the tryout conversation'
+                        : `Start chatting with ${selectedChat.username}`
+                      }
+                    </p>
                   </div>
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message Input */}
+            {/* Input */}
             <div className="bg-zinc-900/50 border-t border-zinc-800 backdrop-blur-sm p-4">
               <div className="flex items-end gap-3">
                 <div className="flex-1 bg-zinc-800/50 border border-zinc-700 rounded-xl p-3 focus-within:border-orange-500/50 transition-colors">
@@ -394,48 +712,34 @@ export default function ChatPage() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder={`Message @${selectedChat.username}...`}
+                    placeholder={`Message ${chatType === 'tryout' ? 'the tryout chat' : `@${selectedChat.username}`}...`}
                     className="w-full bg-transparent text-white placeholder-zinc-400 resize-none outline-none min-h-[20px] max-h-32"
                     rows={1}
-                    style={{
-                      height: 'auto',
-                      minHeight: '20px',
-                    }}
-                    onInput={(e) => {
-                      e.target.style.height = 'auto';
-                      e.target.style.height = e.target.scrollHeight + 'px';
-                    }}
                   />
                 </div>
                 
                 <button
                   onClick={sendMessage}
                   disabled={!input.trim()}
-                  className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 disabled:from-zinc-700 disabled:to-zinc-600 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-all transform hover:scale-105 disabled:scale-100 shadow-lg"
+                  className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 disabled:from-zinc-700 disabled:to-zinc-600 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-all"
                 >
                   <Send className="w-5 h-5" />
                 </button>
-              </div>
-              
-              <div className="flex items-center gap-4 mt-2 text-xs text-zinc-500">
-                <span>Press Enter to send, Shift + Enter for new line</span>
               </div>
             </div>
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center bg-zinc-950/20">
             <div className="text-center">
-              <div className="w-24 h-24 bg-zinc-800 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Hash className="w-12 h-12 text-zinc-600" />
-              </div>
+              <Hash className="w-16 h-16 text-zinc-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-white mb-2">Select a conversation</h3>
-              <p className="text-zinc-400 max-w-sm">
-                Choose a connection from the sidebar to start chatting with fellow gamers
-              </p>
+              <p className="text-zinc-400">Choose a connection or tryout chat to start</p>
             </div>
           </div>
         )}
       </div>
+
+      {showApplications && <ApplicationsPanel />}
     </div>
   );
 }

@@ -39,6 +39,7 @@ import MyTeamsPage from './pages/MyTeamsPage';
 import DetailedTeamInfo from './components/DetailedTeamInfo';
 import DetailedMatchInfoBGMI from './components/DetailedMatchInfoBGMI';
 import OrgDashboard from './pages/OrgDashboard';
+import MyApplications from './pages/MyApplications';
 
 function App() {
   return (
@@ -82,6 +83,7 @@ function App() {
             <Route path="/admin/bug-reports" element={<AdminBugReports />} />
             <Route path="/my-teams" element={<ProtectedRoute><MyTeamsPage /></ProtectedRoute>} />
             <Route path="/org-dashboard" element={<ProtectedRoute><OrgDashboard /></ProtectedRoute>} />
+            <Route path="/my-applications" element={<ProtectedRoute><MyApplications /></ProtectedRoute>} />
           </Routes>
           <ToastContainer
             position="bottom-right"
