@@ -20,6 +20,7 @@ const MyTeams = () => {
   const [ongoingTournaments, setOngoingTournaments] = useState([]);
   const [recentTournaments, setRecentTournaments] = useState([]);
   const [teamInvitations, setTeamInvitations] = useState([]);
+  const [showInvitations, setShowInvitations] = useState(false);
 
   const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
   const [createTeamForm, setCreateTeamForm] = useState({
@@ -72,7 +73,11 @@ const MyTeams = () => {
 
         if (invitationsResponse.ok) {
           const invitationsData = await invitationsResponse.json();
+          console.log('Invitations API response:', invitationsData);
           setTeamInvitations(invitationsData.invitations || []);
+          console.log('Team invitations set:', invitationsData.invitations || []);
+        } else {
+          console.error('Failed to fetch invitations:', invitationsResponse.status, invitationsResponse.statusText);
         }
       } else {
         setError('Failed to fetch player data');
@@ -132,6 +137,44 @@ const MyTeams = () => {
       setCreateTeamError('Network error');
     } finally {
       setCreateTeamLoading(false);
+    }
+  };
+
+  const handleAcceptInvitation = async (invitationId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/teams/invitations/${invitationId}/accept`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        toast.success('Invitation accepted successfully!');
+        // Refresh data
+        fetchPlayerAndTeamData();
+      } else {
+        const error = await response.json();
+        toast.error(error.message || 'Failed to accept invitation');
+      }
+    } catch (error) {
+      toast.error('Network error');
+    }
+  };
+
+  const handleDeclineInvitation = async (invitationId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/teams/invitations/${invitationId}/decline`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        toast.success('Invitation declined');
+        // Refresh data
+        fetchPlayerAndTeamData();
+      } else {
+        const error = await response.json();
+        toast.error(error.message || 'Failed to decline invitation');
+      }
+    } catch (error) {
+      toast.error('Network error');
     }
   };
 
@@ -362,7 +405,7 @@ const MyTeams = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 text-white font-sans pt-[100px]">
+    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 text-white font-sans mt-[100px]">
       {/* Background Effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -left-40 w-80 h-80 bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-full blur-3xl animate-pulse" />
@@ -381,7 +424,7 @@ const MyTeams = () => {
               <p className="text-zinc-400 text-lg">Manage your esports journey</p>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <button className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg shadow-orange-500/30 flex items-center space-x-2">
               <Plus className="w-5 h-5" />
@@ -393,6 +436,69 @@ const MyTeams = () => {
             </button>
           </div>
         </div>
+
+        {/* Team Invitations Section */}
+        {teamInvitations.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <MessageCircle size={28} className="text-blue-400" />
+                <h2 className="text-2xl font-bold text-white">Team Invitations</h2>
+                <div className="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full">
+                  <span className="text-blue-400 text-sm font-medium">{teamInvitations.length} Pending</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowInvitations(!showInvitations)}
+                className="text-zinc-400 hover:text-white transition-colors"
+              >
+                <ChevronRight className={`w-5 h-5 transform transition-transform ${showInvitations ? 'rotate-90' : ''}`} />
+              </button>
+            </div>
+
+            {showInvitations && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {teamInvitations.map((invitation) => (
+                  <div key={invitation._id} className="bg-gradient-to-br from-zinc-900/80 to-zinc-800/80 backdrop-blur-sm border-2 border-blue-500/30 rounded-2xl p-6 hover:scale-105 transition-all duration-300 shadow-lg shadow-blue-500/10">
+                    <div className="flex items-start space-x-4 mb-4">
+                      {invitation.team.logo ? (
+                        <img
+                          src={invitation.team.logo}
+                          alt={`${invitation.team.teamName} logo`}
+                          className="w-12 h-12 rounded-xl object-cover border-2 border-blue-400/50"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center border-2 border-blue-400/50">
+                          <AegisMascot size="w-8 h-8" />
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-white">{invitation.team.teamName}</h3>
+<p className="text-zinc-400 text-sm">Invited by {invitation.fromPlayer.username}</p>
+                        <p className="text-zinc-500 text-xs">{new Date(invitation.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleAcceptInvitation(invitation._id)}
+                        className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-2 px-4 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg shadow-green-500/30 flex items-center justify-center space-x-2"
+                      >
+                        <span>Accept</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeclineInvitation(invitation._id)}
+                        className="flex-1 bg-zinc-700/50 hover:bg-zinc-600/50 text-zinc-300 hover:text-white py-2 px-4 rounded-lg transition-colors border border-zinc-600/50 flex items-center justify-center space-x-2"
+                      >
+                        <span>Decline</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Quick Stats */}
         {(player?.team || (player?.previousTeams && player.previousTeams.length > 0)) && (

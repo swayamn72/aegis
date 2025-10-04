@@ -187,6 +187,16 @@ router.get('/team/:teamId', auth, async (req, res) => {
       return res.status(404).json({ error: 'Team not found' });
     }
 
+    if (!team.captain) {
+      console.error('Team captain is undefined for team:', teamId);
+      return res.status(500).json({ error: 'Team captain information missing' });
+    }
+
+    if (!req.user || !req.user._id) {
+      console.error('User or user._id is undefined in request');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     if (team.captain.toString() !== req.user._id.toString()) {
       return res.status(403).json({ error: 'Only team captain can view applications' });
     }
