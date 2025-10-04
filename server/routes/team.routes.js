@@ -4,6 +4,7 @@ import Player from '../models/player.model.js';
 import Match from '../models/match.model.js';
 import Tournament from '../models/tournament.model.js';
 import TeamInvitation from '../models/teamInvitation.model.js';
+import ChatMessage from '../models/chat.model.js';
 import auth from '../middleware/auth.js';
 
 const router = express.Router();
@@ -99,7 +100,8 @@ router.get('/featured', async (req, res) => {
 // GET /api/teams/:id - Fetch a single team by ID with recent matches and tournaments
 router.get('/:id', async (req, res) => {
   try {
-    const team = await Team.findById(req.params.id)
+    const teamId = req.params.id.trim();
+    const team = await Team.findById(teamId)
       .populate({
         path: 'captain',
         select: 'username profilePicture primaryGame inGameName realName age country aegisRating statistics inGameRole discordTag twitch youtube twitter verified'
@@ -274,7 +276,12 @@ router.post('/:id/invite', auth, async (req, res) => {
       return res.status(404).json({ message: 'Team not found' });
     }
 
-    if (team.captain.toString() !== req.user._id.toString()) {
+    // Defensive check for captain and user.id
+    if (!team.captain || !req.user.id) {
+      return res.status(400).json({ message: 'Invalid team captain or user ID' });
+    }
+
+    if (team.captain.toString() !== req.user.id.toString()) {
       return res.status(403).json({ message: 'Only team captain can invite players' });
     }
 
@@ -304,12 +311,24 @@ router.post('/:id/invite', auth, async (req, res) => {
 
     const invitation = new TeamInvitation({
       team: team._id,
-      fromPlayer: req.user._id,
+      fromPlayer: req.user.id,
       toPlayer: playerId,
       message: message || `Join ${team.teamName}!`
     });
 
     await invitation.save();
+
+    // Create chat message for invitation
+    const chatMessage = new ChatMessage({
+      senderId: req.user.id,
+      receiverId: playerId,
+      message: message || `You have been invited to join the team ${team.teamName}.`,
+      messageType: 'invitation',
+      invitationId: invitation._id
+    });
+
+    await chatMessage.save();
+    console.log('Chat message created for team invitation:', chatMessage);
 
     res.status(201).json({
       message: 'Team invitation sent successfully',
@@ -325,7 +344,7 @@ router.post('/:id/invite', auth, async (req, res) => {
 router.get('/invitations/received', auth, async (req, res) => {
   try {
     const invitations = await TeamInvitation.find({
-      toPlayer: req.user._id,
+      toPlayer: req.user.id,
       status: 'pending',
       expiresAt: { $gt: new Date() }
     })
@@ -350,7 +369,7 @@ router.post('/invitations/:id/accept', auth, async (req, res) => {
       return res.status(404).json({ message: 'Invitation not found' });
     }
 
-    if (invitation.toPlayer.toString() !== req.user._id.toString()) {
+    if (invitation.toPlayer.toString() !== req.user.id.toString()) {
       return res.status(403).json({ message: 'This invitation is not for you' });
     }
 
@@ -364,7 +383,7 @@ router.post('/invitations/:id/accept', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invitation has expired' });
     }
 
-    const player = await Player.findById(req.user._id);
+    const player = await Player.findById(req.user.id);
     if (player.team) {
       return res.status(400).json({ message: 'You are already in a team' });
     }
@@ -375,11 +394,11 @@ router.post('/invitations/:id/accept', auth, async (req, res) => {
     }
 
     // Add player to team
-    team.players.push(req.user._id);
+    team.players.push(req.user.id);
     await team.save();
 
     // Update player
-    await Player.findByIdAndUpdate(req.user._id, {
+    await Player.findByIdAndUpdate(req.user.id, {
       team: team._id,
       teamStatus: 'in a team'
     });
@@ -387,6 +406,12 @@ router.post('/invitations/:id/accept', auth, async (req, res) => {
     // Update invitation status
     invitation.status = 'accepted';
     await invitation.save();
+
+    // Update related chat message invitationStatus
+    await ChatMessage.updateMany(
+      { invitationId: invitation._id },
+      { $set: { invitationStatus: 'accepted' } }
+    );
 
     res.json({
       message: 'Team invitation accepted successfully',
@@ -407,12 +432,18 @@ router.post('/invitations/:id/decline', auth, async (req, res) => {
       return res.status(404).json({ message: 'Invitation not found' });
     }
 
-    if (invitation.toPlayer.toString() !== req.user._id.toString()) {
+    if (invitation.toPlayer.toString() !== req.user.id.toString()) {
       return res.status(403).json({ message: 'This invitation is not for you' });
     }
 
     invitation.status = 'declined';
     await invitation.save();
+
+    // Update related chat message invitationStatus
+    await ChatMessage.updateMany(
+      { invitationId: invitation._id },
+      { $set: { invitationStatus: 'declined' } }
+    );
 
     res.json({ message: 'Invitation declined' });
   } catch (error) {

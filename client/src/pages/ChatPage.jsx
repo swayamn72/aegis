@@ -45,6 +45,40 @@ export default function ChatPage() {
   const location = useLocation();
   const selectedUserId = location.state?.selectedUserId;
 
+  // Fetch all users who have chat messages with the current user
+  const fetchConnections = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/chat/users/with-chats', { credentials: 'include' });
+      const data = await res.json();
+      return data.users || [];
+    } catch (error) {
+      console.error('Error fetching chat users:', error);
+      return [];
+    }
+  };
+
+  // Combine confirmed connections and team application players into one list
+  const combineConnections = (confirmedConns, teamApps) => {
+    const combined = [...confirmedConns];
+
+    // Add players from team applications if not already in connections
+    teamApps.forEach(app => {
+      const exists = combined.some(conn => conn._id === app.player._id);
+      if (!exists) {
+        combined.push(app.player);
+      }
+    });
+
+    return combined;
+  };
+
+  // Fetch connections and team applications and update connections state
+  const fetchAndSetConnections = async () => {
+    const confirmedConns = await fetchConnections();
+    const combined = combineConnections(confirmedConns, teamApplications);
+    setConnections(combined);
+  };
+
   // Fetch messages for direct chat
   const fetchMessages = async (receiverId) => {
     try {
@@ -100,17 +134,34 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Fetch team applications and then fetch messages for selected chat
   useEffect(() => {
-    fetch("http://localhost:5000/api/connections", { credentials: "include" })
-      .then((res) => res.json())
-      .then((data) => setConnections(data.connections || []));
+    if (!userId) return;
 
-    if (userId) {
-      socket.emit("join", userId);
-      fetchTeamApplications();
-      fetchTryoutChats();
+    socket.emit("join", userId);
+
+    const fetchData = async () => {
+      await fetchTeamApplications();
+      await fetchTryoutChats();
+    };
+
+    fetchData();
+  }, [userId]);
+
+  // Fetch messages when selectedChat changes
+  useEffect(() => {
+    if (selectedChat && chatType === 'direct') {
+      fetchMessages(selectedChat._id);
     }
+  }, [selectedChat, chatType]);
 
+  // Fetch and set connections whenever teamApplications or userId changes
+  useEffect(() => {
+    if (!userId) return;
+    fetchAndSetConnections();
+  }, [teamApplications, userId]);
+
+  useEffect(() => {
     socket.on("receiveMessage", (msg) => {
       if (chatType === 'direct' && selectedChat &&
         (msg.senderId === selectedChat._id || msg.receiverId === selectedChat._id)
@@ -131,7 +182,7 @@ export default function ChatPage() {
       socket.off("receiveMessage");
       socket.off("tryoutMessage");
     };
-  }, [userId, selectedChat?._id, chatType]);
+  }, [chatType, selectedChat?._id]);
 
   useEffect(() => {
     const handleConnect = () => console.log('Socket connected');
@@ -147,13 +198,21 @@ export default function ChatPage() {
   useEffect(scrollToBottom, [messages]);
 
   useEffect(() => {
-    if (connections.length > 0 && selectedUserId) {
-      const user = connections.find(c => c._id === selectedUserId);
-      if (user) {
-        setSelectedChat(user);
-        setChatType('direct');
-        fetchMessages(user._id);
+    if (connections.length > 0) {
+      if (selectedUserId) {
+        const user = connections.find(c => c._id === selectedUserId);
+        if (user) {
+          setSelectedChat(user);
+          setChatType('direct');
+          fetchMessages(user._id);
+          return;
+        }
       }
+      // If no selectedUserId or user not found, select first connection by default
+      const firstUser = connections[0];
+      setSelectedChat(firstUser);
+      setChatType('direct');
+      fetchMessages(firstUser._id);
     }
   }, [connections, selectedUserId]);
 
@@ -268,6 +327,60 @@ export default function ChatPage() {
     } catch (error) {
       console.error('Error accepting player:', error);
       toast.error('Failed to accept player');
+    }
+  };
+
+  // Handler to accept team invitation from chat message
+  const handleAcceptInvitation = async (invitationId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/teams/invitations/${invitationId}/accept`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (res.ok) {
+        toast.success('Invitation accepted');
+        // Update invitationStatus in messages state immediately
+        setMessages((prevMessages) =>
+          prevMessages.map((msg) =>
+            msg.invitationId === invitationId ? { ...msg, invitationStatus: 'accepted' } : msg
+          )
+        );
+        // Refresh team applications to update invitation statuses
+        fetchTeamApplications();
+      } else {
+        const error = await res.json();
+        toast.error(error.message || 'Failed to accept invitation');
+      }
+    } catch (error) {
+      console.error('Error accepting invitation:', error);
+      toast.error('Failed to accept invitation');
+    }
+  };
+
+  // Handler to decline team invitation from chat message
+  const handleDeclineInvitation = async (invitationId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/teams/invitations/${invitationId}/decline`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (res.ok) {
+        toast.success('Invitation declined');
+        // Update invitationStatus in messages state immediately
+        setMessages((prevMessages) =>
+          prevMessages.map((msg) =>
+            msg.invitationId === invitationId ? { ...msg, invitationStatus: 'declined' } : msg
+          )
+        );
+        // Refresh team applications to update invitation statuses
+        fetchTeamApplications();
+      } else {
+        const error = await res.json();
+        toast.error(error.message || 'Failed to decline invitation');
+      }
+    } catch (error) {
+      console.error('Error declining invitation:', error);
+      toast.error('Failed to decline invitation');
     }
   };
 
@@ -510,7 +623,7 @@ export default function ChatPage() {
                   }}
                   className={`p-3 rounded-xl cursor-pointer transition-all duration-200 mb-2 group hover:bg-zinc-800/50 ${
                     selectedChat?._id === conn._id && chatType === 'direct'
-                      ? "bg-gradient-to-r from-orange-500/20 to-red-600/20 border border-orange-500/30" 
+                      ? "bg-gradient-to-r from-orange-500/20 to-red-600/20 border border-orange-500/30"
                       : "hover:bg-zinc-800/30"
                   }`}
                 >
@@ -638,12 +751,45 @@ export default function ChatPage() {
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-zinc-950/20">
               {messages.length > 0 ? (
                 messages.map((msg, idx) => {
-                  const isSystem = msg.messageType === 'system';
-                  const isMine = chatType === 'direct' 
-                    ? msg.senderId === userId 
-                    : msg.sender._id === userId || msg.sender === userId;
+                  const isMine = chatType === 'direct'
+                    ? msg.senderId === userId
+                    : msg.sender?._id === userId || msg.sender === userId;
 
-                  if (isSystem) {
+                  if (msg.messageType === 'invitation') {
+                    // Invitation message UI with accept/decline buttons and status
+                    return (
+                      <div key={msg._id || idx} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                        <div className="max-w-xs lg:max-w-md xl:max-w-lg order-1 bg-yellow-100 rounded-2xl p-4 shadow-lg border border-yellow-400 text-yellow-900">
+                          <p className="mb-3 font-semibold">Team Invitation</p>
+                          <p className="mb-4">{msg.message}</p>
+                          {(msg.invitationStatus === 'pending' || !msg.invitationStatus) && (
+                            <div className="flex gap-3">
+                              <button
+                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold"
+                                onClick={() => handleAcceptInvitation(msg.invitationId)}
+                              >
+                                Accept
+                              </button>
+                              <button
+                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold"
+                                onClick={() => handleDeclineInvitation(msg.invitationId)}
+                              >
+                                Decline
+                              </button>
+                            </div>
+                          )}
+                          {msg.invitationStatus === 'accepted' && (
+                            <p className="text-green-700 font-semibold">Invitation Accepted</p>
+                          )}
+                          {msg.invitationStatus === 'declined' && (
+                            <p className="text-red-700 font-semibold">Invitation Declined</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (msg.messageType === 'system') {
                     return (
                       <div key={msg._id || idx} className="flex justify-center">
                         <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-sm text-zinc-300">
@@ -653,6 +799,7 @@ export default function ChatPage() {
                     );
                   }
 
+                  // Normal message UI
                   return (
                     <div
                       key={msg._id || idx}
@@ -675,7 +822,7 @@ export default function ChatPage() {
                           </div>
                         </div>
                       </div>
-                      
+
                       {chatType === 'tryout' && !isMine && (
                         <div className="order-0 mr-2">
                           <img

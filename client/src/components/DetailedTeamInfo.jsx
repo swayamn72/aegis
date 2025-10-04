@@ -1,20 +1,142 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-toastify';
 import {
   ArrowLeft, Users, Trophy, Calendar, MapPin, Shield,
   Award, Star, Target, TrendingUp, Share2, MessageCircle,
   Check, Gamepad2, Briefcase, Copy, Twitter, Youtube,
-  Twitch, Lock, Eye, EyeOff
+  Twitch, Lock, Eye, EyeOff, Edit, UserPlus, Upload,
+  Search, X, Send
 } from 'lucide-react';
 import { FaDiscord } from "react-icons/fa"
 
 const DetailedTeamInfo = () => {
   const { id } = useParams();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [teamData, setTeamData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isPrivate, setIsPrivate] = useState(false);
+
+  // Captain functionality states
+  const [showEditLogoModal, setShowEditLogoModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [inviteMessage, setInviteMessage] = useState('');
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [inviting, setInviting] = useState(false);
+
+  // Check if current user is the captain
+  const isCaptain = user && teamData && teamData.captain && user._id === teamData.captain._id;
+
+  // Handle logo upload
+  const handleLogoUpload = async () => {
+    if (!selectedFile) {
+      toast.error('Please select a file first');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('logo', selectedFile);
+
+      const response = await fetch(`/api/teams/${id}`, {
+        method: 'PUT',
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTeamData(prev => ({ ...prev, logo: data.team.logo }));
+        setShowEditLogoModal(false);
+        setSelectedFile(null);
+        toast.success('Team logo updated successfully!');
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Failed to update team logo');
+      }
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast.error('Failed to upload logo');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Handle player search
+  const handlePlayerSearch = async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const response = await fetch(`/api/teams/search/${encodeURIComponent(query)}?searchType=players`, {
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSearchResults(data.players || []);
+      } else {
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error('Error searching players:', error);
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  // Handle sending invitation
+  const handleSendInvitation = async () => {
+    if (!selectedPlayer) {
+      toast.error('Please select a player to invite');
+      return;
+    }
+
+    setInviting(true);
+    try {
+      const response = await fetch(`/api/teams/${id}/invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          playerId: selectedPlayer._id,
+          message: inviteMessage || `Join ${teamData.teamName}!`,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success('Invitation sent successfully!');
+        setShowInviteModal(false);
+        setSelectedPlayer(null);
+        setInviteMessage('');
+        setSearchQuery('');
+        setSearchResults([]);
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Failed to send invitation');
+      }
+    } catch (error) {
+      console.error('Error sending invitation:', error);
+      toast.error('Failed to send invitation');
+    } finally {
+      setInviting(false);
+    }
+  };
 
   // Fetch team data from API
   useEffect(() => {
@@ -37,7 +159,7 @@ const DetailedTeamInfo = () => {
           throw new Error('Failed to fetch team data');
         } else {
           const data = await response.json();
-          setTeamData(data);
+          setTeamData(data.team);
         }
       } catch (err) {
         setError(err.message);
@@ -237,7 +359,31 @@ const DetailedTeamInfo = () => {
                       <button className="p-2 bg-zinc-700/50 hover:bg-zinc-600/50 rounded-lg transition-colors group">
                         <MessageCircle className="w-5 h-5 text-zinc-300 group-hover:text-orange-400" />
                       </button>
+                      {isCaptain && (
+                        <>
+                          <button
+                            onClick={() => setShowEditLogoModal(true)}
+                            className="p-2 bg-zinc-700/50 hover:bg-zinc-600/50 rounded-lg transition-colors group"
+                            title="Edit Team Logo"
+                          >
+                            <Edit className="w-5 h-5 text-zinc-300 group-hover:text-orange-400" />
+                          </button>
+                          <button
+                            onClick={() => setShowInviteModal(true)}
+                            className="p-2 bg-zinc-700/50 hover:bg-zinc-600/50 rounded-lg transition-colors group"
+                            title="Invite Players"
+                          >
+                            <UserPlus className="w-5 h-5 text-zinc-300 group-hover:text-orange-400" />
+                          </button>
+                        </>
+                      )}
                     </div>
+                  </div>
+                  {/* Debug info for user and captain IDs */}
+                  <div className="text-xs text-red-400 mt-2">
+                    <div>User ID: {user?._id || 'N/A'}</div>
+                    <div>Captain ID: {teamData.captain?._id || 'N/A'}</div>
+                    <div>isCaptain: {isCaptain ? 'true' : 'false'}</div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-4 text-zinc-400 mb-4">
@@ -494,6 +640,187 @@ const DetailedTeamInfo = () => {
             Copy Team URL
           </button>
         </div>
+
+        {/* Edit Logo Modal */}
+        {showEditLogoModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-full max-w-md">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-white">Edit Team Logo</h3>
+                <button
+                  onClick={() => setShowEditLogoModal(false)}
+                  className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-zinc-400" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="text-center">
+                  <div className="w-24 h-24 mx-auto mb-4 bg-zinc-800/50 rounded-xl flex items-center justify-center">
+                    {selectedFile ? (
+                      <img
+                        src={URL.createObjectURL(selectedFile)}
+                        alt="Preview"
+                        className="w-full h-full object-contain rounded-xl"
+                      />
+                    ) : (
+                      <Upload className="w-8 h-8 text-zinc-400" />
+                    )}
+                  </div>
+                  <p className="text-zinc-400 text-sm mb-4">
+                    Upload a new logo for your team (PNG, JPG, max 5MB)
+                  </p>
+                </div>
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setSelectedFile(e.target.files[0])}
+                  className="w-full p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-500 file:text-white hover:file:bg-orange-600"
+                />
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowEditLogoModal(false)}
+                    className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleLogoUpload}
+                    disabled={!selectedFile || uploading}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {uploading ? 'Uploading...' : 'Upload Logo'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Invite Players Modal */}
+        {showInviteModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-full max-w-lg">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-white">Invite Players</h3>
+                <button
+                  onClick={() => setShowInviteModal(false)}
+                  className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-zinc-400" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                  <input
+                    type="text"
+                    placeholder="Search players by username or name..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      handlePlayerSearch(e.target.value);
+                    }}
+                    className="w-full pl-10 pr-4 py-3 bg-zinc-800/50 border border-zinc-700 rounded-lg text-white placeholder-zinc-400 focus:border-orange-500 focus:outline-none"
+                  />
+                  {searching && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-400"></div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="max-h-60 overflow-y-auto space-y-2">
+                  {searchResults.map(player => (
+                    <div
+                      key={player._id}
+                      onClick={() => setSelectedPlayer(player)}
+                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedPlayer?._id === player._id
+                          ? 'bg-orange-500/20 border border-orange-500/30'
+                          : 'bg-zinc-800/50 hover:bg-zinc-700/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={player.profilePicture || `https://placehold.co/40x40/4A5568/FFFFFF?text=${player.username?.charAt(0) || 'P'}`}
+                          alt={player.username}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                        <div className="flex-1">
+                          <div className="text-white font-medium">{player.inGameName || player.username}</div>
+                          <div className="text-zinc-400 text-sm">{player.realName}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-orange-400 text-sm font-medium">
+                            Rating: {player.aegisRating || 0}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {searchQuery && searchResults.length === 0 && !searching && (
+                    <div className="text-center py-8 text-zinc-400">
+                      No players found matching "{searchQuery}"
+                    </div>
+                  )}
+                </div>
+
+                {selectedPlayer && (
+                  <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
+                    <h4 className="text-white font-medium mb-3">Invitation Details</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-zinc-400 text-sm mb-1">Inviting:</label>
+                        <div className="text-white font-medium">{selectedPlayer.inGameName || selectedPlayer.username}</div>
+                      </div>
+                      <div>
+                        <label className="block text-zinc-400 text-sm mb-1">Custom Message (Optional):</label>
+                        <textarea
+                          value={inviteMessage}
+                          onChange={(e) => setInviteMessage(e.target.value)}
+                          placeholder={`Join ${teamData.teamName}!`}
+                          className="w-full p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg text-white placeholder-zinc-400 focus:border-orange-500 focus:outline-none resize-none"
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowInviteModal(false)}
+                    className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSendInvitation}
+                    disabled={!selectedPlayer || inviting}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {inviting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Send Invitation
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
