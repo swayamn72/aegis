@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
   Calendar, MapPin, Users, Trophy, Clock, Gamepad2, Target,
   TrendingUp, Award, Eye, Share2, MessageCircle, Star,
@@ -7,7 +8,7 @@ import {
   Medal, Crown, Shield, Zap, Activity, BarChart3, Globe,
   CheckCircle, XCircle, AlertCircle, ArrowRight, Download,
   Twitch, Youtube, Twitter, Instagram, Hash, X, ChevronDown,
-  ChevronUp
+  ChevronUp, UserPlus, Send
 } from 'lucide-react';
  import ErangelMap from '../assets/mapImages/erangel.jpg';
   import MiramarMap from '../assets/mapImages/miramar.webp';
@@ -17,10 +18,12 @@ import {
 const DetailedTournamentInfo = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedGroup, setSelectedGroup] = useState('A');
   const [selectedPhase, setSelectedPhase] = useState('');
   const [showPrizeModal, setShowPrizeModal] = useState(false);
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [tournamentData, setTournamentData] = useState(null);
   const [scheduleData, setScheduleData] = useState([]);
   const [groupsData, setGroupsData] = useState({});
@@ -29,6 +32,116 @@ const DetailedTournamentInfo = () => {
   const [matchesData, setMatchesData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [registrationForm, setRegistrationForm] = useState({
+    agreedToTerms: false,
+  });
+  const [registrationLoading, setRegistrationLoading] = useState(false);
+  const [registrationError, setRegistrationError] = useState('');
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [userTeam, setUserTeam] = useState(null);
+  const [isCaptain, setIsCaptain] = useState(false);
+  const [teamPlayers, setTeamPlayers] = useState([]);
+  const [showNonCaptainModal, setShowNonCaptainModal] = useState(false);
+  const [sendingReference, setSendingReference] = useState(false);
+  const [referenceSentSuccess, setReferenceSentSuccess] = useState(false);
+
+  // Function to send tournament reference message to captain
+  const sendTournamentReferenceToCaptain = async () => {
+    if (!userTeam || !userTeam.captain) return;
+
+    setSendingReference(true);
+    try {
+      const messagePayload = {
+        receiverId: userTeam.captain,
+        messageType: 'tournament_reference',
+        message: `Please register our team for the tournament: ${tournamentData.name}`,
+        tournamentId: tournamentData._id,
+        tournamentName: tournamentData.name,
+        tournamentDate: tournamentData.startDate,
+        prizePool: tournamentData.prizePool?.total || 0,
+        totalSlots: tournamentData.teams || 0,
+      };
+
+      const response = await fetch('/api/message/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(messagePayload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to send reference message');
+      }
+
+      setReferenceSentSuccess(true);
+    } catch (error) {
+      console.error('Error sending tournament reference:', error);
+      alert('Failed to send tournament reference message. Please try again later.');
+    } finally {
+      setSendingReference(false);
+    }
+  };
+
+  // Handle team registration
+  const handleRegistration = async (e) => {
+    e.preventDefault();
+    setRegistrationLoading(true);
+    setRegistrationError('');
+
+    if (!registrationForm.agreedToTerms) {
+      setRegistrationError('You must agree to the terms and conditions to register.');
+      setRegistrationLoading(false);
+      return;
+    }
+
+    try {
+      if (!userTeam) {
+        throw new Error('User team data not available.');
+      }
+
+      const allPlayers = userTeam.players ? [...userTeam.players] : [];
+      if (userTeam.substitute) {
+        allPlayers.push(userTeam.substitute);
+      }
+
+      const registrationData = {
+        tournamentId: id,
+        teamId: userTeam._id,
+        teamName: userTeam.teamName,
+        teamTag: userTeam.teamTag,
+        teamLogo: userTeam.logo,
+        captainName: userTeam.captain?.name || '',
+        captainEmail: userTeam.captain?.email || '',
+        captainPhone: userTeam.captain?.phone || '',
+        players: allPlayers.map(player => player.name || player), // assuming player objects or strings
+      };
+
+      const response = await fetch(`/api/team-tournaments/register/${id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(registrationData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Registration failed');
+      }
+
+      const result = await response.json();
+      setRegistrationSuccess(true);
+      setShowRegistrationModal(false);
+      setRegistrationForm({ agreedToTerms: false });
+    } catch (error) {
+      setRegistrationError(error.message);
+    } finally {
+      setRegistrationLoading(false);
+    }
+  };
 
   // Map images - you can update these paths later
  
@@ -53,18 +166,18 @@ const DetailedTournamentInfo = () => {
         if (!response.ok) {
           throw new Error(`Failed to fetch tournament data: ${response.status}`);
         }
-        
+
         const data = await response.json();
-        
+
         setTournamentData(data.tournamentData);
         setScheduleData(data.scheduleData || []);
         setGroupsData(data.groupsData || {});
         setTournamentStats(data.tournamentStats);
         setStreamLinks(data.streamLinks || []);
-        
+
         // Set default phase
         if (data.tournamentData?.phases?.length > 0) {
-          const currentPhase = data.tournamentData.phases.find(p => p.status === 'in_progress') || 
+          const currentPhase = data.tournamentData.phases.find(p => p.status === 'in_progress') ||
                                data.tournamentData.phases[0];
           setSelectedPhase(currentPhase.name);
         }
@@ -75,7 +188,7 @@ const DetailedTournamentInfo = () => {
           const matchesResult = await matchesResponse.json();
           setMatchesData(matchesResult.matches || []);
         }
-        
+
       } catch (err) {
         console.error('Error fetching tournament data:', err);
         setError(err.message);
@@ -88,6 +201,38 @@ const DetailedTournamentInfo = () => {
       fetchTournamentData();
     }
   }, [id]);
+
+  // Fetch user team data
+  useEffect(() => {
+    const fetchUserTeamData = async () => {
+      if (!user) return;
+
+      try {
+        const response = await fetch('/api/teams/user/my-teams', {
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const teamData = await response.json();
+
+          const userTeams = teamData.teams || [];
+          const team = userTeams.length > 0 ? userTeams[0] : null;
+
+          setUserTeam(team);
+          setIsCaptain(team && team.captain._id.toString() === user._id.toString());
+
+          // Set team players from the populated team data
+          if (team && team.players) {
+            setTeamPlayers(team.players);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching user team data:', err);
+      }
+    };
+
+    fetchUserTeamData();
+  }, [user]);
 
   // Update selectedGroup when selectedPhase changes
   useEffect(() => {
@@ -704,6 +849,33 @@ const DetailedTournamentInfo = () => {
                         Watch Live Stream
                       </a>
                     )}
+                    {user ? (
+                      isCaptain ? (
+                        <button
+                          onClick={() => setShowRegistrationModal(true)}
+                          className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                          Register Team
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setShowNonCaptainModal(true)}
+                          className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+                        >
+                          <Shield className="w-4 h-4" />
+                          Register Team
+                        </button>
+                      )
+                    ) : (
+                      <button
+                        onClick={() => navigate('/login')}
+                        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        Login to Register
+                      </button>
+                    )}
                     <button className="w-full bg-zinc-700 hover:bg-zinc-600 text-white font-medium px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
                       <Copy className="w-4 h-4" />
                       Copy Tournament URL
@@ -1063,6 +1235,183 @@ const DetailedTournamentInfo = () => {
           )}
         </div>
       </div>
+
+      {/* Registration Modal */}
+      {showRegistrationModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-zinc-800">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-white">Register Team for Tournament</h2>
+                <button
+                  onClick={() => setShowRegistrationModal(false)}
+                  className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6 text-zinc-400" />
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleRegistration} className="p-6 space-y-6">
+              {/* Show User Team Info */}
+              {userTeam ? (
+                <>
+                  <div className="text-white mb-4">
+                    <h3 className="text-lg font-semibold mb-2">Team Information</h3>
+                    <p><strong>Name:</strong> {userTeam.teamName}</p>
+                    <p><strong>Tag:</strong> {userTeam.teamTag}</p>
+                    {userTeam.logo && <img src={userTeam.logo} alt="Team Logo" className="w-20 h-20 rounded-lg mt-2" />}
+                  </div>
+
+                  <div className="text-white mb-4">
+                    <h3 className="text-lg font-semibold mb-2">Captain Information</h3>
+                    <p><strong>Username:</strong> {userTeam.captain?.username || 'N/A'}</p>
+                  </div>
+
+                  <div className="text-white mb-4">
+                    <h3 className="text-lg font-semibold mb-2">Team Players ({userTeam.players?.length || 0} players)</h3>
+                    <ul className="list-disc list-inside">
+                      {userTeam.players && userTeam.players.map((player, index) => (
+                        <li key={index}>{player.username || player.name || player}</li>
+                      ))}
+                      {userTeam.substitute && <li>{userTeam.substitute.username || userTeam.substitute.name || userTeam.substitute} (Substitute)</li>}
+                    </ul>
+                  </div>
+                </>
+              ) : (
+                <p className="text-red-400">User team data not available.</p>
+              )}
+
+              {/* Terms and Conditions Checkbox */}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="agreeTerms"
+                  checked={registrationForm.agreedToTerms || false}
+                  onChange={(e) => setRegistrationForm({ ...registrationForm, agreedToTerms: e.target.checked })}
+                  className="mr-2"
+                  required
+                />
+                <label htmlFor="agreeTerms" className="text-zinc-300 text-sm">
+                  I confirm my registration and agree to the terms and conditions.
+                </label>
+              </div>
+
+              {registrationError && (
+                <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-red-400" />
+                    <span className="text-red-400 font-medium">Error</span>
+                  </div>
+                  <p className="text-red-300 mt-1">{registrationError}</p>
+                </div>
+              )}
+
+              <div className="flex gap-4 pt-6 border-t border-zinc-700">
+                <button
+                  type="button"
+                  onClick={() => setShowRegistrationModal(false)}
+                  className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white font-medium px-6 py-3 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={registrationLoading || !registrationForm.agreedToTerms}
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 disabled:from-zinc-600 disabled:to-zinc-700 text-white font-medium px-6 py-3 rounded-lg transition-colors disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {registrationLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Registering...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4" />
+                      Register Team
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Non-Captain Modal */}
+      {showNonCaptainModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-md w-full">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Team Registration</h2>
+              <p className="text-zinc-400 mb-6">
+                Only team captains can register for tournaments. Send a reference message to your captain to request registration.
+              </p>
+
+              {referenceSentSuccess ? (
+                <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-4 mb-6">
+                  <div className="flex items-center gap-2 justify-center">
+                    <CheckCircle className="w-5 h-5 text-green-400" />
+                    <span className="text-green-400 font-medium">Reference Sent!</span>
+                  </div>
+                  <p className="text-green-300 text-sm mt-1">Your captain has been notified.</p>
+                </div>
+              ) : (
+                <button
+                  onClick={sendTournamentReferenceToCaptain}
+                  disabled={sendingReference}
+                  className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-zinc-600 disabled:to-zinc-700 text-white font-medium px-6 py-3 rounded-lg transition-colors disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-4"
+                >
+                  {sendingReference ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Send Reference to Captain
+                    </>
+                  )}
+                </button>
+              )}
+
+              <button
+                onClick={() => setShowNonCaptainModal(false)}
+                className="bg-zinc-700 hover:bg-zinc-600 text-white font-medium px-6 py-3 rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {registrationSuccess && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-md w-full">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Registration Successful!</h2>
+              <p className="text-zinc-400 mb-6">
+                Your team has been successfully registered for this tournament. You will receive further instructions via email.
+              </p>
+              <button
+                onClick={() => setRegistrationSuccess(false)}
+                className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Prize Breakdown Modal */}
       {showPrizeModal && tournamentData?.prizePool?.distribution && (

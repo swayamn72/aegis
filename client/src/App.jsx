@@ -41,7 +41,6 @@ import DetailedTeamInfo from './components/DetailedTeamInfo';
 import DetailedMatchInfoBGMI from './components/DetailedMatchInfoBGMI';
 import OrgDashboard from './pages/OrgDashboard';
 import MyApplications from './pages/MyApplications';
-import TournamentRegistrationPage from './pages/TournamentRegistrationPage';
 
 function App() {
   return (
@@ -87,7 +86,6 @@ function App() {
             <Route path="/my-teams" element={<ProtectedRoute><MyTeamsPage /></ProtectedRoute>} />
             <Route path="/org-dashboard" element={<ProtectedRoute><OrgDashboard /></ProtectedRoute>} />
             <Route path="/my-applications" element={<ProtectedRoute><MyApplications /></ProtectedRoute>} />
-            <Route path="/tournaments/register" element={<TournamentRegistrationPage />} />
           </Routes>
           <ToastContainer
             position="bottom-right"

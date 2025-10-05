@@ -186,8 +186,8 @@ router.get('/user/my-teams', auth, async (req, res) => {
   try {
     const teams = await Team.find({ 
       $or: [
-        { captain: req.user._id },
-        { players: req.user._id }
+        { captain: req.user.id },
+        { players: req.user.id }
       ]
     })
     .populate('captain', 'username profilePicture primaryGame')

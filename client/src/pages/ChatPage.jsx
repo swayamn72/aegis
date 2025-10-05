@@ -762,32 +762,49 @@ export default function ChatPage() {
                         <div className="max-w-xs lg:max-w-md xl:max-w-lg order-1 bg-yellow-100 rounded-2xl p-4 shadow-lg border border-yellow-400 text-yellow-900">
                           <p className="mb-3 font-semibold">Team Invitation</p>
                           <p className="mb-4">{msg.message}</p>
-                          {(msg.invitationStatus === 'pending' || !msg.invitationStatus) && (
-                            <div className="flex gap-3">
-                              <button
-                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold"
-                                onClick={() => handleAcceptInvitation(msg.invitationId)}
-                              >
-                                Accept
-                              </button>
-                              <button
-                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold"
-                                onClick={() => handleDeclineInvitation(msg.invitationId)}
-                              >
-                                Decline
-                              </button>
-                            </div>
-                          )}
-                          {msg.invitationStatus === 'accepted' && (
-                            <p className="text-green-700 font-semibold">Invitation Accepted</p>
-                          )}
-                          {msg.invitationStatus === 'declined' && (
-                            <p className="text-red-700 font-semibold">Invitation Declined</p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }
+                  {(msg.invitationStatus === 'pending' || !msg.invitationStatus) && (
+                    <div className="flex gap-3">
+                      <button
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold"
+                        onClick={() => handleAcceptInvitation(msg.invitationId)}
+                      >
+                        Accept
+                      </button>
+                      <button
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold"
+                        onClick={() => handleDeclineInvitation(msg.invitationId)}
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  )}
+                  {msg.invitationStatus === 'accepted' && (
+                    <p className="text-green-700 font-semibold">Invitation Accepted</p>
+                  )}
+                  {msg.invitationStatus === 'declined' && (
+                    <p className="text-red-700 font-semibold">Invitation Declined</p>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          if (msg.messageType === 'tournament_reference') {
+            return (
+              <div key={msg._id || idx} className={`flex ${msg.senderId === userId ? 'justify-end' : 'justify-start'}`}>
+                <div className="max-w-xs lg:max-w-md xl:max-w-lg order-1 bg-blue-100 rounded-2xl p-4 shadow-lg border border-blue-400 text-blue-900 cursor-pointer hover:bg-blue-200 transition-colors"
+                  onClick={() => {
+                    // Navigate to tournament page
+                    window.location.href = `/tournaments/${msg.tournamentId}`;
+                  }}
+                >
+                  <p className="mb-2 font-semibold">Tournament Reference</p>
+                  <p className="mb-2">{msg.message}</p>
+                  {/* Additional info can be fetched and displayed if needed */}
+                </div>
+              </div>
+            );
+          }
 
                   if (msg.messageType === 'system') {
                     return (

@@ -1,19 +1,16 @@
-# TODO: Add Create Team Functionality to MyTeams.jsx
+# Tournament Registration Implementation
 
-## Tasks
-- [x] Add state for create team modal visibility
-- [x] Add state for form data (teamName, teamTag, primaryGame, region, bio, logo)
-- [x] Create modal/form UI for team creation
-- [x] Add form validation
-- [x] Implement form submission handler to call POST /api/teams
-- [x] Handle API response: success (close modal, refresh data, navigate to team page), error (show error message)
-- [x] Update "Create Team" button to open modal
-- [x] Test the functionality
+## Backend Changes
+- [ ] Update chat.model.js to add 'tournament_reference' messageType and tournamentId field
+- [ ] Add route in message.routes.js to send tournament reference message to captain
+- [ ] Update teamTournament.routes.js registration to support selected players (if needed)
 
-## Dependent Files
-- client/src/components/MyTeams.jsx
+## Frontend Changes
+- [ ] Modify DetailedTournamentInfo2.jsx to add register button and modals
+- [ ] Update ChatPage.jsx to handle tournament_reference messages as clickable cards
 
-## Follow-up Steps
-- [x] Test team creation end-to-end
-- [ ] Handle file upload for logo if needed
-- [ ] Add more validation or features if required
+## Testing
+- [ ] Test captain registration flow with player selection
+- [ ] Test non-captain registration attempt and message sending
+- [ ] Test chat message display and navigation
+- [ ] Verify tournament status and slot checks
