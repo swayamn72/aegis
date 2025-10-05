@@ -16,7 +16,9 @@ const Navbar = () => {
     { to: "/players", text: "Players" },
     { to: "/opportunities", text: "Opportunities" },
     { to: "/tournaments", text: "Tournaments" },
-    { to: "/scrims", text: "Scrims" },
+    { to: "/communities", text: "Communities" },
+
+    // { to: "/scrims", text: "Scrims" },
   ];
 
   // This is a custom link component that handles the active underline
@@ -28,13 +30,13 @@ const Navbar = () => {
       <NavLink to={to} className="relative text-gray-300 hover:text-white transition-colors duration-300 text-lg font-bold group">
         {text}
         {/* The underline will only be visible (scale-x-100) if isActive is true */}
-        <span 
+        <span
           className={`absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-[#FF4500] to-orange-500 transition-transform duration-300 ease-out transform scale-x-0 group-hover:scale-x-100 ${isActive ? 'scale-x-100' : ''}`}
         ></span>
       </NavLink>
     );
   };
-  
+
   const MobileNavLink = ({ to, text }) => (
      <NavLink to={to} onClick={() => setIsOpen(false)} className="block text-gray-300 hover:text-white transition-colors duration-300 text-xl font-bold py-3 text-center">
        {text}
@@ -44,7 +46,7 @@ const Navbar = () => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#120E0E] border-b border-zinc-800/50">
       <div className="container mx-auto flex items-center justify-between h-24 px-6">
-        
+
         {/* Left Side: Logo (Your original styling) */}
         <NavLink to="/">
           <img src={logo} alt="Aegis Logo" className="h-[150px] mt-[5px] mr-[15px]" />

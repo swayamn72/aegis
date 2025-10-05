@@ -6,7 +6,7 @@ import Footer from '../components/Footer';
 function SignupPage() {
   return (
     <>
-      <Navbar />
+     
       <main>
         <AegisSignup />
       </main>

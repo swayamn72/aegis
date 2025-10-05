@@ -45,6 +45,56 @@ router.post("/", auth, async (req, res) => {
   }
 });
 
+// Join a community
+router.put("/:id/join", auth, async (req, res) => {
+  try {
+    const community = await Community.findById(req.params.id);
+    if (!community) {
+      return res.status(404).json({ message: "Community not found" });
+    }
+
+    if (community.members.includes(req.user.id)) {
+      return res.status(400).json({ message: "Already a member of this community" });
+    }
+
+    community.members.push(req.user.id);
+    community.membersCount += 1;
+    await community.save();
+
+    res.json({ message: "Joined community successfully", community });
+  } catch (error) {
+    console.error("Error joining community:", error);
+    res.status(500).json({ message: "Error joining community" });
+  }
+});
+
+// Leave a community
+router.put("/:id/leave", auth, async (req, res) => {
+  try {
+    const community = await Community.findById(req.params.id);
+    if (!community) {
+      return res.status(404).json({ message: "Community not found" });
+    }
+
+    if (!community.members.includes(req.user.id)) {
+      return res.status(400).json({ message: "Not a member of this community" });
+    }
+
+    if (community.admin.toString() === req.user.id) {
+      return res.status(400).json({ message: "Admin cannot leave the community" });
+    }
+
+    community.members = community.members.filter(member => member.toString() !== req.user.id);
+    community.membersCount -= 1;
+    await community.save();
+
+    res.json({ message: "Left community successfully", community });
+  } catch (error) {
+    console.error("Error leaving community:", error);
+    res.status(500).json({ message: "Error leaving community" });
+  }
+});
+
 // Get community by ID
 router.get("/:id", async (req, res) => {
   try {

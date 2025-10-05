@@ -74,8 +74,8 @@ const Sidebar = () => {
         <ul className="space-y-2">
           {communities.map((com) => (
             <NavLink
-              key={com._id}
-              to={`/community/${com._id}`}
+              key={com._id || com.id}
+              to={`/community/${com._id || com.id}`}
               className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-800 cursor-pointer"
             >
               <img

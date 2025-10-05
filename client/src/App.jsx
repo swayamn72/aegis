@@ -28,6 +28,7 @@ import AdminMatches from './pages/AdminMatches';
 import AdminOrganizations from './pages/AdminOrganizations';
 import AdminBugReports from './pages/AdminBugReports';
 import CommunityPage from './pages/CommunityPage';
+import CommunitiesPage from './pages/CommunitiesPage';
 import CreateCommunityPage from './pages/CreateCommunityPage';
 import CreatePost from './components/CreatePost';
 import PostList from './components/PostList';
@@ -64,7 +65,8 @@ function App() {
             <Route path='/match' element={<DetailedMatchInfoDN/>} />
             <Route path='/org' element={<DetailedOrgInfoDN/>} />
             <Route path="/myfeed" element={<MyFeed/>} />
-            <Route path='/community/:communityId' element={<CommunityPage/>}/>
+            <Route path='/community/:communityId' element={<ProtectedRoute><CommunityPage/></ProtectedRoute>}/>
+            <Route path='/communities' element={<CommunitiesPage />} />
             <Route path='/create-community' element={<CreateCommunityPage />} />
             <Route path='/complete-profile' element={<ProtectedRoute><CompleteProfilePage/></ProtectedRoute>} />
             <Route path='/my-profile' element={<ProtectedRoute><MyProfilePage/></ProtectedRoute>} />
