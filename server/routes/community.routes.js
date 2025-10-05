@@ -1,6 +1,6 @@
 import express from "express";
 import Community from "../models/community.model.js";
-import auth from "../middleware/auth.js";
+import auth, { isCommunityAdmin } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -92,6 +92,46 @@ router.put("/:id/leave", auth, async (req, res) => {
   } catch (error) {
     console.error("Error leaving community:", error);
     res.status(500).json({ message: "Error leaving community" });
+  }
+});
+
+// Edit a community (admin only)
+router.put("/:id", auth, isCommunityAdmin, async (req, res) => {
+  try {
+    const { name, description, image } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ message: "Community name is required" });
+    }
+
+    const community = req.community; // from middleware
+
+    community.name = name;
+    community.description = description || "";
+    community.image = image || "";
+
+    await community.save();
+    res.json({ message: "Community updated successfully", community });
+  } catch (error) {
+    console.error("Error updating community:", error);
+    if (error.code === 11000) {
+      res.status(400).json({ message: "Community name already exists" });
+    } else {
+      res.status(500).json({ message: "Error updating community", error: error.message });
+    }
+  }
+});
+
+// Delete a community (admin only)
+router.delete("/:id", auth, isCommunityAdmin, async (req, res) => {
+  try {
+    const community = req.community; // from middleware
+
+    await Community.findByIdAndDelete(community._id);
+    res.json({ message: "Community deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting community:", error);
+    res.status(500).json({ message: "Error deleting community" });
   }
 });
 

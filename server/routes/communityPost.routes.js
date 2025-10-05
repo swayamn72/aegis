@@ -1,5 +1,6 @@
 import express from "express";
 import CommunityPost from "../models/communityPost.model.js";
+import Community from "../models/community.model.js";
 import auth from "../middleware/auth.js";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
@@ -34,6 +35,15 @@ router.post("/", auth, upload.array("media", 5), async (req, res) => {
 
     if (!communityId) {
       return res.status(400).json({ message: "Community ID is required" });
+    }
+
+    // Check if user is member of the community
+    const community = await Community.findById(communityId);
+    if (!community) {
+      return res.status(404).json({ message: "Community not found" });
+    }
+    if (!community.members.includes(req.user.id)) {
+      return res.status(403).json({ message: "Only community members can post" });
     }
 
     // Upload files to Cloudinary
