@@ -4,6 +4,7 @@ import { Menu, X } from 'lucide-react';
 import logo from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
 import ProfileDropdown from './ProfileDropdown';
+import NotificationBar from './NotificationBar';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -46,7 +47,7 @@ const Navbar = () => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#120E0E] border-b border-zinc-800/50">
       <div className="container mx-auto flex items-center justify-between h-24 px-6">
-
+        
         {/* Left Side: Logo (Your original styling) */}
         <NavLink to="/">
           <img src={logo} alt="Aegis Logo" className="h-[150px] mt-[5px] mr-[15px]" />
@@ -59,6 +60,7 @@ const Navbar = () => {
 
         {/* Right Side: Desktop Buttons (Your original colors) */}
         <div className="hidden md:flex items-center gap-4">
+          <NotificationBar />
           {!isAuthenticated ? (
             <>
               <NavLink to="/login" className="font-bold text-white text-lg px-6 py-2 rounded-lg border-2 border-[#FF4500] hover:bg-[#FF4500]/20 transition-colors duration-300">

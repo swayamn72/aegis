@@ -27,15 +27,20 @@ import orgTournamentRoutes from './routes/orgTournament.routes.js';
 import teamTournamentRoutes from './routes/teamTournament.routes.js';
 import adminOrgTournamentRoutes from './routes/adminOrgTournament.routes.js';
 import supportRoutes from './routes/support.routes.js';
+import teamApplicationRoutes from './routes/teamApplication.routes.js';
+import tryoutChatRoutes from './routes/tryoutChat.routes.js';
 
 
-// Import Models to register with Mongoose
+// Import Models
 import './models/player.model.js';
 import './models/team.model.js';
 import './models/tournament.model.js';
 import './models/match.model.js';
 import './models/admin.model.js';
 import './models/organization.model.js';
+import './models/teamApplication.model.js';
+import './models/tryoutChat.model.js'
+
 
 // Load environment variables
 dotenv.config();
@@ -71,7 +76,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
 
-// Debugging middleware: log all incoming requests
 app.use((req, res, next) => {
   console.log(`Incoming request: ${req.method} ${req.url}`);
   next();
@@ -106,6 +110,8 @@ app.use('/api/team-tournaments', teamTournamentRoutes);
 // Admin routes for org tournament approval
 app.use('/api/admin/org-tournaments', adminOrgTournamentRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/team-applications', teamApplicationRoutes);
+app.use('/api/tryout-chats', tryoutChatRoutes);
 
 
 
@@ -123,13 +129,12 @@ const io = new Server(server, {
 io.on('connection', (socket) => {
   console.log('New Client Joined', socket.id);
 
-  
   socket.on('join', (playerId) => {
     socket.join(playerId);
     console.log(`Player ${playerId} joined room`);
   });
 
-  
+  // Direct message handler
   socket.on('sendMessage', async ({ senderId, receiverId, message }) => {
     console.log(`${senderId} -> ${receiverId}: ${message}`);
 
@@ -147,14 +152,33 @@ io.on('connection', (socket) => {
         ...msgData,
       };
 
-      // Emit to receiver (sender adds locally in client)
       io.to(receiverId).emit('receiveMessage', msgToEmit);
     } catch (error) {
       console.error('Error saving message:', error);
     }
   });
 
-  
+  // Tryout chat message handler
+  socket.on('tryoutMessage', async ({ chatId, message }) => {
+    try {
+      // Import TryoutChat model
+      const TryoutChat = (await import('./models/tryoutChat.model.js')).default;
+      
+      const chat = await TryoutChat.findById(chatId);
+      if (chat) {
+        // Emit to all participants
+        chat.participants.forEach(participantId => {
+          io.to(participantId.toString()).emit('tryoutMessage', {
+            chatId,
+            message,
+          });
+        });
+      }
+    } catch (error) {
+      console.error('Error handling tryout message:', error);
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log('❌ Client disconnected:', socket.id);
   });

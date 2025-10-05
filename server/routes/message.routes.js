@@ -5,6 +5,29 @@ import auth from "../middleware/auth.js";
 
 const router = express.Router();
 
+// Get all users who have chat messages with the current user
+router.get("/users/with-chats", auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Find all unique users who have exchanged messages with the current user
+    const sentMessages = await ChatMessage.find({ senderId: userId }).distinct('receiverId');
+    const receivedMessages = await ChatMessage.find({ receiverId: userId }).distinct('senderId');
+
+    const chatUserIds = [...new Set([...sentMessages, ...receivedMessages])];
+
+    // Fetch user details for these IDs
+    const Player = (await import('../models/player.model.js')).default;
+    const chatUsers = await Player.find({ _id: { $in: chatUserIds } })
+      .select('username profilePicture realName primaryGame aegisRating')
+      .sort({ username: 1 });
+
+    res.json({ users: chatUsers });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Get chat messages between two users
 router.get("/:receiverId", auth, async (req, res) => {
   try {
@@ -70,7 +93,7 @@ router.post("/invitations/:id/accept", auth, async (req, res) => {
       return res.status(400).json({ message: 'Invitation has expired' });
     }
 
-    // Import Player and Team models here to avoid circular dependencies
+
     const Player = (await import('../models/player.model.js')).default;
     const Team = (await import('../models/team.model.js')).default;
 

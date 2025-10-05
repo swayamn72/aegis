@@ -31,7 +31,7 @@ export const createSupportRequest = async (req, res) => {
 export const createBugReport = async (req, res) => {
   try {
     const { title, stepsToReproduce, priority } = req.body;
-    const userId = req.user.id; // Assuming user is authenticated and user info is in req.user
+    const userId = req.user.id; 
 
     if (!title || !stepsToReproduce) {
       return res.status(400).json({ message: 'Title and steps to reproduce are required' });

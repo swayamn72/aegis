@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
+import { toast } from 'react-toastify';
+import {
   Users, AlertCircle, Crown, History, Star, MapPin, Calendar,
   Trophy, Target, Zap, TrendingUp, Award, Shield, Plus,
   ExternalLink, MessageCircle, Settings, Eye, ChevronRight,
-  Medal, Activity, BarChart3, Globe, Gamepad2
+  Medal, Activity, BarChart3, Globe, Gamepad2, X
 } from 'lucide-react';
 
 const MyTeams = () => {
@@ -19,6 +20,19 @@ const MyTeams = () => {
   const [ongoingTournaments, setOngoingTournaments] = useState([]);
   const [recentTournaments, setRecentTournaments] = useState([]);
   const [teamInvitations, setTeamInvitations] = useState([]);
+  const [showInvitations, setShowInvitations] = useState(false);
+
+  const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
+  const [createTeamForm, setCreateTeamForm] = useState({
+    teamName: '',
+    teamTag: '',
+    primaryGame: 'BGMI',
+    region: 'India',
+    bio: '',
+    logo: ''
+  });
+  const [createTeamError, setCreateTeamError] = useState('');
+  const [createTeamLoading, setCreateTeamLoading] = useState(false);
 
   useEffect(() => {
   if (!user) {
@@ -59,7 +73,11 @@ const MyTeams = () => {
 
         if (invitationsResponse.ok) {
           const invitationsData = await invitationsResponse.json();
+          console.log('Invitations API response:', invitationsData);
           setTeamInvitations(invitationsData.invitations || []);
+          console.log('Team invitations set:', invitationsData.invitations || []);
+        } else {
+          console.error('Failed to fetch invitations:', invitationsResponse.status, invitationsResponse.statusText);
         }
       } else {
         setError('Failed to fetch player data');
@@ -72,7 +90,93 @@ const MyTeams = () => {
   };
 
   fetchPlayerAndTeamData();
-}, [user]);
+  }, [user]);
+
+  const handleCreateTeam = async (e) => {
+    e.preventDefault();
+    if (!createTeamForm.teamName.trim()) {
+      setCreateTeamError('Team name is required');
+      return;
+    }
+    setCreateTeamLoading(true);
+    setCreateTeamError('');
+    try {
+      console.log('Player object in handleCreateTeam:', player);
+      const captainId = player?._id || player?.id;
+      console.log('Captain ID:', captainId);
+      if (!captainId) {
+        setCreateTeamError('User not authenticated or player data not loaded');
+        setCreateTeamLoading(false);
+        return;
+      }
+      const teamData = {
+        ...createTeamForm
+      };
+      const response = await fetch('http://localhost:5000/api/teams', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(teamData),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        // Success
+        toast.success(`Team "${data.team.teamName}" created successfully! 🎉`);
+        setShowCreateTeamModal(false);
+        setCreateTeamForm({ teamName: '', teamTag: '', primaryGame: 'BGMI', region: 'India', bio: '', logo: '' });
+        // Refresh player data
+        fetchPlayerAndTeamData();
+        // Navigate to new team page
+        navigate(`/team/${data.team._id}`);
+      } else {
+        setCreateTeamError(data.message || 'Failed to create team');
+      }
+    } catch (error) {
+      setCreateTeamError('Network error');
+    } finally {
+      setCreateTeamLoading(false);
+    }
+  };
+
+  const handleAcceptInvitation = async (invitationId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/teams/invitations/${invitationId}/accept`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        toast.success('Invitation accepted successfully!');
+        // Refresh data
+        fetchPlayerAndTeamData();
+      } else {
+        const error = await response.json();
+        toast.error(error.message || 'Failed to accept invitation');
+      }
+    } catch (error) {
+      toast.error('Network error');
+    }
+  };
+
+  const handleDeclineInvitation = async (invitationId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/teams/invitations/${invitationId}/decline`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        toast.success('Invitation declined');
+        // Refresh data
+        fetchPlayerAndTeamData();
+      } else {
+        const error = await response.json();
+        toast.error(error.message || 'Failed to decline invitation');
+      }
+    } catch (error) {
+      toast.error('Network error');
+    }
+  };
 
   // Aegis Mascot Component
   const AegisMascot = ({ size = "w-12 h-12" }) => (
@@ -301,7 +405,7 @@ const MyTeams = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 text-white font-sans pt-[100px]">
+    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 text-white font-sans mt-[100px]">
       {/* Background Effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -left-40 w-80 h-80 bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-full blur-3xl animate-pulse" />
@@ -320,18 +424,81 @@ const MyTeams = () => {
               <p className="text-zinc-400 text-lg">Manage your esports journey</p>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <button className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg shadow-orange-500/30 flex items-center space-x-2">
               <Plus className="w-5 h-5" />
               <span>Join Team</span>
             </button>
-            <button className="bg-zinc-800/50 hover:bg-zinc-700/50 text-zinc-300 hover:text-white px-6 py-3 rounded-xl font-medium transition-colors border border-zinc-700/50 flex items-center space-x-2">
+            <button className="bg-zinc-800/50 hover:bg-zinc-700/50 text-zinc-300 hover:text-white px-6 py-3 rounded-xl font-medium transition-colors border border-zinc-700/50 flex items-center space-x-2" onClick={() => setShowCreateTeamModal(true)}>
               <Trophy className="w-5 h-5" />
               <span>Create Team</span>
             </button>
           </div>
         </div>
+
+        {/* Team Invitations Section */}
+        {teamInvitations.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <MessageCircle size={28} className="text-blue-400" />
+                <h2 className="text-2xl font-bold text-white">Team Invitations</h2>
+                <div className="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full">
+                  <span className="text-blue-400 text-sm font-medium">{teamInvitations.length} Pending</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowInvitations(!showInvitations)}
+                className="text-zinc-400 hover:text-white transition-colors"
+              >
+                <ChevronRight className={`w-5 h-5 transform transition-transform ${showInvitations ? 'rotate-90' : ''}`} />
+              </button>
+            </div>
+
+            {showInvitations && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {teamInvitations.map((invitation) => (
+                  <div key={invitation._id} className="bg-gradient-to-br from-zinc-900/80 to-zinc-800/80 backdrop-blur-sm border-2 border-blue-500/30 rounded-2xl p-6 hover:scale-105 transition-all duration-300 shadow-lg shadow-blue-500/10">
+                    <div className="flex items-start space-x-4 mb-4">
+                      {invitation.team.logo ? (
+                        <img
+                          src={invitation.team.logo}
+                          alt={`${invitation.team.teamName} logo`}
+                          className="w-12 h-12 rounded-xl object-cover border-2 border-blue-400/50"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center border-2 border-blue-400/50">
+                          <AegisMascot size="w-8 h-8" />
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-white">{invitation.team.teamName}</h3>
+<p className="text-zinc-400 text-sm">Invited by {invitation.fromPlayer.username}</p>
+                        <p className="text-zinc-500 text-xs">{new Date(invitation.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleAcceptInvitation(invitation._id)}
+                        className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-2 px-4 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg shadow-green-500/30 flex items-center justify-center space-x-2"
+                      >
+                        <span>Accept</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeclineInvitation(invitation._id)}
+                        className="flex-1 bg-zinc-700/50 hover:bg-zinc-600/50 text-zinc-300 hover:text-white py-2 px-4 rounded-lg transition-colors border border-zinc-600/50 flex items-center justify-center space-x-2"
+                      >
+                        <span>Decline</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Quick Stats */}
         {(player?.team || (player?.previousTeams && player.previousTeams.length > 0)) && (
@@ -415,7 +582,7 @@ const MyTeams = () => {
                   <Users className="w-5 h-5" />
                   <span>Find Teams</span>
                 </button>
-                <button className="bg-zinc-800/50 hover:bg-zinc-700/50 text-zinc-300 hover:text-white px-8 py-4 rounded-xl font-bold text-lg transition-colors border border-zinc-700/50 flex items-center justify-center space-x-2">
+                <button className="bg-zinc-800/50 hover:bg-zinc-700/50 text-zinc-300 hover:text-white px-8 py-4 rounded-xl font-bold text-lg transition-colors border border-zinc-700/50 flex items-center justify-center space-x-2" onClick={() => setShowCreateTeamModal(true)}>
                   <Plus className="w-5 h-5" />
                   <span>Create Team</span>
                 </button>
@@ -535,6 +702,142 @@ const MyTeams = () => {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Create Team Modal */}
+        {showCreateTeamModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1050] flex items-center justify-center p-4 pt-[80px]">
+          <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl border border-zinc-700 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <AegisMascot size="w-8 h-8" />
+                  <h2 className="text-xl font-bold text-white">Create New Team</h2>
+                </div>
+                <button
+                  onClick={() => setShowCreateTeamModal(false)}
+                  className="text-zinc-400 hover:text-white transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+                <form onSubmit={handleCreateTeam} className="space-y-4">
+                  {createTeamError && (
+                    <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3">
+                      <p className="text-red-400 text-sm">{createTeamError}</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-zinc-300 text-sm font-medium mb-2">
+                      Team Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={createTeamForm.teamName}
+                      onChange={(e) => setCreateTeamForm(prev => ({ ...prev, teamName: e.target.value }))}
+                      className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500 transition-colors"
+                      placeholder="Enter team name"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-zinc-300 text-sm font-medium mb-2">
+                      Team Tag (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={createTeamForm.teamTag}
+                      onChange={(e) => setCreateTeamForm(prev => ({ ...prev, teamTag: e.target.value }))}
+                      className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500 transition-colors"
+                      placeholder="e.g., ESP, PRO"
+                      maxLength={5}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-zinc-300 text-sm font-medium mb-2">
+                      Primary Game
+                    </label>
+                    <select
+                      value={createTeamForm.primaryGame}
+                      onChange={(e) => setCreateTeamForm(prev => ({ ...prev, primaryGame: e.target.value }))}
+                      className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-orange-500 transition-colors"
+                    >
+                      <option value="BGMI">BGMI</option>
+                      <option value="Free Fire">Free Fire</option>
+                      <option value="PUBG Mobile">PUBG Mobile</option>
+                      <option value="COD Mobile">COD Mobile</option>
+                      <option value="Valorant">Valorant</option>
+                      <option value="CS2">CS2</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-zinc-300 text-sm font-medium mb-2">
+                      Region
+                    </label>
+                    <select
+                      value={createTeamForm.region}
+                      onChange={(e) => setCreateTeamForm(prev => ({ ...prev, region: e.target.value }))}
+                      className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-orange-500 transition-colors"
+                    >
+                      <option value="India">India</option>
+                      <option value="Asia">Asia</option>
+                      <option value="Europe">Europe</option>
+                      <option value="North America">North America</option>
+                      <option value="South America">South America</option>
+                      <option value="Oceania">Oceania</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-zinc-300 text-sm font-medium mb-2">
+                      Team Bio (Optional)
+                    </label>
+                    <textarea
+                      value={createTeamForm.bio}
+                      onChange={(e) => setCreateTeamForm(prev => ({ ...prev, bio: e.target.value }))}
+                      className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500 transition-colors resize-none"
+                      placeholder="Tell us about your team..."
+                      rows={3}
+                      maxLength={200}
+                    />
+                    <p className="text-zinc-500 text-xs mt-1">{createTeamForm.bio.length}/200</p>
+                  </div>
+
+                  <div className="flex space-x-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateTeamModal(false)}
+                      className="flex-1 bg-zinc-700/50 hover:bg-zinc-600/50 text-zinc-300 hover:text-white py-2 px-4 rounded-lg transition-colors border border-zinc-600/50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={createTeamLoading}
+                      className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white py-2 px-4 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                    >
+                      {createTeamLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>Creating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Trophy className="w-4 h-4" />
+                          <span>Create Team</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           </div>
         )}
       </div>
