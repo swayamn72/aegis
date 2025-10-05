@@ -1,6 +1,6 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom'; // Import NavLink and useLocation
-import { Menu, X } from 'lucide-react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'; // Import NavLink, useLocation, useNavigate
+import { Menu, X, MessageCircle } from 'lucide-react'; // Changed chat icon to MessageCircle for better appearance
 import logo from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
 import ProfileDropdown from './ProfileDropdown';
@@ -9,6 +9,7 @@ import NotificationBar from './NotificationBar';
 const Navbar = () => {
   const [isOpen, setIsOpen] = React.useState(false);
   const location = useLocation(); // This hook gets the current URL path
+  const navigate = useNavigate(); // Hook to programmatically navigate
   const { isAuthenticated, user, logout } = useAuth();
 
   // I've updated your links to use "to" for routing instead of "href"
@@ -61,6 +62,16 @@ const Navbar = () => {
         {/* Right Side: Desktop Buttons (Your original colors) */}
         <div className="hidden md:flex items-center gap-4">
           <NotificationBar />
+          {isAuthenticated && (
+            <button
+              onClick={() => navigate('/chat')}
+              className="text-gray-300 hover:text-white transition-colors duration-300"
+              aria-label="Chat"
+              title="Chat"
+            >
+              <MessageCircle size={24} />
+            </button>
+          )}
           {!isAuthenticated ? (
             <>
               <NavLink to="/login" className="font-bold text-white text-lg px-6 py-2 rounded-lg border-2 border-[#FF4500] hover:bg-[#FF4500]/20 transition-colors duration-300">

@@ -41,6 +41,7 @@ export default function ChatPage() {
   const [teamApplications, setTeamApplications] = useState([]);
   const [tryoutChats, setTryoutChats] = useState([]);
   const [showApplications, setShowApplications] = useState(false);
+  const [tournamentDetails, setTournamentDetails] = useState({});
   const messagesEndRef = useRef(null);
   const location = useLocation();
   const selectedUserId = location.state?.selectedUserId;
@@ -196,6 +197,15 @@ export default function ChatPage() {
   }, []);
 
   useEffect(scrollToBottom, [messages]);
+
+  // Fetch tournament details when messages change
+  useEffect(() => {
+    messages.forEach(msg => {
+      if (msg.messageType === 'tournament_reference' && msg.tournamentId) {
+        fetchTournamentDetails(msg.tournamentId);
+      }
+    });
+  }, [messages]);
 
   useEffect(() => {
     if (connections.length > 0) {
@@ -419,6 +429,19 @@ export default function ChatPage() {
     if (aegisRating >= 1500) return <Shield className="w-4 h-4 text-purple-400" />;
     if (aegisRating >= 1000) return <Gamepad2 className="w-4 h-4 text-blue-400" />;
     return null;
+  };
+
+  // Fetch tournament details
+  const fetchTournamentDetails = async (tournamentId) => {
+    if (tournamentDetails[tournamentId]) return;
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/tournaments/${tournamentId}`, { credentials: 'include' });
+      const data = await res.json();
+      setTournamentDetails(prev => ({ ...prev, [tournamentId]: data }));
+    } catch (error) {
+      console.error('Error fetching tournament details:', error);
+    }
   };
 
   const ApplicationsPanel = () => (
@@ -795,12 +818,29 @@ export default function ChatPage() {
                 <div className="max-w-xs lg:max-w-md xl:max-w-lg order-1 bg-blue-100 rounded-2xl p-4 shadow-lg border border-blue-400 text-blue-900 cursor-pointer hover:bg-blue-200 transition-colors"
                   onClick={() => {
                     // Navigate to tournament page
-                    window.location.href = `/tournaments/${msg.tournamentId}`;
+window.location.href = `/tournament/${msg.tournamentId}`;
                   }}
                 >
                   <p className="mb-2 font-semibold">Tournament Reference</p>
+                  <div className="flex items-center gap-4 mb-2">
+{(tournamentDetails[msg.tournamentId]?.tournamentData?.media?.logo || tournamentDetails[msg.tournamentId]?.tournamentData?.organizer?.logo) ? (
+  <img
+    src={tournamentDetails[msg.tournamentId]?.tournamentData?.media?.logo || tournamentDetails[msg.tournamentId]?.tournamentData?.organizer?.logo}
+    alt={tournamentDetails[msg.tournamentId]?.tournamentData?.name}
+    className="w-16 h-16 rounded-lg object-cover"
+  />
+) : (
+  <div className="w-16 h-16 bg-zinc-300 rounded-lg flex items-center justify-center text-zinc-600 text-xs">
+    No Logo
+  </div>
+)}
+<div className="flex-1">
+  <p className="font-semibold text-blue-900">{tournamentDetails[msg.tournamentId]?.tournamentData?.name || 'Loading...'}</p>
+  <p className="text-sm text-blue-800">Prize Pool: {tournamentDetails[msg.tournamentId]?.tournamentData?.prizePool?.total || 'N/A'}</p>
+  <p className="text-sm text-blue-800">Slots Remaining: {tournamentDetails[msg.tournamentId]?.tournamentData?.totalSlots ?? 'N/A'}</p>
+</div>
+                  </div>
                   <p className="mb-2">{msg.message}</p>
-                  {/* Additional info can be fetched and displayed if needed */}
                 </div>
               </div>
             );

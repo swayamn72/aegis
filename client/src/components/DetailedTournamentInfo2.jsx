@@ -52,7 +52,8 @@ const DetailedTournamentInfo = () => {
     setSendingReference(true);
     try {
       const messagePayload = {
-        receiverId: userTeam.captain,
+        receiverId: userTeam.captain._id,
+        captainId: userTeam.captain._id,
         messageType: 'tournament_reference',
         message: `Please register our team for the tournament: ${tournamentData.name}`,
         tournamentId: tournamentData._id,
@@ -62,7 +63,7 @@ const DetailedTournamentInfo = () => {
         totalSlots: tournamentData.teams || 0,
       };
 
-      const response = await fetch('/api/message/send', {
+      const response = await fetch(`/api/chat/tournament-reference/${tournamentData._id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
