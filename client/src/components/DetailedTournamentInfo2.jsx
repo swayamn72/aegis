@@ -63,7 +63,7 @@ const DetailedTournamentInfo = () => {
         totalSlots: tournamentData.teams || 0,
       };
 
-      const response = await fetch(`/api/chat/tournament-reference/${tournamentData._id}`, {
+      const response = await fetch(`http://localhost:5000/api/chat/tournament-reference/${tournamentData._id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,6 +87,8 @@ const DetailedTournamentInfo = () => {
   };
 
   // Handle team registration
+  const registrationClosed = tournamentData?.registrationEndDate && new Date(tournamentData.registrationEndDate) < new Date();
+
   const handleRegistration = async (e) => {
     e.preventDefault();
     setRegistrationLoading(true);
@@ -120,12 +122,9 @@ const DetailedTournamentInfo = () => {
         players: allPlayers.map(player => player.name || player), // assuming player objects or strings
       };
 
-      const response = await fetch(`/api/team-tournaments/register/${id}`, {
+      const response = await fetch(`http://localhost:5000/api/team-tournaments/register/${id}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(registrationData),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -163,7 +162,9 @@ const DetailedTournamentInfo = () => {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`/api/tournaments/${id}`);
+        const response = await fetch(`http://localhost:5000/api/tournaments/${id}`, {
+          credentials: 'include'
+        });
         if (!response.ok) {
           throw new Error(`Failed to fetch tournament data: ${response.status}`);
         }
@@ -184,7 +185,9 @@ const DetailedTournamentInfo = () => {
         }
 
         // Fetch matches data
-        const matchesResponse = await fetch(`/api/matches/tournament/${id}`);
+        const matchesResponse = await fetch(`http://localhost:5000/api/matches/tournament/${id}`, {
+          credentials: 'include'
+        });
         if (matchesResponse.ok) {
           const matchesResult = await matchesResponse.json();
           setMatchesData(matchesResult.matches || []);
@@ -209,7 +212,7 @@ const DetailedTournamentInfo = () => {
       if (!user) return;
 
       try {
-        const response = await fetch('/api/teams/user/my-teams', {
+        const response = await fetch('http://localhost:5000/api/teams/user/my-teams', {
           credentials: 'include'
         });
 
@@ -850,33 +853,39 @@ const DetailedTournamentInfo = () => {
                         Watch Live Stream
                       </a>
                     )}
-                    {user ? (
-                      isCaptain ? (
-                        <button
-                          onClick={() => setShowRegistrationModal(true)}
-                          className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
-                        >
-                          <UserPlus className="w-4 h-4" />
-                          Register Team
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setShowNonCaptainModal(true)}
-                          className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
-                        >
-                          <Shield className="w-4 h-4" />
-                          Register Team
-                        </button>
-                      )
-                    ) : (
-                      <button
-                        onClick={() => navigate('/login')}
-                        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
-                      >
-                        <UserPlus className="w-4 h-4" />
-                        Login to Register
-                      </button>
-                    )}
+        {user ? (
+          registrationClosed ? (
+            <div className="w-full bg-red-600 text-white font-medium px-4 py-3 rounded-lg text-center">
+              Registration closed: Registration deadline has passed.
+            </div>
+          ) : (
+            isCaptain ? (
+              <button
+                onClick={() => setShowRegistrationModal(true)}
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+              >
+                <UserPlus className="w-4 h-4" />
+                Register Team
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowNonCaptainModal(true)}
+                className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+              >
+                <Shield className="w-4 h-4" />
+                Register Team
+              </button>
+            )
+          )
+        ) : (
+          <button
+            onClick={() => navigate('/login')}
+            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            Login to Register
+          </button>
+        )}
                     <button className="w-full bg-zinc-700 hover:bg-zinc-600 text-white font-medium px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
                       <Copy className="w-4 h-4" />
                       Copy Tournament URL

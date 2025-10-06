@@ -6,6 +6,7 @@ import Player from '../models/player.model.js';
 import Organization from '../models/organization.model.js';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
+import { sendEmail, emailTemplates } from '../utils/emailService.js';
 
 const router = express.Router();
 
@@ -226,7 +227,7 @@ router.post('/:tournamentId/invite-team', verifyOrgAuth, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const team = await Team.findById(teamId).populate('captain', 'email username');
+    const team = await Team.findById(teamId).populate('captain', 'email username').populate('players', 'email username');
     if (!team) {
       return res.status(404).json({ error: 'Team not found' });
     }
@@ -256,7 +257,23 @@ router.post('/:tournamentId/invite-team', verifyOrgAuth, async (req, res) => {
 
     await tournament.save();
 
-    // TODO: Send notification to team captain
+    // Send email notifications to all team members
+    try {
+      const allPlayers = [team.captain, ...team.players].filter(player => player && player.email);
+
+      for (const player of allPlayers) {
+        const playerName = player.username || 'Player';
+        const teamName = team.teamName || 'Your Team';
+        const tournamentName = tournament.tournamentName || 'Tournament';
+        const organizerName = tournament.organizer.name || 'AEGIS Esports';
+
+        const { subject, html } = emailTemplates.teamInvitation(playerName, teamName, tournamentName, organizerName);
+
+        await sendEmail(player.email, subject, html);
+      }
+    } catch (emailError) {
+      console.error('Error sending team invitation emails:', emailError);
+    }
 
     res.json({
       message: 'Team invitation sent successfully',

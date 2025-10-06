@@ -34,6 +34,10 @@ const MyTeams = () => {
   const [createTeamError, setCreateTeamError] = useState('');
   const [createTeamLoading, setCreateTeamLoading] = useState(false);
 
+  const [showKickConfirm, setShowKickConfirm] = useState(false);
+  const [kickPlayerData, setKickPlayerData] = useState(null);
+  const [kickLoading, setKickLoading] = useState(false);
+
   useEffect(() => {
   if (!user) {
     setLoading(false);
@@ -175,6 +179,60 @@ const MyTeams = () => {
       }
     } catch (error) {
       toast.error('Network error');
+    }
+  };
+
+  const handleKickPlayer = async (teamId, playerId, playerUsername) => {
+    setKickPlayerData({ teamId, playerId, playerUsername });
+    setShowKickConfirm(true);
+  };
+
+  const confirmKickPlayer = async () => {
+    if (!kickPlayerData) return;
+
+    setKickLoading(true);
+    try {
+      const response = await fetch(`http://localhost:5000/api/teams/${kickPlayerData.teamId}/kick/${kickPlayerData.playerId}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        toast.success(`${kickPlayerData.playerUsername} has been kicked from the team`);
+        setShowKickConfirm(false);
+        setKickPlayerData(null);
+        // Refresh data
+        fetchPlayerAndTeamData();
+      } else {
+        const error = await response.json();
+        toast.error(error.message || 'Failed to kick player');
+      }
+    } catch (error) {
+      toast.error('Network error');
+    } finally {
+      setKickLoading(false);
+    }
+  };
+
+  const handleLeaveTeam = async (teamId) => {
+    if (window.confirm('Are you sure you want to leave this team?')) {
+      try {
+        const response = await fetch(`http://localhost:5000/api/teams/${teamId}/leave`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          toast.success('You have left the team');
+          // Refresh data
+          fetchPlayerAndTeamData();
+        } else {
+          const error = await response.json();
+          toast.error(error.message || 'Failed to leave team');
+        }
+      } catch (error) {
+        toast.error('Network error');
+      }
     }
   };
 
@@ -321,6 +379,67 @@ const MyTeams = () => {
         {team.bio && (
           <div className="bg-zinc-800/30 rounded-lg p-3 border border-zinc-700/30">
             <p className="text-zinc-300 text-sm line-clamp-2">{team.bio}</p>
+          </div>
+        )}
+
+        {/* Team Members */}
+        {team.players && team.players.length > 0 && (
+          <div className="bg-zinc-800/30 rounded-lg p-3 border border-zinc-700/30">
+            <h4 className="text-zinc-300 font-semibold text-sm mb-3 flex items-center space-x-2">
+              <Users className="w-4 h-4" />
+              <span>Team Members ({team.players.length}/5)</span>
+            </h4>
+            <div className="space-y-2">
+              {team.players.map((player) => (
+                <div key={player._id} className="flex items-center justify-between bg-zinc-800/50 rounded-lg p-2">
+                  <div className="flex items-center space-x-3">
+                    {player.profilePicture ? (
+                      <img
+                        src={player.profilePicture}
+                        alt={`${player.username} avatar`}
+                        className="w-8 h-8 rounded-full object-cover border border-zinc-600"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 bg-gradient-to-br from-zinc-600 to-zinc-700 rounded-full flex items-center justify-center">
+                        <span className="text-zinc-400 text-xs font-bold">
+                          {player.username?.charAt(0)?.toUpperCase() || '?'}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      <div className="text-white text-sm font-medium flex items-center space-x-2">
+                        <span>{player.username}</span>
+                        {team.captain && team.captain._id === player._id && (
+                          <Crown className="w-3 h-3 text-amber-400" />
+                        )}
+                      </div>
+                      <div className="text-zinc-400 text-xs">{player.primaryGame}</div>
+                    </div>
+                  </div>
+
+                  {/* Kick Player Button - Only visible to captain and not for captain themselves */}
+                  {player && team.captain && team.captain._id === player._id && (
+                    <div className="text-amber-400 text-xs font-medium">Captain</div>
+                  )}
+                  {player && team.captain && team.captain._id !== player._id && player._id === user?.id && (
+                    <button
+                      onClick={() => handleLeaveTeam(team._id)}
+                      className="text-red-400 hover:text-red-300 text-xs font-medium px-2 py-1 rounded hover:bg-red-500/20 transition-colors"
+                    >
+                      Leave Team
+                    </button>
+                  )}
+                  {player && team.captain && team.captain._id === user?.id && team.captain._id !== player._id && (
+                    <button
+                      onClick={() => handleKickPlayer(team._id, player._id, player.username)}
+                      className="text-red-400 hover:text-red-300 text-xs font-medium px-2 py-1 rounded hover:bg-red-500/20 transition-colors"
+                    >
+                      Kick
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -836,6 +955,69 @@ const MyTeams = () => {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Kick Player Confirmation Modal */}
+        {showKickConfirm && kickPlayerData && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1050] flex items-center justify-center p-4 pt-[80px]">
+            <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl border border-zinc-700 max-w-md w-full">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-3">
+                    <AlertCircle size={24} className="text-red-400" />
+                    <h2 className="text-xl font-bold text-white">Kick Player</h2>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowKickConfirm(false);
+                      setKickPlayerData(null);
+                    }}
+                    className="text-zinc-400 hover:text-white transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                    <p className="text-red-400 text-sm">
+                      Are you sure you want to kick <span className="font-bold text-white">{kickPlayerData.playerUsername}</span> from the team?
+                      This action cannot be undone.
+                    </p>
+                  </div>
+
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={() => {
+                        setShowKickConfirm(false);
+                        setKickPlayerData(null);
+                      }}
+                      className="flex-1 bg-zinc-700/50 hover:bg-zinc-600/50 text-zinc-300 hover:text-white py-2 px-4 rounded-lg transition-colors border border-zinc-600/50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmKickPlayer}
+                      disabled={kickLoading}
+                      className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white py-2 px-4 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg shadow-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                    >
+                      {kickLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>Kicking...</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="w-4 h-4" />
+                          <span>Kick Player</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

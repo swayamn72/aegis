@@ -1,7 +1,10 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+
 import cookieParser from 'cookie-parser';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
@@ -43,7 +46,7 @@ import './models/tryoutChat.model.js'
 
 
 // Load environment variables
-dotenv.config();
+
 
 // Configure Cloudinary
 cloudinary.config({
@@ -188,3 +191,4 @@ io.on('connection', (socket) => {
 server.listen(port, () => {
   console.log(`✅ Server is running on port: ${port}`);
 });
+

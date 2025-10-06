@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import Tournament from '../models/tournament.model.js';
 import Team from '../models/team.model.js';
 import Player from '../models/player.model.js';
+import { sendEmail, emailTemplates } from '../utils/emailService.js';
 
 const router = express.Router();
 
@@ -254,7 +255,7 @@ router.post('/register/:tournamentId', verifyTeamCaptain, async (req, res) => {
   try {
     const { tournamentId } = req.params;
 
-    const tournament = await Tournament.findById(tournamentId);
+    const tournament = await Tournament.findById(tournamentId).populate('participatingTeams.team').populate('organizer');
     if (!tournament) {
       return res.status(404).json({ error: 'Tournament not found' });
     }
@@ -277,7 +278,7 @@ router.post('/register/:tournamentId', verifyTeamCaptain, async (req, res) => {
 
     // Check if team already registered
     const alreadyRegistered = tournament.participatingTeams.some(
-      pt => pt.team.toString() === req.team._id.toString()
+      pt => pt.team._id.toString() === req.team._id.toString()
     );
 
     if (alreadyRegistered) {
@@ -301,6 +302,21 @@ router.post('/register/:tournamentId', verifyTeamCaptain, async (req, res) => {
     });
 
     await tournament.save();
+
+    // Send registration confirmation emails to all team players
+    try {
+      const players = await Player.find({ team: req.team._id });
+      const organizerName = tournament.organizer?.orgName || 'AEGIS Esports';
+
+      for (const player of players) {
+        if (player.email) {
+          const { subject, html } = emailTemplates.tournamentRegistration(player.username, req.team.teamName, tournament.tournamentName);
+          await sendEmail(player.email, subject, html);
+        }
+      }
+    } catch (emailError) {
+      console.error('Error sending tournament registration emails:', emailError);
+    }
 
     res.json({
       message: 'Team registered successfully',

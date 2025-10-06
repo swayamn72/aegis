@@ -6,6 +6,7 @@ import Tournament from '../models/tournament.model.js';
 import TeamInvitation from '../models/teamInvitation.model.js';
 import ChatMessage from '../models/chat.model.js';
 import auth from '../middleware/auth.js';
+import { sendEmail, emailTemplates } from '../utils/emailService.js';
 
 const router = express.Router();
 
@@ -329,6 +330,23 @@ router.post('/:id/invite', auth, async (req, res) => {
 
     await chatMessage.save();
     console.log('Chat message created for team invitation:', chatMessage);
+
+    // Send email notification to invited player
+    // In the POST /api/teams/:id/invite route, update the email section:
+
+// Send email notification to invited player
+try {
+  if (player.email) {
+    const playerName = player.username || 'Player';
+    const teamName = team.teamName || 'Your Team';
+    const { subject, html } = emailTemplates.teamInvitation(playerName, teamName, '', '');
+    
+    await sendEmail(player.email, subject, html);
+  }
+} catch (emailError) {
+  console.error('Error sending team invitation email:', emailError.message);
+  // Don't fail the invitation if email fails
+}
 
     res.status(201).json({
       message: 'Team invitation sent successfully',
