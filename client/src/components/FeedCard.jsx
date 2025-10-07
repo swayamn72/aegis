@@ -1,6 +1,7 @@
 // src/components/FeedCard.js
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { Heart, MessageCircle, Share } from "lucide-react";
 
 export default function FeedCard({ post }) {
   const { user, isAuthenticated } = useAuth();
@@ -85,14 +86,14 @@ export default function FeedCard({ post }) {
         />
         <div className="ml-4">
           <p className="font-bold text-white text-lg">{post.author?.username}</p>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-gray-500">
             {new Date(post.createdAt).toLocaleString()}
           </p>
         </div>
       </div>
 
       {/* Caption */}
-      <p className="text-gray-200 text-md mb-4">{post.caption}</p>
+      <p className="text-gray-100 text-md mb-4">{post.caption}</p>
 
       {/* Media (image or video) */}
       {post.media?.map((m, i) =>
@@ -114,27 +115,27 @@ export default function FeedCard({ post }) {
       )}
 
       {/* Actions */}
-      <div className="flex justify-between text-gray-400 text-sm pt-3 border-t border-zinc-700">
+      <div className="flex justify-between text-gray-400 text-sm pt-3 border-t border-zinc-700 gap-2">
         <button
           onClick={toggleLike}
           disabled={isLiking}
-          className={`flex items-center gap-1 transition ${
+          className={`flex items-center gap-2 transition ${
             userHasLiked ? "text-amber-400" : "hover:text-amber-400"
           }`}
           aria-label={userHasLiked ? "Unlike post" : "Like post"}
         >
-          👍 {likes.length}
+          <Heart size={16} /> {likes.length}
         </button>
         <button
           onClick={() => setShowComments(!showComments)}
-          className="hover:text-orange-400 flex items-center gap-1 transition"
+          className="hover:text-orange-400 flex items-center gap-2 transition"
           aria-expanded={showComments}
           aria-controls={`comments-section-${post._id}`}
         >
-          💬 {comments.length}
+          <MessageCircle size={16} /> {comments.length}
         </button>
-        <button className="hover:text-red-400 flex items-center gap-1 transition">
-          ↗️ Share
+        <button className="hover:text-red-400 flex items-center gap-2 transition">
+          <Share size={16} /> Share
         </button>
       </div>
 

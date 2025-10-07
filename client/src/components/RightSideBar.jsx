@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import {Link} from "react-router-dom";
 import axios from "axios";
+import { Newspaper, Trophy } from "lucide-react";
 
 
 export default function RightSidebar({ tournaments, news, communities }) {
@@ -33,9 +34,10 @@ export default function RightSidebar({ tournaments, news, communities }) {
               key={i}
               className="flex items-start gap-3 p-2 rounded-lg hover:bg-zinc-800 transition cursor-pointer"
             >
+              <Newspaper size={16} className="text-gray-400 mt-1" />
               <div className="flex-1">
-                <p className="text-gray-200 font-medium">{item.title}</p>
-                <p className="text-gray-400 text-xs mt-1">{item.source}</p>
+                <p className="text-gray-100 font-bold text-sm">{item.title}</p>
+                <p className="text-gray-500 text-xs mt-1">{item.source}</p>
               </div>
             </li>
           ))}
@@ -58,7 +60,7 @@ export default function RightSidebar({ tournaments, news, communities }) {
               />
               <div>
                 <p className="text-gray-200 font-medium">{tour.name}</p>
-                <p className="text-gray-400 text-sm">{tour.date}</p>
+                <p className="text-gray-500 text-sm">{tour.date}</p>
               </div>
             </li>
           ))}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import logo from '../assets/logo.png';
-import { Home, Users, Trophy, Calendar, Plus } from 'lucide-react'; // icons for nav items
+import { Home, User, Users, Trophy, Calendar, Plus } from 'lucide-react'; // icons for nav items, consistent filled
 import axios from 'axios';
 const Sidebar = () => {
   const location = useLocation();
@@ -21,7 +21,7 @@ const Sidebar = () => {
 
   const navLinks = [
     { to: "/myfeed", text: "My Feed", icon: <Home size={20} /> },
-    { to: "/my-profile", text: "My Profile", icon: <Users size={20} /> },
+    { to: "/my-profile", text: "My Profile", icon: <User size={20} /> },
     { to: "/players", text: "Players", icon: <Users size={20} /> },
     { to: "/tournaments", text: "Tournaments", icon: <Trophy size={20} /> },
     { to: "/scrims", text: "Scrims", icon: <Calendar size={20} /> },
@@ -32,8 +32,8 @@ const Sidebar = () => {
     return (
       <NavLink
         to={to}
-        className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-colors 
-        ${isActive ? "bg-[#FF4500] text-white" : "text-gray-300 hover:bg-gray-800 hover:text-white"}`}
+        className={`flex items-center gap-3 px-4 py-4 rounded-xl font-semibold transition-colors
+        ${isActive ? "bg-[#FF4500] text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"}`}
       >
         {icon}
         {text}
@@ -52,9 +52,12 @@ const Sidebar = () => {
 
       {/* Nav links */}
       <nav className="flex flex-col mt-6 px-3 space-y-2">
-        {navLinks.map(link => (
-          <CustomNavLink key={link.text} {...link} />
-        ))}
+        <CustomNavLink {...navLinks[0]} />
+        <CustomNavLink {...navLinks[1]} />
+        <div className="border-t border-zinc-700 my-2"></div>
+        <CustomNavLink {...navLinks[2]} />
+        <CustomNavLink {...navLinks[3]} />
+        <CustomNavLink {...navLinks[4]} />
       </nav>
 
 
