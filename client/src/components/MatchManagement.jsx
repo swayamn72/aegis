@@ -44,7 +44,14 @@ const MatchManagement = ({ tournament, onUpdate }) => {
       const response = await fetch(`http://localhost:5000/api/matches/tournament/${tournament._id}`);
       if (response.ok) {
         const matchesData = await response.json();
-        setMatches(matchesData);
+        // Ensure matches is always an array
+        if (Array.isArray(matchesData)) {
+          setMatches(matchesData);
+        } else if (Array.isArray(matchesData.matches)) {
+          setMatches(matchesData.matches);
+        } else {
+          setMatches([]);
+        }
       } else {
         setError('Failed to fetch matches');
       }

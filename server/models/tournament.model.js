@@ -79,6 +79,10 @@ const tournamentSchema = new mongoose.Schema(
 
     // --- Tournament Timeline ---
     announcementDate: Date,
+    isOpenForAll: {
+      type: Boolean,
+      default: false,
+    },
     registrationStartDate: Date,
     registrationEndDate: Date,
     startDate: {

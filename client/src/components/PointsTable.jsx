@@ -32,7 +32,14 @@ const PointsTable = ({ tournament, onUpdate }) => {
       if (response.ok) {
         const matchesData = await response.json();
         console.log('Fetched matches:', matchesData);
-        setMatches(matchesData);
+        // Ensure matches is always an array
+        if (Array.isArray(matchesData)) {
+          setMatches(matchesData);
+        } else if (Array.isArray(matchesData.matches)) {
+          setMatches(matchesData.matches);
+        } else {
+          setMatches([]);
+        }
       } else {
         const errorText = await response.text();
         console.error('Error fetching matches:', errorText);

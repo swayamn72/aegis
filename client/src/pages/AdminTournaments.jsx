@@ -316,6 +316,8 @@ const AdminTournaments = () => {
   const [pendingOrgTournaments, setPendingOrgTournaments] = useState([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [tournamentToDelete, setTournamentToDelete] = useState(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectingTournamentId, setRejectingTournamentId] = useState(null);
 
   const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel }) => {
     if (!isOpen) return null;
@@ -336,6 +338,41 @@ const AdminTournaments = () => {
               className="px-4 py-2 bg-red-600 rounded hover:bg-red-700 transition"
             >
               Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const RejectReasonModal = ({ isOpen, onClose, onSubmit }) => {
+    const [reason, setReason] = useState('');
+    if (!isOpen) return null;
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-zinc-900 rounded-lg p-6 max-w-sm w-full text-white shadow-lg">
+          <h2 className="text-lg font-semibold mb-4">Reject Tournament</h2>
+          <label className="block text-sm mb-2">Enter rejection reason:</label>
+          <input
+            type="text"
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-white mb-4"
+            placeholder="Reason for rejection"
+          />
+          <div className="flex justify-end gap-4">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600 transition"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => { if (reason.trim()) onSubmit(reason); }}
+              className="px-4 py-2 bg-red-600 rounded hover:bg-red-700 transition disabled:opacity-50"
+              disabled={!reason.trim()}
+            >
+              Reject
             </button>
           </div>
         </div>
@@ -390,12 +427,16 @@ const AdminTournaments = () => {
     }
   };
 
-  const handleRejectOrgTournament = async (tournamentId) => {
-    const reason = prompt('Enter rejection reason:');
-    if (!reason) return;
-    
+  const handleRejectOrgTournament = (tournamentId) => {
+    setRejectingTournamentId(tournamentId);
+    setShowRejectModal(true);
+  };
+
+  const handleSubmitRejectReason = async (reason) => {
+    setShowRejectModal(false);
+    if (!reason || !rejectingTournamentId) return;
     try {
-      const response = await fetch(`/api/admin/org-tournaments/reject-org-tournament/${tournamentId}`, {
+      const response = await fetch(`/api/admin/org-tournaments/reject-org-tournament/${rejectingTournamentId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -412,6 +453,8 @@ const AdminTournaments = () => {
     } catch (error) {
       console.error('Error rejecting tournament:', error);
       toast.error('Error rejecting tournament');
+    } finally {
+      setRejectingTournamentId(null);
     }
   };
 
@@ -603,47 +646,47 @@ const AdminTournaments = () => {
             </h3>
             <div className="space-y-3">
               {pendingOrgTournaments.map((tournament) => (
-                <div key={tournament._id} className="bg-zinc-800 rounded-lg p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-zinc-700 rounded flex-shrink-0">
+                <div key={tournament._id} className="bg-gradient-to-r from-yellow-900/80 to-yellow-700/80 border border-yellow-500/30 shadow-lg rounded-xl p-6 flex items-center justify-between gap-6">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-16 h-16 bg-zinc-700 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center">
                       {tournament.media?.logo ? (
                         <img src={tournament.media.logo} alt="" className="w-full h-full object-cover rounded" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Trophy className="w-6 h-6 text-zinc-400" />
-                        </div>
+                        <Trophy className="w-8 h-8 text-yellow-400" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-white truncate">{tournament.tournamentName}</h4>
-                      <p className="text-sm text-zinc-400">
-                        By {tournament.organizer?.organizationRef?.orgName || 'Unknown'} • {tournament.gameTitle} • {tournament.region}
+                      <h4 className="font-bold text-lg text-white truncate">{tournament.tournamentName}</h4>
+                      <div className="flex items-center gap-2 text-sm text-yellow-200 mt-1">
+                        <span className="font-semibold">Pending Approval</span>
+                        <span className="px-2 py-1 bg-yellow-800/60 rounded text-xs">{tournament.gameTitle} • {tournament.region}</span>
+                      </div>
+                      <p className="text-xs text-yellow-100 mt-1">
+                        By <span className="font-semibold">{tournament.organizer?.organizationRef?.orgName || 'Unknown'}</span> • Submitted {new Date(tournament._submittedAt).toLocaleDateString()}
                       </p>
-                      <p className="text-xs text-zinc-500 mt-1">
-                        Submitted {new Date(tournament._submittedAt).toLocaleDateString()}
-                      </p>
+                      {tournament.description && (
+                        <p className="text-xs text-yellow-200 mt-2 line-clamp-2">{tournament.description}</p>
+                      )}
                     </div>
                   </div>
-                  <div className="flex gap-2 flex-shrink-0">
+                  <div className="flex flex-col gap-2 flex-shrink-0 items-end">
                     <button
                       onClick={() => handleView(tournament)}
-                      className="px-3 py-1 bg-zinc-700 hover:bg-zinc-600 rounded text-sm text-white transition"
+                      className="px-4 py-1 bg-zinc-700 hover:bg-zinc-600 rounded text-sm text-white transition mb-1"
                     >
                       View
                     </button>
                     <button
                       onClick={() => handleApproveOrgTournament(tournament._id)}
-                      className="px-3 py-1 bg-green-500 hover:bg-green-600 rounded text-sm text-white transition flex items-center gap-1"
+                      className="px-4 py-1 bg-green-500 hover:bg-green-600 rounded text-sm text-white transition flex items-center gap-1 mb-1"
                     >
-                      <CheckCircle className="w-3 h-3" />
-                      Approve
+                      <CheckCircle className="w-4 h-4" /> Approve
                     </button>
                     <button
                       onClick={() => handleRejectOrgTournament(tournament._id)}
-                      className="px-3 py-1 bg-red-500 hover:bg-red-600 rounded text-sm text-white transition flex items-center gap-1"
+                      className="px-4 py-1 bg-red-500 hover:bg-red-600 rounded text-sm text-white transition flex items-center gap-1"
                     >
-                      <XCircle className="w-3 h-3" />
-                      Reject
+                      <XCircle className="w-4 h-4" /> Reject
                     </button>
                   </div>
                 </div>
@@ -718,6 +761,12 @@ const AdminTournaments = () => {
         message={tournamentToDelete ? `Are you sure you want to delete "${tournamentToDelete.tournamentName}"?` : ''}
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
+      />
+
+      <RejectReasonModal
+        isOpen={showRejectModal}
+        onClose={() => { setShowRejectModal(false); setRejectingTournamentId(null); }}
+        onSubmit={handleSubmitRejectReason}
       />
 
       {showTournamentWindow && selectedTournament && (

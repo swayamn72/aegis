@@ -2,6 +2,9 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Trophy, Users, Calendar, Settings, Upload, Bell, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { toast } from 'react-toastify';
+import ToastConfig from '../components/ToastConfig';
+import TournamentWindow from '../components/TournamentWindow';
 
 const OrgDashboard = () => {
   const [organization, setOrganization] = useState(null);
@@ -11,6 +14,8 @@ const OrgDashboard = () => {
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showTournamentWindow, setShowTournamentWindow] = useState(false);
+  const [selectedTournament, setSelectedTournament] = useState(null);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -141,6 +146,7 @@ const OrgDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
+      <ToastConfig />
       {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700 px-8 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
@@ -312,32 +318,69 @@ const OrgDashboard = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {tournaments.map((tournament) => (
-                  <div key={tournament._id} className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-750 transition">
-                    <div className="h-32 bg-gradient-to-br from-orange-500 to-red-500 relative">
-                      {tournament.media?.banner && (
-                        <img src={tournament.media.banner} alt="" className="w-full h-full object-cover" />
+                {tournaments.map((tournament) => {
+                  const isPending = tournament._approvalStatus === 'pending';
+                  const isRejected = tournament._approvalStatus === 'rejected';
+                  const isApproved = tournament._approvalStatus === 'approved';
+                  return (
+                    <div key={tournament._id} className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-750 transition relative">
+                      <div className="h-32 bg-gradient-to-br from-orange-500 to-red-500 relative">
+                        {tournament.media?.banner && (
+                          <img src={tournament.media.banner} alt="" className="w-full h-full object-cover" />
+                        )}
+                      </div>
+                      {/* Status Box for Pending/Rejected */}
+                      {(isPending || isRejected) && (
+                        <div className={`absolute top-4 left-4 right-4 z-10 rounded-lg px-4 py-3 flex items-center gap-2 shadow-lg border ${isPending ? 'bg-yellow-900/80 border-yellow-500/40' : 'bg-red-900/80 border-red-500/40'}`}>
+                          {isPending && (
+                            <>
+                              <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3" />
+                              </svg>
+                              <span className="text-yellow-300 font-semibold">Pending Admin Approval</span>
+                            </>
+                          )}
+                          {isRejected && (
+                            <>
+                              <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                              <span className="text-red-300 font-semibold">Rejected</span>
+                              {tournament.rejectionReason && (
+                                <span className="ml-2 text-xs text-red-200">Reason: {tournament.rejectionReason}</span>
+                              )}
+                            </>
+                          )}
+                        </div>
                       )}
-                    </div>
-                    <div className="p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-bold text-lg">{tournament.tournamentName}</h3>
-                        {getTournamentStatusBadge(tournament.status)}
+                      <div className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <h3 className="font-bold text-lg">{tournament.tournamentName}</h3>
+                          {getTournamentStatusBadge(tournament.status)}
+                        </div>
+                        <p className="text-gray-400 text-sm mb-4">
+                          {new Date(tournament.startDate).toLocaleDateString()} - {new Date(tournament.endDate).toLocaleDateString()}
+                        </p>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-400">
+                            {tournament.participatingTeams?.length || 0}/{tournament.slots?.total || 0} Teams
+                          </span>
+                          {isApproved && (
+                            <button
+                              className="text-orange-500 hover:text-orange-400"
+                              onClick={() => {
+                                setSelectedTournament(tournament);
+                                setShowTournamentWindow(true);
+                              }}
+                            >
+                              Manage →
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-gray-400 text-sm mb-4">
-                        {new Date(tournament.startDate).toLocaleDateString()} - {new Date(tournament.endDate).toLocaleDateString()}
-                      </p>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-400">
-                          {tournament.participatingTeams?.length || 0}/{tournament.slots?.total || 0} Teams
-                        </span>
-                        <button className="text-orange-500 hover:text-orange-400">
-                          Manage →
-                        </button>
-                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -392,6 +435,25 @@ const OrgDashboard = () => {
             setShowCreateModal(false);
             fetchTournaments();
           }}
+        />
+      )}
+
+      {/* Tournament Management Window */}
+      {showTournamentWindow && (
+        <TournamentWindow
+          tournament={selectedTournament}
+          isOpen={showTournamentWindow}
+          onClose={() => {
+            setShowTournamentWindow(false);
+            setSelectedTournament(null);
+          }}
+          onSave={(updatedTournament) => {
+            // Optionally update tournaments list after save
+            setShowTournamentWindow(false);
+            setSelectedTournament(null);
+            fetchTournaments();
+          }}
+          isAdmin={false}
         />
       )}
     </div>
@@ -475,9 +537,14 @@ const CreateTournamentModal = ({ organization, onClose, onSuccess }) => {
   const handleSubmit = async () => {
     setUploading(true);
     try {
+      if (!formData.tournamentName || formData.tournamentName.trim() === '') {
+        toast.error('Tournament Name is required.');
+        setUploading(false);
+        return;
+      }
       const formDataToSend = new FormData();
       formDataToSend.append('tournamentData', JSON.stringify(formData));
-      
+
       if (files.logo) formDataToSend.append('logo', files.logo);
       if (files.banner) formDataToSend.append('banner', files.banner);
       if (files.coverImage) formDataToSend.append('coverImage', files.coverImage);
@@ -490,11 +557,11 @@ const CreateTournamentModal = ({ organization, onClose, onSuccess }) => {
 
       if (!response.ok) throw new Error('Failed to create tournament');
 
-      alert('Tournament submitted for admin approval!');
+      toast.success('Tournament submitted for admin approval!');
       onSuccess();
     } catch (error) {
       console.error('Error creating tournament:', error);
-      alert('Error creating tournament: ' + error.message);
+      toast.error('Error creating tournament: ' + error.message);
     } finally {
       setUploading(false);
     }
@@ -529,6 +596,7 @@ const CreateTournamentModal = ({ organization, onClose, onSuccess }) => {
               <h3 className="text-xl font-semibold mb-4">Basic Information</h3>
               
               <div className="grid grid-cols-2 gap-4">
+                {/* Only one set of Tournament Name and Short Name inputs should be present */}
                 <div>
                   <label className="block text-sm font-medium mb-2">Tournament Name *</label>
                   <input
@@ -539,7 +607,6 @@ const CreateTournamentModal = ({ organization, onClose, onSuccess }) => {
                     placeholder="BGMI Winter Championship 2024"
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium mb-2">Short Name</label>
                   <input
@@ -623,26 +690,45 @@ const CreateTournamentModal = ({ organization, onClose, onSuccess }) => {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">Registration Start</label>
-                  <input
-                    type="datetime-local"
-                    value={formData.registrationStartDate}
-                    onChange={(e) => handleInputChange('registrationStartDate', e.target.value)}
-                    className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Registration End</label>
-                  <input
-                    type="datetime-local"
-                    value={formData.registrationEndDate}
-                    onChange={(e) => handleInputChange('registrationEndDate', e.target.value)}
-                    className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
-                  />
-                </div>
               </div>
+
+              {/* Open for All Checkbox */}
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  checked={formData.isOpenForAll || false}
+                  onChange={(e) => handleInputChange('isOpenForAll', e.target.checked)}
+                  className="w-4 h-4 text-orange-500 bg-gray-700 border-gray-600 rounded focus:ring-orange-500 focus:ring-2"
+                />
+                <label className="text-sm font-medium text-gray-300">
+                  Is this tournament open for all?
+                </label>
+              </div>
+
+              {/* Conditional Registration Dates */}
+              {formData.isOpenForAll && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Registration Start Date</label>
+                    <input
+                      type="datetime-local"
+                      value={formData.registrationStartDate}
+                      onChange={(e) => handleInputChange('registrationStartDate', e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Registration End Date</label>
+                    <input
+                      type="datetime-local"
+                      value={formData.registrationEndDate}
+                      onChange={(e) => handleInputChange('registrationEndDate', e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium mb-2">Description</label>

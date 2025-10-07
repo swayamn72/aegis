@@ -12,6 +12,7 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
   const [isEditing, setIsEditing] = useState(false);
   const [editedTournament, setEditedTournament] = useState(tournament);
   const [isPhaseManagerOpen, setIsPhaseManagerOpen] = useState(false);
+  const [selectedPhase, setSelectedPhase] = useState('');
 
   useEffect(() => {
     setEditedTournament(tournament);
@@ -36,6 +37,17 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
+  };
+
+  // Add handlers for admin and organizer actions
+  const handleAdminAddTeamToPhase = async (team, phase) => {
+    // Backend call to add team to phase
+  };
+  const handleAdminRemoveTeamFromPhase = async (team, phase) => {
+    // Backend call to remove team from phase
+  };
+  const handleSendInvite = async (team, phase) => {
+    // Backend call to send invite for phase
   };
 
   if (!isOpen || !tournament) return null;
@@ -290,6 +302,22 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
           {activeTab === 'teams' && (
             <div className="space-y-4">
               <h3 className="text-xl font-semibold text-white">Participating Teams</h3>
+              {/* Phase selection for invite/admin controls */}
+              {tournament.phases?.length > 0 && (
+                <div className="mb-4 flex gap-2 items-center">
+                  <span className="text-zinc-400">Select Phase:</span>
+                  <select
+                    value={selectedPhase || ''}
+                    onChange={e => setSelectedPhase(e.target.value)}
+                    className="bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-white"
+                  >
+                    <option value="">All Phases</option>
+                    {tournament.phases.map((phase, idx) => (
+                      <option key={idx} value={phase.name}>{phase.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {tournament.participatingTeams?.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {tournament.participatingTeams.map((participatingTeam, index) => {
@@ -298,7 +326,11 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
                     const teamName = team.teamName || team.name || participatingTeam.teamName || 'Unknown Team';
                     const teamLogo = team.logo || participatingTeam.logo;
                     const qualifiedThrough = participatingTeam.qualifiedThrough || 'Not specified';
-                    
+                    // Phase-specific invite status
+                    const phaseInvite = participatingTeam.invites?.find(inv => inv.phase === selectedPhase) || {};
+                    const inviteStatus = phaseInvite.status || 'none';
+                    const inviteExpiry = new Date(tournament.startDate).getTime() - 2 * 60 * 60 * 1000;
+                    const now = Date.now();
                     return (
                       <div key={participatingTeam._id || index} className="bg-zinc-800/50 rounded-lg p-4">
                         <div className="flex items-center gap-3">
@@ -324,6 +356,42 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
                               )}
                             </div>
                           </div>
+                          {/* Admin controls: add/remove team to phase */}
+                          {isAdmin && selectedPhase && (
+                            <div className="flex gap-2">
+                              <button
+                                className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
+                                onClick={() => handleAdminAddTeamToPhase(participatingTeam, selectedPhase)}
+                              >
+                                Add to {selectedPhase}
+                              </button>
+                              <button
+                                className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+                                onClick={() => handleAdminRemoveTeamFromPhase(participatingTeam, selectedPhase)}
+                              >
+                                Remove from {selectedPhase}
+                              </button>
+                            </div>
+                          )}
+                          {/* Organizer invite button for phase */}
+                          {!isAdmin && selectedPhase && inviteStatus === 'none' && now < inviteExpiry && (
+                            <button
+                              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+                              onClick={() => handleSendInvite(team, selectedPhase)}
+                            >
+                              Invite to {selectedPhase}
+                            </button>
+                          )}
+                          {/* Show invite status for phase */}
+                          {!isAdmin && selectedPhase && inviteStatus === 'pending' && now < inviteExpiry && (
+                            <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs">Invite Pending</span>
+                          )}
+                          {!isAdmin && selectedPhase && inviteStatus === 'expired' && (
+                            <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs">Invite Expired</span>
+                          )}
+                          {!isAdmin && selectedPhase && inviteStatus === 'accepted' && (
+                            <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">Accepted</span>
+                          )}
                         </div>
                       </div>
                     );

@@ -340,57 +340,52 @@ export default function ChatPage() {
     }
   };
 
-  // Handler to accept team invitation from chat message
-  const handleAcceptInvitation = async (invitationId) => {
+
+  // Handler to accept tournament team invitation from chat message
+  const handleAcceptTournamentInvite = async (inviteId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/teams/invitations/${invitationId}/accept`, {
+      const res = await fetch(`http://localhost:5000/api/tournaments/invites/${inviteId}/accept`, {
         method: 'POST',
         credentials: 'include',
       });
       if (res.ok) {
-        toast.success('Invitation accepted');
-        // Update invitationStatus in messages state immediately
+        toast.success('Tournament invite accepted');
         setMessages((prevMessages) =>
           prevMessages.map((msg) =>
-            msg.invitationId === invitationId ? { ...msg, invitationStatus: 'accepted' } : msg
+            msg.invitationId === inviteId ? { ...msg, invitationStatus: 'accepted' } : msg
           )
         );
-        // Refresh team applications to update invitation statuses
-        fetchTeamApplications();
       } else {
         const error = await res.json();
-        toast.error(error.message || 'Failed to accept invitation');
+        toast.error(error.message || 'Failed to accept tournament invite');
       }
     } catch (error) {
-      console.error('Error accepting invitation:', error);
-      toast.error('Failed to accept invitation');
+      console.error('Error accepting tournament invite:', error);
+      toast.error('Failed to accept tournament invite');
     }
   };
 
-  // Handler to decline team invitation from chat message
-  const handleDeclineInvitation = async (invitationId) => {
+  // Handler to decline tournament team invitation from chat message
+  const handleDeclineTournamentInvite = async (inviteId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/teams/invitations/${invitationId}/decline`, {
+      const res = await fetch(`http://localhost:5000/api/tournaments/invites/${inviteId}/decline`, {
         method: 'POST',
         credentials: 'include',
       });
       if (res.ok) {
-        toast.success('Invitation declined');
-        // Update invitationStatus in messages state immediately
+        toast.success('Tournament invite declined');
         setMessages((prevMessages) =>
           prevMessages.map((msg) =>
-            msg.invitationId === invitationId ? { ...msg, invitationStatus: 'declined' } : msg
+            msg.invitationId === inviteId ? { ...msg, invitationStatus: 'declined' } : msg
           )
         );
-        // Refresh team applications to update invitation statuses
-        fetchTeamApplications();
       } else {
         const error = await res.json();
-        toast.error(error.message || 'Failed to decline invitation');
+        toast.error(error.message || 'Failed to decline tournament invite');
       }
     } catch (error) {
-      console.error('Error declining invitation:', error);
-      toast.error('Failed to decline invitation');
+      console.error('Error declining tournament invite:', error);
+      toast.error('Failed to decline tournament invite');
     }
   };
 
@@ -778,39 +773,75 @@ export default function ChatPage() {
                     ? msg.senderId === userId
                     : msg.sender?._id === userId || msg.sender === userId;
 
+
                   if (msg.messageType === 'invitation') {
-                    // Invitation message UI with accept/decline buttons and status
+                    // Player invite message UI (unchanged)
                     return (
                       <div key={msg._id || idx} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                         <div className="max-w-xs lg:max-w-md xl:max-w-lg order-1 bg-yellow-100 rounded-2xl p-4 shadow-lg border border-yellow-400 text-yellow-900">
                           <p className="mb-3 font-semibold">Team Invitation</p>
                           <p className="mb-4">{msg.message}</p>
-                  {(msg.invitationStatus === 'pending' || !msg.invitationStatus) && (
-                    <div className="flex gap-3">
-                      <button
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold"
-                        onClick={() => handleAcceptInvitation(msg.invitationId)}
-                      >
-                        Accept
-                      </button>
-                      <button
-                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold"
-                        onClick={() => handleDeclineInvitation(msg.invitationId)}
-                      >
-                        Decline
-                      </button>
-                    </div>
-                  )}
-                  {msg.invitationStatus === 'accepted' && (
-                    <p className="text-green-700 font-semibold">Invitation Accepted</p>
-                  )}
-                  {msg.invitationStatus === 'declined' && (
-                    <p className="text-red-700 font-semibold">Invitation Declined</p>
-                  )}
-                </div>
-              </div>
-            );
-          }
+                          {(msg.invitationStatus === 'pending' || !msg.invitationStatus) && (
+                            <div className="flex gap-3">
+                              <button
+                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold"
+                                onClick={() => handleAcceptInvitation(msg.invitationId)}
+                              >
+                                Accept
+                              </button>
+                              <button
+                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold"
+                                onClick={() => handleDeclineInvitation(msg.invitationId)}
+                              >
+                                Decline
+                              </button>
+                            </div>
+                          )}
+                          {msg.invitationStatus === 'accepted' && (
+                            <p className="text-green-700 font-semibold">Invitation Accepted</p>
+                          )}
+                          {msg.invitationStatus === 'declined' && (
+                            <p className="text-red-700 font-semibold">Invitation Declined</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (msg.messageType === 'tournament_invite') {
+                    // Tournament team invite message UI
+                    return (
+                      <div key={msg._id || idx} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                        <div className="max-w-xs lg:max-w-md xl:max-w-lg order-1 bg-orange-100 rounded-2xl p-4 shadow-lg border border-orange-400 text-orange-900">
+                          <p className="mb-3 font-semibold">Tournament Team Invite</p>
+                          <p className="mb-2">Tournament: <span className="font-bold">{msg.tournamentName || 'Tournament'}</span></p>
+                          <p className="mb-4">{msg.message}</p>
+                          {(msg.invitationStatus === 'pending' || !msg.invitationStatus) && (
+                            <div className="flex gap-3">
+                              <button
+                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold"
+                                onClick={() => handleAcceptTournamentInvite(msg.invitationId)}
+                              >
+                                Accept
+                              </button>
+                              <button
+                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold"
+                                onClick={() => handleDeclineTournamentInvite(msg.invitationId)}
+                              >
+                                Decline
+                              </button>
+                            </div>
+                          )}
+                          {msg.invitationStatus === 'accepted' && (
+                            <p className="text-green-700 font-semibold">Tournament Invite Accepted</p>
+                          )}
+                          {msg.invitationStatus === 'declined' && (
+                            <p className="text-red-700 font-semibold">Tournament Invite Declined</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
 
           if (msg.messageType === 'tournament_reference') {
             return (

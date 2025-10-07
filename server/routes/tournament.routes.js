@@ -4,6 +4,7 @@ import Tournament from '../models/tournament.model.js';
 import Match from '../models/match.model.js';
 import Team from '../models/team.model.js';
 import Player from '../models/player.model.js';
+import { sendTeamInvite, acceptTeamInvite } from '../controllers/tournament.controller.js';
 
 const router = express.Router();
 
@@ -547,5 +548,11 @@ router.get('/search/:query', async (req, res) => {
     res.status(500).json({ error: 'Failed to search tournaments' });
   }
 });
+
+// Send invite to team for a phase
+router.post('/:tournamentId/invite', sendTeamInvite);
+
+// Accept invite
+router.post('/invite/:inviteId/accept', acceptTeamInvite);
 
 export default router;

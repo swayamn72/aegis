@@ -17,6 +17,8 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
     visibility: 'public',
     startDate: '',
     endDate: '',
+    isOpenForAll: false,
+    registrationStartDate: '',
     registrationEndDate: '',
     slots: {
       total: 16,
@@ -72,6 +74,8 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
         ...tournament,
         startDate: tournament.startDate ? tournament.startDate.split('T')[0] : '',
         endDate: tournament.endDate ? tournament.endDate.split('T')[0] : '',
+        isOpenForAll: tournament.isOpenForAll || false,
+        registrationStartDate: tournament.registrationStartDate ? tournament.registrationStartDate.split('T')[0] : '',
         registrationEndDate: tournament.registrationEndDate ? tournament.registrationEndDate.split('T')[0] : ''
       });
       // Set previews for editing
@@ -90,6 +94,8 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
         visibility: 'public',
         startDate: '',
         endDate: '',
+        isOpenForAll: false,
+        registrationStartDate: '',
         registrationEndDate: '',
         slots: {
           total: 16,
@@ -125,7 +131,12 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
   }, [tournament]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
+
+    let finalValue = value;
+    if (type === 'checkbox') {
+      finalValue = checked;
+    }
 
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
@@ -133,13 +144,13 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
         ...prev,
         [parent]: {
           ...prev[parent],
-          [child]: value
+          [child]: finalValue
         }
       }));
     } else {
       setFormData(prev => ({
         ...prev,
-        [name]: value
+        [name]: finalValue
       }));
     }
 
@@ -425,7 +436,7 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
           </div>
 
           {/* Dates */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-zinc-300 mb-2">
                 Start Date *
@@ -461,20 +472,52 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
                 <p className="text-red-400 text-sm mt-1">{errors.endDate}</p>
               )}
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-2">
-                Registration End Date
-              </label>
-              <input
-                type="date"
-                name="registrationEndDate"
-                value={formData.registrationEndDate}
-                onChange={handleChange}
-                className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
           </div>
+
+          {/* Open for All Checkbox */}
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              name="isOpenForAll"
+              checked={formData.isOpenForAll}
+              onChange={handleChange}
+              className="w-4 h-4 text-orange-500 bg-zinc-800 border-zinc-700 rounded focus:ring-orange-500 focus:ring-2"
+            />
+            <label className="text-sm font-medium text-zinc-300">
+              Is this tournament open for all?
+            </label>
+          </div>
+
+          {/* Conditional Registration Dates */}
+          {formData.isOpenForAll && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Registration Start Date
+                </label>
+                <input
+                  type="date"
+                  name="registrationStartDate"
+                  value={formData.registrationStartDate}
+                  onChange={handleChange}
+                  className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Registration End Date
+                </label>
+                <input
+                  type="date"
+                  name="registrationEndDate"
+                  value={formData.registrationEndDate}
+                  onChange={handleChange}
+                  className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Prize Pool */}
           <div>
