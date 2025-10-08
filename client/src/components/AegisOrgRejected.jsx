@@ -1,12 +1,15 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { XCircle, Mail, Building, User, MapPin, Globe, Phone, Calendar, LogOut, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const AegisOrgRejected = ({ organization, reason }) => {
   const { logout } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
     await logout();
+    navigate('/login');
   };
 
   return (

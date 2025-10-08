@@ -2,25 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import { useLocation } from 'react-router-dom';
-import { 
-  Send, 
-  Search, 
-  MoreVertical, 
-  Phone, 
-  Video, 
-  Settings,
-  Users,
-  Hash,
-  ChevronDown,
-  Activity,
-  Crown,
-  Shield,
-  Gamepad2,
-  Bell,
-  Check,
-  X,
-  Eye,
-  UserPlus
+import {
+  Send, Search, MoreVertical, Phone, Video, Settings, Users, Hash, ChevronDown, Activity, Crown, Shield, Gamepad2, Bell, Check, X, Eye, UserPlus
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -106,10 +89,10 @@ export default function ChatPage() {
   // Fetch team applications (for captains)
   const fetchTeamApplications = async () => {
     if (!user?.team) return;
-    
+
     try {
-      const res = await fetch(`http://localhost:5000/api/team-applications/team/${user.team._id}`, { 
-        credentials: 'include' 
+      const res = await fetch(`http://localhost:5000/api/team-applications/team/${user.team._id}`, {
+        credentials: 'include'
       });
       const data = await res.json();
       setTeamApplications(data.applications || []);
@@ -121,8 +104,8 @@ export default function ChatPage() {
   // Fetch tryout chats
   const fetchTryoutChats = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/tryout-chats/my-chats', { 
-        credentials: 'include' 
+      const res = await fetch('http://localhost:5000/api/tryout-chats/my-chats', {
+        credentials: 'include'
       });
       const data = await res.json();
       setTryoutChats(data.chats || []);
@@ -162,12 +145,56 @@ export default function ChatPage() {
     fetchAndSetConnections();
   }, [teamApplications, userId]);
 
+  // Request notification permission on component mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Function to show browser notification
+  const showNotification = (title, body, icon, onClick) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const notification = new Notification(title, {
+        body,
+        icon,
+        tag: 'tournament-invite', // Prevents duplicate notifications
+      });
+
+      if (onClick) {
+        notification.onclick = () => {
+          onClick();
+          notification.close();
+        };
+      }
+
+      // Auto close after 5 seconds
+      setTimeout(() => {
+        notification.close();
+      }, 5000);
+    }
+  };
+
   useEffect(() => {
     socket.on("receiveMessage", (msg) => {
       if (chatType === 'direct' && selectedChat &&
-        (msg.senderId === selectedChat._id || msg.receiverId === selectedChat._id)
+        (msg.senderId.toString() === selectedChat._id.toString() || msg.receiverId.toString() === selectedChat._id.toString())
       ) {
         setMessages((prev) => [...prev, msg]);
+      }
+
+      // Show notification for tournament invites if not currently viewing the chat
+      if (msg.messageType === 'tournament_invite' && msg.receiverId === userId) {
+        const senderName = 'Tournament Organizer'; // Could be enhanced to get actual name
+        showNotification(
+          'Tournament Team Invite',
+          `Your team has been invited to participate in a tournament`,
+          '/favicon.ico', // Use appropriate icon
+          () => {
+            // Redirect to chat page with the sender
+            window.location.href = `/chat?user=${msg.senderId}`;
+          }
+        );
       }
     });
 
@@ -183,7 +210,7 @@ export default function ChatPage() {
       socket.off("receiveMessage");
       socket.off("tryoutMessage");
     };
-  }, [chatType, selectedChat?._id]);
+  }, [chatType, selectedChat?._id, userId]);
 
   useEffect(() => {
     const handleConnect = () => console.log('Socket connected');
@@ -273,13 +300,13 @@ export default function ChatPage() {
         method: 'POST',
         credentials: 'include',
       });
-      
+
       if (res.ok) {
         const data = await res.json();
         toast.success('Tryout started!');
         fetchTeamApplications();
         fetchTryoutChats();
-        
+
         // Switch to tryout chat
         setSelectedChat(data.tryoutChat);
         setChatType('tryout');
@@ -303,7 +330,7 @@ export default function ChatPage() {
         credentials: 'include',
         body: JSON.stringify({ reason: 'Not suitable at this time' }),
       });
-      
+
       if (res.ok) {
         toast.success('Application rejected');
         fetchTeamApplications();
@@ -325,7 +352,7 @@ export default function ChatPage() {
         credentials: 'include',
         body: JSON.stringify({ notes: 'Great performance during tryout' }),
       });
-      
+
       if (res.ok) {
         toast.success('Player accepted to team!');
         fetchTeamApplications();
@@ -342,17 +369,17 @@ export default function ChatPage() {
 
 
   // Handler to accept tournament team invitation from chat message
-  const handleAcceptTournamentInvite = async (inviteId) => {
+  const handleAcceptTournamentInvite = async (msg) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/tournaments/invites/${inviteId}/accept`, {
+      const res = await fetch(`http://localhost:5000/api/team-tournaments/accept-invitation/${msg.tournamentId}/${msg.invitationId}`, {
         method: 'POST',
         credentials: 'include',
       });
       if (res.ok) {
         toast.success('Tournament invite accepted');
         setMessages((prevMessages) =>
-          prevMessages.map((msg) =>
-            msg.invitationId === inviteId ? { ...msg, invitationStatus: 'accepted' } : msg
+          prevMessages.map((m) =>
+            m.invitationId === msg.invitationId ? { ...m, invitationStatus: 'accepted' } : m
           )
         );
       } else {
@@ -366,17 +393,17 @@ export default function ChatPage() {
   };
 
   // Handler to decline tournament team invitation from chat message
-  const handleDeclineTournamentInvite = async (inviteId) => {
+  const handleDeclineTournamentInvite = async (msg) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/tournaments/invites/${inviteId}/decline`, {
+      const res = await fetch(`http://localhost:5000/api/team-tournaments/decline-invitation/${msg.tournamentId}/${msg.invitationId}`, {
         method: 'POST',
         credentials: 'include',
       });
       if (res.ok) {
         toast.success('Tournament invite declined');
         setMessages((prevMessages) =>
-          prevMessages.map((msg) =>
-            msg.invitationId === inviteId ? { ...msg, invitationStatus: 'declined' } : msg
+          prevMessages.map((m) =>
+            m.invitationId === msg.invitationId ? { ...m, invitationStatus: 'declined' } : m
           )
         );
       } else {
@@ -389,7 +416,55 @@ export default function ChatPage() {
     }
   };
 
-  const filteredConnections = connections.filter(conn => 
+  // Handler to accept team invitation from chat message
+  const handleAcceptInvitation = async (invitationId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/teams/invitations/${invitationId}/accept`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        toast.success('Invitation accepted successfully!');
+        setMessages((prevMessages) =>
+          prevMessages.map((m) =>
+            m.invitationId === invitationId ? { ...m, invitationStatus: 'accepted' } : m
+          )
+        );
+      } else {
+        const error = await response.json();
+        toast.error(error.message || 'Failed to accept invitation');
+      }
+    } catch (error) {
+      console.error('Error accepting invitation:', error);
+      toast.error('Network error accepting invitation');
+    }
+  };
+
+  // Handler to decline team invitation from chat message
+  const handleDeclineInvitation = async (invitationId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/teams/invitations/${invitationId}/decline`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        toast.success('Invitation declined');
+        setMessages((prevMessages) =>
+          prevMessages.map((m) =>
+            m.invitationId === invitationId ? { ...m, invitationStatus: 'declined' } : m
+          )
+        );
+      } else {
+        const error = await response.json();
+        toast.error(error.message || 'Failed to decline invitation');
+      }
+    } catch (error) {
+      console.error('Error declining invitation:', error);
+      toast.error('Network error declining invitation');
+    }
+  };
+
+  const filteredConnections = connections.filter(conn =>
     conn.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (conn.realName && conn.realName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -398,7 +473,7 @@ export default function ChatPage() {
     const date = new Date(timestamp);
     const now = new Date();
     const diff = now - date;
-    
+
     if (diff < 60000) return 'now';
     if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`;
@@ -451,7 +526,7 @@ export default function ChatPage() {
             <X className="w-5 h-5 text-zinc-400" />
           </button>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {teamApplications.length === 0 ? (
             <div className="text-center py-12 text-zinc-400">
@@ -462,19 +537,19 @@ export default function ChatPage() {
             teamApplications.map(app => (
               <div key={app._id} className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
                 <div className="flex items-start gap-4">
-                  <img 
+                  <img
                     src={app.player.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${app.player.username}`}
                     alt={app.player.username}
                     className="w-16 h-16 rounded-xl object-cover"
                   />
-                  
+
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-lg font-bold text-white">{app.player.inGameName || app.player.username}</h3>
                       {getRankIcon(app.player.aegisRating)}
                       <span className="text-sm text-zinc-400">@{app.player.username}</span>
                     </div>
-                    
+
                     <div className="flex items-center gap-4 text-sm text-zinc-400 mb-2">
                       <span>{app.player.primaryGame}</span>
                       <span>•</span>
@@ -545,7 +620,7 @@ export default function ChatPage() {
             </h2>
             <div className="flex items-center gap-2">
               {user?.team && (
-                <button 
+                <button
                   onClick={() => setShowApplications(true)}
                   className="relative p-2 hover:bg-zinc-800 rounded-lg transition-colors"
                 >
@@ -562,7 +637,7 @@ export default function ChatPage() {
               </button>
             </div>
           </div>
-          
+
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-400" />
             <input
@@ -593,11 +668,10 @@ export default function ChatPage() {
                     setChatType('tryout');
                     fetchTryoutMessages(chat._id);
                   }}
-                  className={`p-3 rounded-xl cursor-pointer transition-all mb-2 ${
-                    selectedChat?._id === chat._id && chatType === 'tryout'
+                  className={`p-3 rounded-xl cursor-pointer transition-all mb-2 ${selectedChat?._id === chat._id && chatType === 'tryout'
                       ? "bg-gradient-to-r from-orange-500/20 to-red-600/20 border border-orange-500/30"
                       : "hover:bg-zinc-800/30"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="relative">
@@ -608,7 +682,7 @@ export default function ChatPage() {
                       />
                       <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-orange-500 rounded-full border-2 border-zinc-900" />
                     </div>
-                    
+
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-white truncate text-sm">
                         {chat.team.teamName} Tryout
@@ -639,22 +713,21 @@ export default function ChatPage() {
                     setChatType('direct');
                     fetchMessages(conn._id);
                   }}
-                  className={`p-3 rounded-xl cursor-pointer transition-all duration-200 mb-2 group hover:bg-zinc-800/50 ${
-                    selectedChat?._id === conn._id && chatType === 'direct'
+                  className={`p-3 rounded-xl cursor-pointer transition-all duration-200 mb-2 group hover:bg-zinc-800/50 ${selectedChat?._id === conn._id && chatType === 'direct'
                       ? "bg-gradient-to-r from-orange-500/20 to-red-600/20 border border-orange-500/30"
                       : "hover:bg-zinc-800/30"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <img
                         src={conn.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${conn.username}`}
-                        alt={conn.username} 
+                        alt={conn.username}
                         className="w-12 h-12 rounded-xl object-cover border-2 border-zinc-700 group-hover:border-orange-400/50 transition-colors"
                       />
                       <div className={`absolute -bottom-1 -right-1 w-4 h-4 ${getStatusColor(getUserStatus(conn._id))} rounded-full border-2 border-zinc-900`} />
                     </div>
-                    
+
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-white truncate">
@@ -662,7 +735,7 @@ export default function ChatPage() {
                         </span>
                         {getRankIcon(conn.aegisRating)}
                       </div>
-                      
+
                       <div className="flex items-center gap-2 text-sm">
                         <span className="text-zinc-400">@{conn.username}</span>
                       </div>
@@ -709,11 +782,11 @@ export default function ChatPage() {
                       <div className={`absolute -bottom-1 -right-1 w-3 h-3 ${getStatusColor(getUserStatus(selectedChat._id))} rounded-full border border-zinc-900`} />
                     )}
                   </div>
-                  
+
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-white">
-                        {chatType === 'tryout' 
+                        {chatType === 'tryout'
                           ? `${selectedChat.team?.teamName} Tryout`
                           : (selectedChat.realName || selectedChat.username)
                         }
@@ -843,39 +916,39 @@ export default function ChatPage() {
                     );
                   }
 
-          if (msg.messageType === 'tournament_reference') {
-            return (
-              <div key={msg._id || idx} className={`flex ${msg.senderId === userId ? 'justify-end' : 'justify-start'}`}>
-                <div className="max-w-xs lg:max-w-md xl:max-w-lg order-1 bg-blue-100 rounded-2xl p-4 shadow-lg border border-blue-400 text-blue-900 cursor-pointer hover:bg-blue-200 transition-colors"
-                  onClick={() => {
-                    // Navigate to tournament page
-window.location.href = `/tournament/${msg.tournamentId}`;
-                  }}
-                >
-                  <p className="mb-2 font-semibold">Tournament Reference</p>
-                  <div className="flex items-center gap-4 mb-2">
-{(tournamentDetails[msg.tournamentId]?.tournamentData?.media?.logo || tournamentDetails[msg.tournamentId]?.tournamentData?.organizer?.logo) ? (
-  <img
-    src={tournamentDetails[msg.tournamentId]?.tournamentData?.media?.logo || tournamentDetails[msg.tournamentId]?.tournamentData?.organizer?.logo}
-    alt={tournamentDetails[msg.tournamentId]?.tournamentData?.name}
-    className="w-16 h-16 rounded-lg object-cover"
-  />
-) : (
-  <div className="w-16 h-16 bg-zinc-300 rounded-lg flex items-center justify-center text-zinc-600 text-xs">
-    No Logo
-  </div>
-)}
-<div className="flex-1">
-  <p className="font-semibold text-blue-900">{tournamentDetails[msg.tournamentId]?.tournamentData?.name || 'Loading...'}</p>
-  <p className="text-sm text-blue-800">Prize Pool: {tournamentDetails[msg.tournamentId]?.tournamentData?.prizePool?.total || 'N/A'}</p>
-  <p className="text-sm text-blue-800">Slots Remaining: {tournamentDetails[msg.tournamentId]?.tournamentData?.totalSlots ?? 'N/A'}</p>
-</div>
-                  </div>
-                  <p className="mb-2">{msg.message}</p>
-                </div>
-              </div>
-            );
-          }
+                  if (msg.messageType === 'tournament_reference') {
+                    return (
+                      <div key={msg._id || idx} className={`flex ${msg.senderId === userId ? 'justify-end' : 'justify-start'}`}>
+                        <div className="max-w-xs lg:max-w-md xl:max-w-lg order-1 bg-blue-100 rounded-2xl p-4 shadow-lg border border-blue-400 text-blue-900 cursor-pointer hover:bg-blue-200 transition-colors"
+                          onClick={() => {
+                            // Navigate to tournament page
+                            window.location.href = `/tournament/${msg.tournamentId}`;
+                          }}
+                        >
+                          <p className="mb-2 font-semibold">Tournament Reference</p>
+                          <div className="flex items-center gap-4 mb-2">
+                            {(tournamentDetails[msg.tournamentId]?.tournamentData?.media?.logo || tournamentDetails[msg.tournamentId]?.tournamentData?.organizer?.logo) ? (
+                              <img
+                                src={tournamentDetails[msg.tournamentId]?.tournamentData?.media?.logo || tournamentDetails[msg.tournamentId]?.tournamentData?.organizer?.logo}
+                                alt={tournamentDetails[msg.tournamentId]?.tournamentData?.name}
+                                className="w-16 h-16 rounded-lg object-cover"
+                              />
+                            ) : (
+                              <div className="w-16 h-16 bg-zinc-300 rounded-lg flex items-center justify-center text-zinc-600 text-xs">
+                                No Logo
+                              </div>
+                            )}
+                            <div className="flex-1">
+                              <p className="font-semibold text-blue-900">{tournamentDetails[msg.tournamentId]?.tournamentData?.name || 'Loading...'}</p>
+                              <p className="text-sm text-blue-800">Prize Pool: {tournamentDetails[msg.tournamentId]?.tournamentData?.prizePool?.total || 'N/A'}</p>
+                              <p className="text-sm text-blue-800">Slots Remaining: {tournamentDetails[msg.tournamentId]?.tournamentData?.totalSlots ?? 'N/A'}</p>
+                            </div>
+                          </div>
+                          <p className="mb-2">{msg.message}</p>
+                        </div>
+                      </div>
+                    );
+                  }
 
                   if (msg.messageType === 'system') {
                     return (
@@ -899,11 +972,10 @@ window.location.href = `/tournament/${msg.tournamentId}`;
                             {msg.sender?.username || 'Unknown'}
                           </div>
                         )}
-                        <div className={`p-3 rounded-2xl shadow-lg ${
-                          isMine
+                        <div className={`p-3 rounded-2xl shadow-lg ${isMine
                             ? "bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-br-md"
                             : "bg-zinc-800/80 text-white border border-zinc-700 rounded-bl-md"
-                        }`}>
+                          }`}>
                           <p className="break-words">{msg.message}</p>
                           <div className={`text-xs mt-1 ${isMine ? 'text-orange-100' : 'text-zinc-400'}`}>
                             {formatTime(msg.timestamp)}
@@ -928,7 +1000,7 @@ window.location.href = `/tournament/${msg.tournamentId}`;
                   <div className="text-center">
                     <Hash className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
                     <p className="text-zinc-400">
-                      {chatType === 'tryout' 
+                      {chatType === 'tryout'
                         ? 'Start the tryout conversation'
                         : `Start chatting with ${selectedChat.username}`
                       }
@@ -952,7 +1024,7 @@ window.location.href = `/tournament/${msg.tournamentId}`;
                     rows={1}
                   />
                 </div>
-                
+
                 <button
                   onClick={sendMessage}
                   disabled={!input.trim()}

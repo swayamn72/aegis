@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { X, Edit, Save, Users, Trophy, Calendar, Settings, Target, BarChart3, Check, X as XIcon } from 'lucide-react';
+import toast from 'react-hot-toast';
 import TournamentForm from './TournamentForm';
 import PhaseManager from './PhaseManager';
 import MatchManagement from './MatchManagement';
 import PointsTable from './PointsTable';
 import TeamGrouping from './TeamGrouping';
-import Seeding from './Seeding';
+
+import TeamSelector from './TeamSelector';
 
 const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false }) => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -13,6 +15,16 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
   const [editedTournament, setEditedTournament] = useState(tournament);
   const [isPhaseManagerOpen, setIsPhaseManagerOpen] = useState(false);
   const [selectedPhase, setSelectedPhase] = useState('');
+  const [isEditingOverview, setIsEditingOverview] = useState(false);
+  const [overviewData, setOverviewData] = useState({
+    tournamentName: tournament.tournamentName || '',
+    shortName: tournament.shortName || '',
+    logo: tournament.media?.logo || '',
+    coverImage: tournament.media?.coverImage || '',
+    visibility: tournament.visibility || 'public'
+  });
+  const [logoFile, setLogoFile] = useState(null);
+  const [coverFile, setCoverFile] = useState(null);
 
   useEffect(() => {
     setEditedTournament(tournament);
@@ -25,14 +37,80 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
     { id: 'matches', name: 'Matches', icon: Calendar },
     { id: 'teams', name: 'Teams', icon: Users },
     { id: 'points', name: 'Points Table', icon: Trophy },
-    { id: 'groups', name: 'Groups', icon: Users },
-    { id: 'seeding', name: 'Seeding', icon: Settings }
+    { id: 'groups', name: 'Groups', icon: Users }
   ];
 
-  const handleSave = async (updatedTournament) => {
-    await onSave(updatedTournament);
-    setIsEditing(false);
-    setEditedTournament(updatedTournament);
+  const handleSave = async (formData) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/tournaments/${tournament._id}`, {
+        method: 'PUT',
+        credentials: 'include',
+        body: formData
+      });
+
+      if (res.ok) {
+        const updatedTournament = await res.json();
+        setEditedTournament(updatedTournament.tournament || updatedTournament);
+        onSave(updatedTournament.tournament || updatedTournament);
+        setIsEditing(false);
+        toast.success('Tournament updated successfully');
+      } else {
+        const errorData = await res.json();
+        toast.error(errorData.message || 'Failed to update tournament');
+      }
+    } catch (err) {
+      console.error('Error updating tournament:', err);
+      toast.error('Failed to update tournament');
+    }
+  };
+
+  const handleSaveOverview = async () => {
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('tournamentName', overviewData.tournamentName);
+      formDataToSend.append('shortName', overviewData.shortName);
+      formDataToSend.append('visibility', overviewData.visibility);
+      if (logoFile) {
+        formDataToSend.append('logo', logoFile);
+      }
+      if (coverFile) {
+        formDataToSend.append('coverImage', coverFile);
+      }
+
+      const res = await fetch(`http://localhost:5000/api/tournaments/${tournament._id}`, {
+        method: 'PUT',
+        credentials: 'include',
+        body: formDataToSend
+      });
+
+      if (res.ok) {
+        const updatedTournament = await res.json();
+        setEditedTournament(updatedTournament);
+        onSave(updatedTournament);
+        setIsEditingOverview(false);
+        setLogoFile(null);
+        setCoverFile(null);
+        toast.success('Overview details updated successfully');
+      } else {
+        toast.error('Failed to update overview details');
+      }
+    } catch (err) {
+      console.error('Error updating overview:', err);
+      toast.error('Failed to update overview details');
+    }
+  };
+
+  const handleCancelOverview = () => {
+    setOverviewData({
+      tournamentName: tournament.tournamentName || '',
+      shortName: tournament.shortName || '',
+      logo: tournament.media?.logo || '',
+      coverImage: tournament.media?.coverImage || '',
+      visibility: tournament.visibility || 'public'
+    });
+    setIsEditingOverview(false);
+    setLogoFile(null);
+    setCoverFile(null);
   };
 
   const handleTabChange = (tabId) => {
@@ -41,13 +119,111 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
 
   // Add handlers for admin and organizer actions
   const handleAdminAddTeamToPhase = async (team, phase) => {
-    // Backend call to add team to phase
+    try {
+      const res = await fetch(`http://localhost:5000/api/tournaments/${tournament._id}/phases/${phase}/teams`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ teamId: team._id })
+      });
+
+      let data;
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        console.error('Received non-JSON response:', text);
+        throw new Error('Invalid response format from server');
+      }
+
+      if (res.ok) {
+        toast.success(`Team added to ${phase}`);
+        setEditedTournament(data);
+        onSave(data);
+      } else {
+        toast.error(data.message || 'Failed to add team');
+      }
+    } catch (err) {
+      console.error('Error adding team:', err);
+      toast.error(err.message || 'Failed to add team');
+    }
   };
+
   const handleAdminRemoveTeamFromPhase = async (team, phase) => {
-    // Backend call to remove team from phase
+    try {
+      const res = await fetch(`http://localhost:5000/api/tournaments/${tournament._id}/phases/${phase}/teams/${team._id}`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json'
+        },
+        credentials: 'include'
+      });
+
+      let data;
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        console.error('Received non-JSON response:', text);
+        throw new Error('Invalid response format from server');
+      }
+
+      if (res.ok) {
+        toast.success(`Team removed from ${phase}`);
+        setEditedTournament(data);
+        onSave(data);
+      } else {
+        toast.error(data.message || 'Failed to remove team');
+      }
+    } catch (err) {
+      console.error('Error removing team:', err);
+      toast.error(err.message || 'Failed to remove team');
+    }
   };
+
   const handleSendInvite = async (team, phase) => {
-    // Backend call to send invite for phase
+    try {
+      const res = await fetch(`http://localhost:5000/api/tournaments/${tournament._id}/invites`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          teamId: team._id,
+          phase: phase
+        })
+      });
+
+      let data;
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        console.error('Received non-JSON response:', text);
+        throw new Error('Invalid response format from server');
+      }
+
+      if (res.ok) {
+        toast.success(`Invite sent to ${team.teamName || 'team'} for ${phase}`);
+        if (data.tournament) {
+          setEditedTournament(data.tournament);
+          onSave(data.tournament);
+        }
+      } else {
+        toast.error(data.message || 'Failed to send invite');
+      }
+    } catch (err) {
+      console.error('Error sending invite:', err);
+      toast.error(err.message || 'Failed to send invite');
+    }
   };
 
   if (!isOpen || !tournament) return null;
@@ -93,11 +269,10 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
-                className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'text-orange-400 border-b-2 border-orange-400'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
+                className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab.id
+                  ? 'text-orange-400 border-b-2 border-orange-400'
+                  : 'text-zinc-400 hover:text-white'
+                  }`}
               >
                 <Icon className="w-4 h-4" />
                 {tab.name}
@@ -147,6 +322,140 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
                   </div>
                 </div>
               </div>
+
+              {/* Tournament Details Section */}
+              <div className="bg-zinc-800/50 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white">Tournament Details</h3>
+                  {isAdmin && (
+                    <button
+                      onClick={() => setIsEditingOverview(!isEditingOverview)}
+                      className="px-3 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm flex items-center gap-2"
+                    >
+                      <Edit className="w-4 h-4" />
+                      {isEditingOverview ? 'Cancel' : 'Edit Details'}
+                    </button>
+                  )}
+                </div>
+
+                {isEditingOverview ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-300 mb-2">Tournament Name</label>
+                        <input
+                          type="text"
+                          value={overviewData.tournamentName}
+                          onChange={(e) => setOverviewData(prev => ({ ...prev, tournamentName: e.target.value }))}
+                          className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-300 mb-2">Short Name/Tag</label>
+                        <input
+                          type="text"
+                          value={overviewData.shortName}
+                          onChange={(e) => setOverviewData(prev => ({ ...prev, shortName: e.target.value }))}
+                          className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-300 mb-2">Logo</label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setLogoFile(e.target.files[0])}
+                          className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white text-sm"
+                        />
+                        {overviewData.logo && !logoFile && (
+                          <img src={overviewData.logo} alt="Current Logo" className="w-16 h-16 object-cover rounded mt-2" />
+                        )}
+                        {logoFile && (
+                          <img src={URL.createObjectURL(logoFile)} alt="New Logo" className="w-16 h-16 object-cover rounded mt-2" />
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-300 mb-2">Banner/Cover</label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setCoverFile(e.target.files[0])}
+                          className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white text-sm"
+                        />
+                        {overviewData.coverImage && !coverFile && (
+                          <img src={overviewData.coverImage} alt="Current Banner" className="w-24 h-12 object-cover rounded mt-2" />
+                        )}
+                        {coverFile && (
+                          <img src={URL.createObjectURL(coverFile)} alt="New Banner" className="w-24 h-12 object-cover rounded mt-2" />
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-300 mb-2">Visibility</label>
+                        <select
+                          value={overviewData.visibility}
+                          onChange={(e) => setOverviewData(prev => ({ ...prev, visibility: e.target.value }))}
+                          className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white"
+                        >
+                          <option value="public">Public</option>
+                          <option value="private">Private</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-4">
+                      <button
+                        onClick={handleSaveOverview}
+                        className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2"
+                      >
+                        <Check className="w-4 h-4" />
+                        Save
+                      </button>
+                      <button
+                        onClick={handleCancelOverview}
+                        className="px-4 py-2 bg-zinc-600 text-white rounded hover:bg-zinc-700 flex items-center gap-2"
+                      >
+                        <XIcon className="w-4 h-4" />
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-zinc-400 text-sm">Name</p>
+                      <p className="text-white">{tournament.tournamentName}</p>
+                    </div>
+                    <div>
+                      <p className="text-zinc-400 text-sm">Tag</p>
+                      <p className="text-white">{tournament.shortName || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-zinc-400 text-sm">Visibility</p>
+                      <p className="text-white capitalize">{tournament.visibility || 'public'}</p>
+                    </div>
+                    <div className="md:col-span-2 lg:col-span-3">
+                      <p className="text-zinc-400 text-sm mb-2">Media</p>
+                      <div className="flex gap-4">
+                        {tournament.media?.logo && (
+                          <div>
+                            <p className="text-zinc-400 text-xs mb-1">Logo</p>
+                            <img src={tournament.media.logo} alt="Logo" className="w-16 h-16 object-cover rounded" />
+                          </div>
+                        )}
+                        {tournament.media?.coverImage && (
+                          <div>
+                            <p className="text-zinc-400 text-xs mb-1">Banner</p>
+                            <img src={tournament.media.coverImage} alt="Banner" className="w-24 h-12 object-cover rounded" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -154,22 +463,6 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-semibold text-white">Edit Tournament</h3>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setIsEditing(false)}
-                    className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors flex items-center gap-2"
-                  >
-                    <XIcon className="w-4 h-4" />
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => handleSave(editedTournament)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-                  >
-                    <Check className="w-4 h-4" />
-                    Save Changes
-                  </button>
-                </div>
               </div>
               <TournamentForm
                 tournament={editedTournament}
@@ -212,12 +505,11 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
                             <p className="text-zinc-400 text-sm">{phase.type}</p>
                           </div>
                         </div>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          phase.status === 'upcoming' ? 'bg-blue-500/20 text-blue-400' :
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${phase.status === 'upcoming' ? 'bg-blue-500/20 text-blue-400' :
                           phase.status === 'in_progress' ? 'bg-green-500/20 text-green-400' :
-                          phase.status === 'completed' ? 'bg-gray-500/20 text-gray-400' :
-                          'bg-red-500/20 text-red-400'
-                        }`}>
+                            phase.status === 'completed' ? 'bg-gray-500/20 text-gray-400' :
+                              'bg-red-500/20 text-red-400'
+                          }`}>
                           {phase.status}
                         </span>
                       </div>
@@ -300,112 +592,116 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
           )}
 
           {activeTab === 'teams' && (
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-white">Participating Teams</h3>
-              {/* Phase selection for invite/admin controls */}
-              {tournament.phases?.length > 0 && (
-                <div className="mb-4 flex gap-2 items-center">
-                  <span className="text-zinc-400">Select Phase:</span>
-                  <select
-                    value={selectedPhase || ''}
-                    onChange={e => setSelectedPhase(e.target.value)}
-                    className="bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-white"
-                  >
-                    <option value="">All Phases</option>
-                    {tournament.phases.map((phase, idx) => (
-                      <option key={idx} value={phase.name}>{phase.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {tournament.participatingTeams?.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {tournament.participatingTeams.map((participatingTeam, index) => {
-                    // Handle both populated and unpopulated team references
-                    const team = participatingTeam.team || participatingTeam;
-                    const teamName = team.teamName || team.name || participatingTeam.teamName || 'Unknown Team';
-                    const teamLogo = team.logo || participatingTeam.logo;
-                    const qualifiedThrough = participatingTeam.qualifiedThrough || 'Not specified';
-                    // Phase-specific invite status
-                    const phaseInvite = participatingTeam.invites?.find(inv => inv.phase === selectedPhase) || {};
-                    const inviteStatus = phaseInvite.status || 'none';
-                    const inviteExpiry = new Date(tournament.startDate).getTime() - 2 * 60 * 60 * 1000;
-                    const now = Date.now();
-                    return (
-                      <div key={participatingTeam._id || index} className="bg-zinc-800/50 rounded-lg p-4">
-                        <div className="flex items-center gap-3">
-                          {teamLogo && (
-                            <img 
-                              src={teamLogo} 
-                              alt={teamName} 
-                              className="w-10 h-10 rounded object-cover" 
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                              }}
-                            />
-                          )}
-                          <div className="flex-1">
-                            <h4 className="text-white font-medium">{teamName}</h4>
-                            <div className="flex flex-col gap-1">
-                              <p className="text-zinc-400 text-sm">Qualified through: {qualifiedThrough}</p>
-                              {participatingTeam.group && (
-                                <p className="text-zinc-500 text-xs">Group: {participatingTeam.group}</p>
-                              )}
-                              {participatingTeam.seed && (
-                                <p className="text-zinc-500 text-xs">Seed: #{participatingTeam.seed}</p>
-                              )}
-                            </div>
-                          </div>
-                          {/* Admin controls: add/remove team to phase */}
-                          {isAdmin && selectedPhase && (
-                            <div className="flex gap-2">
-                              <button
-                                className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
-                                onClick={() => handleAdminAddTeamToPhase(participatingTeam, selectedPhase)}
-                              >
-                                Add to {selectedPhase}
-                              </button>
-                              <button
-                                className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-                                onClick={() => handleAdminRemoveTeamFromPhase(participatingTeam, selectedPhase)}
-                              >
-                                Remove from {selectedPhase}
-                              </button>
-                            </div>
-                          )}
-                          {/* Organizer invite button for phase */}
-                          {!isAdmin && selectedPhase && inviteStatus === 'none' && now < inviteExpiry && (
-                            <button
-                              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
-                              onClick={() => handleSendInvite(team, selectedPhase)}
-                            >
-                              Invite to {selectedPhase}
-                            </button>
-                          )}
-                          {/* Show invite status for phase */}
-                          {!isAdmin && selectedPhase && inviteStatus === 'pending' && now < inviteExpiry && (
-                            <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs">Invite Pending</span>
-                          )}
-                          {!isAdmin && selectedPhase && inviteStatus === 'expired' && (
-                            <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs">Invite Expired</span>
-                          )}
-                          {!isAdmin && selectedPhase && inviteStatus === 'accepted' && (
-                            <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">Accepted</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Users className="w-8 h-8 text-zinc-400" />
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-white">Participating Teams</h3>
+
+                {/* Phase selection for invite/admin controls */}
+                {tournament.phases?.length > 0 && (
+                  <div className="flex gap-2 items-center">
+                    <span className="text-zinc-400">Select Phase:</span>
+                    <select
+                      value={selectedPhase || ''}
+                      onChange={e => setSelectedPhase(e.target.value)}
+                      className="bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-white"
+                    >
+                      <option value="">All Phases</option>
+                      {tournament.phases.map((phase, idx) => (
+                        <option key={idx} value={phase.name}>{phase.name}</option>
+                      ))}
+                    </select>
                   </div>
-                  <p className="text-zinc-400">No teams participating yet.</p>
-                  <p className="text-zinc-500 text-sm mt-1">Teams will appear here once they register for the tournament.</p>
+                )}
+              </div>
+
+              {/* Team Selector for both admins and organizers */}
+              {selectedPhase && (
+                <div className="bg-zinc-800/30 border border-zinc-700 rounded-xl p-4 mb-6">
+                  <h4 className="text-lg font-semibold text-white mb-4">
+                    {isAdmin ? `Add Teams to ${selectedPhase}` : `Invite Teams to ${selectedPhase}`}
+                  </h4>
+                  <TeamSelector
+                    selectedPhase={selectedPhase}
+                    tournament={tournament}
+                    onSelect={(team) => isAdmin ? handleAdminAddTeamToPhase(team, selectedPhase) : handleSendInvite(team, selectedPhase)}
+                  />
                 </div>
               )}
+
+              {/* Participating Teams List */}
+              <div className="space-y-4">
+                {tournament.participatingTeams?.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {tournament.participatingTeams.map((participatingTeam, index) => {
+                      const team = participatingTeam.team || participatingTeam;
+                      const teamName = team.teamName || team.name || 'Unknown Team';
+                      const teamLogo = team.logo || participatingTeam.logo;
+                      const phaseInvite = participatingTeam.invites?.find(inv => inv.phase === selectedPhase) || {};
+                      const inviteStatus = phaseInvite.status || 'none';
+
+                      return (
+                        <div key={team._id || index} className="bg-zinc-800/50 rounded-lg p-4">
+                          <div className="flex items-center gap-3">
+                            {teamLogo && (
+                              <img
+                                src={teamLogo}
+                                alt={teamName}
+                                className="w-10 h-10 rounded-lg object-cover"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                }}
+                              />
+                            )}
+                            <div className="flex-1">
+                              <h4 className="text-white font-medium">{teamName}</h4>
+                              {selectedPhase && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className={`px-2 py-0.5 rounded text-xs ${inviteStatus === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                                    inviteStatus === 'accepted' ? 'bg-green-500/20 text-green-400' :
+                                      inviteStatus === 'declined' ? 'bg-red-500/20 text-red-400' :
+                                        'bg-zinc-500/20 text-zinc-400'
+                                    }`}>
+                                    {inviteStatus === 'none' ? 'Not Invited' :
+                                      inviteStatus.charAt(0).toUpperCase() + inviteStatus.slice(1)}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Admin Controls */}
+                            {isAdmin && selectedPhase && (
+                              <div className="flex gap-2">
+                                <button
+                                  className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
+                                  onClick={() => handleAdminAddTeamToPhase(team, selectedPhase)}
+                                >
+                                  Add to {selectedPhase}
+                                </button>
+                                <button
+                                  className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+                                  onClick={() => handleAdminRemoveTeamFromPhase(team, selectedPhase)}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Users className="w-8 h-8 text-zinc-400" />
+                    </div>
+                    <p className="text-zinc-400">No teams participating yet.</p>
+                    <p className="text-zinc-500 text-sm mt-1">
+                      {isAdmin ? "Add teams using the controls above" : "Invite teams using the selector above"}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -429,15 +725,7 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
             />
           )}
 
-          {activeTab === 'seeding' && (
-            <Seeding
-              tournament={tournament}
-              onUpdate={(updatedTournament) => {
-                setEditedTournament(updatedTournament);
-                if (isAdmin) onSave(updatedTournament);
-              }}
-            />
-          )}
+
         </div>
       </div>
     </div>

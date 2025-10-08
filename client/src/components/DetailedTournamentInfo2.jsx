@@ -859,21 +859,31 @@ const DetailedTournamentInfo = () => {
               Registration closed: Registration deadline has passed.
             </div>
           ) : (
-            isCaptain ? (
-              <button
-                onClick={() => setShowRegistrationModal(true)}
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
-              >
-                <UserPlus className="w-4 h-4" />
-                Register Team
-              </button>
+            userTeam ? (
+              isCaptain ? (
+                <button
+                  onClick={() => setShowRegistrationModal(true)}
+                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Register Team
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowNonCaptainModal(true)}
+                  className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+                >
+                  <Shield className="w-4 h-4" />
+                  Register Team
+                </button>
+              )
             ) : (
               <button
-                onClick={() => setShowNonCaptainModal(true)}
-                className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+                onClick={() => navigate('/my-teams')}
+                className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
               >
-                <Shield className="w-4 h-4" />
-                Register Team
+                <Users className="w-4 h-4" />
+                You are not in a team. Go to My Teams
               </button>
             )
           )
