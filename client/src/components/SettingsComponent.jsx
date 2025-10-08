@@ -274,6 +274,33 @@ const SettingsComponent = () => {
     </button>
   );
 
+  const handleForgotPassword = async () => {
+    const email = document.getElementById('forgotEmail').value.trim();
+    if (!email) {
+      alert('Please enter your registered email.');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5000/api/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        alert(data.message);
+      } else {
+        alert(data.error || 'Something went wrong.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Server error.');
+    }
+  };
+
+
   const AccountCard = ({ platform, icon: Icon, account, onToggle, color = 'orange' }) => (
     <div className={`bg-zinc-800/50 border border-zinc-700 rounded-xl p-4`}>
       <div className="flex items-center justify-between mb-3">
@@ -1067,40 +1094,62 @@ const SettingsComponent = () => {
             )}
 
             {/* Privacy & Security Section */}
-            {activeSection === 'privacy' && (
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
-                <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-                  <Shield className="w-6 h-6 text-orange-400" />
-                  Privacy & Security
-                </h2>
+              {activeSection === 'privacy' && (
+                <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                    <Shield className="w-6 h-6 text-orange-400" />
+                    Privacy & Security
+                  </h2>
 
-                <div className="space-y-6">
-                  <div className="bg-zinc-800/50 border border-amber-400/30 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-amber-400 mb-3 flex items-center gap-2">
-                      <Key className="w-5 h-5" />
-                      Change Password
-                    </h3>
-                    <div className="space-y-4">
-                      <input
-                        type="password"
-                        placeholder="Current Password"
-                        className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
-                      />
-                      <input
-                        type="password"
-                        placeholder="New Password"
-                        className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
-                      />
-                      <input
-                        type="password"
-                        placeholder="Confirm New Password"
-                        className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
-                      />
-                      <button className="bg-amber-500 hover:bg-amber-600 text-black font-medium px-4 py-2 rounded-lg transition-colors">
-                        Update Password
-                      </button>
+                  <div className="space-y-6">
+                    <div className="bg-zinc-800/50 border border-amber-400/30 rounded-lg p-4">
+                      <h3 className="text-lg font-semibold text-amber-400 mb-3 flex items-center gap-2">
+                        <Key className="w-5 h-5" />
+                        Change Password
+                      </h3>
+                      <div className="space-y-4">
+                        <input
+                          type="password"
+                          placeholder="Current Password"
+                          className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
+                        />
+                        <input
+                          type="password"
+                          placeholder="New Password"
+                          className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
+                        />
+                        <input
+                          type="password"
+                          placeholder="Confirm New Password"
+                          className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
+                        />
+                        <button className="bg-amber-500 hover:bg-amber-600 text-black font-medium px-4 py-2 rounded-lg transition-colors">
+                          Update Password
+                        </button>
+                      </div>
                     </div>
-                  </div>
+
+                    {/*Forgot Passwrod section*/}
+      <div className="bg-zinc-800/50 border border-amber-400/30 rounded-lg p-4">
+        <h3 className="text-lg font-semibold text-amber-400 mb-3 flex items-center gap-2">
+          <Key className="w-5 h-5" />
+          Forgot Password
+        </h3>
+        <div className="space-y-4">
+          <input
+            type="email"
+            placeholder="Enter your registered email"
+            className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
+            id="forgotEmail"
+          />
+          <button
+            onClick={handleForgotPassword}
+            className="bg-amber-500 hover:bg-amber-600 text-black font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            Send Reset Link
+          </button>
+        </div>
+      </div>
 
                   <div className="bg-zinc-800/50 border border-blue-400/30 rounded-lg p-4">
                     <h3 className="text-lg font-semibold text-blue-400 mb-3 flex items-center gap-2">

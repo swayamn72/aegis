@@ -28,7 +28,15 @@ const playerSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    verified: {
+    resetPasswordToken: {
+      type: String,
+      default: null,
+    },
+    resetPasswordExpiry: {
+      type: Date,
+      default: null,
+    },
+        verified: {
       type: Boolean,
       default: false,
     },

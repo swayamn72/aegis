@@ -32,7 +32,7 @@ import adminOrgTournamentRoutes from './routes/adminOrgTournament.routes.js';
 import supportRoutes from './routes/support.routes.js';
 import teamApplicationRoutes from './routes/teamApplication.routes.js';
 import tryoutChatRoutes from './routes/tryoutChat.routes.js';
-
+import forgotPassRoutes from "./routes/forgotpass.routes.js";
 
 // Import Models
 import './models/player.model.js';
@@ -115,15 +115,14 @@ app.use('/api/admin/org-tournaments', adminOrgTournamentRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/team-applications', teamApplicationRoutes);
 app.use('/api/tryout-chats', tryoutChatRoutes);
-
-
+app.use("/api",forgotPassRoutes);
 
 const server = createServer(app);
 
 
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173',
+    origin: 'http://localhost:5174',
     credentials: true,
   },
 });

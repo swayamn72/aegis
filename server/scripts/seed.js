@@ -73,11 +73,11 @@ async function seed() {
     // 4. Create team (Player1 = captain)
     const team = await Team.create({
       teamName: "Team Titans",
-      tag: "TTN",
+      teamTag: "TTN",
       captain: players[0]._id,
       players: players.map((p) => p._id),
       primaryGame: "BGMI",
-      region: "APAC",
+      region: "Asia",
       country: "India",
       bio: "A rising BGMI squad aiming for the top!",
       socials: {

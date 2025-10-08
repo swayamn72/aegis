@@ -41,6 +41,7 @@ import DetailedTeamInfo from './components/DetailedTeamInfo';
 import DetailedMatchInfoBGMI from './components/DetailedMatchInfoBGMI';
 import OrgDashboard from './pages/OrgDashboard';
 import MyApplications from './pages/MyApplications';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   return (
@@ -72,6 +73,7 @@ function App() {
             <Route path='/complete-profile' element={<ProtectedRoute><CompleteProfilePage/></ProtectedRoute>} />
             <Route path='/my-profile' element={<ProtectedRoute><MyProfilePage/></ProtectedRoute>} />
             <Route path='/settings' element={<ProtectedRoute><SettingsPage/></ProtectedRoute>} />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
             <Route path='/tournaments2' element={<Tournaments2Page />} />
             <Route path="/tournament/:id" element={<DetailedTournamentInfo2 />} />
             <Route path="/team/:id" element={<DetailedTeamInfo />} />
