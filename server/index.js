@@ -127,6 +127,9 @@ const io = new Server(server, {
   },
 });
 
+// Make io globally available
+global.io = io;
+
 
 io.on('connection', (socket) => {
   console.log('New Client Joined', socket.id);

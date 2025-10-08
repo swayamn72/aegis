@@ -167,6 +167,9 @@ router.put('/:tournamentId', verifyOrgAuth, upload.fields([
       return res.status(403).json({ error: 'Not authorized to edit this tournament' });
     }
 
+    // Get the old participating teams for comparison
+    const oldParticipatingTeams = tournament.participatingTeams || [];
+
     // Upload new images if provided
     const mediaUrls = {};
     if (req.files) {
@@ -201,6 +204,62 @@ router.put('/:tournamentId', verifyOrgAuth, upload.fields([
       { $set: updateData },
       { new: true, runValidators: true }
     ).populate('participatingTeams.team', 'teamName teamTag logo');
+
+    // Check for newly added teams and send notifications
+    if (updateData.participatingTeams && Array.isArray(updateData.participatingTeams)) {
+      const newParticipatingTeams = updateData.participatingTeams;
+      const oldTeamIds = new Set(oldParticipatingTeams.map(pt => pt.team?.toString() || pt.team));
+      const newTeamIds = newParticipatingTeams.map(pt => pt.team?.toString() || pt.team);
+
+      // Find newly added teams
+      const newlyAddedTeamIds = newTeamIds.filter(teamId => !oldTeamIds.has(teamId));
+
+      if (newlyAddedTeamIds.length > 0) {
+        // Send notifications to newly added team captains
+        try {
+          const ChatMessage = (await import('../models/chat.model.js')).default;
+
+          for (const teamId of newlyAddedTeamIds) {
+            const team = await Team.findById(teamId).populate('captain', 'username');
+            if (team && team.captain) {
+              const captainId = team.captain._id.toString();
+              const organizerId = req.organization._id.toString();
+
+              const message = `Your team "${team.teamName}" has been invited to participate in "${tournament.tournamentName}". Check your tournament invitations for more details.`;
+
+              const savedMessage = await ChatMessage.create({
+                senderId: organizerId,
+                receiverId: captainId,
+                message: message,
+                messageType: 'tournament_invite',
+                tournamentId: tournamentId,
+                timestamp: new Date(),
+                tournamentName: tournament.tournamentName
+              });
+
+              // Emit to receiver (captain)
+              const msgToEmit = {
+                _id: savedMessage._id,
+                senderId: organizerId,
+                receiverId: captainId,
+                message: message,
+                messageType: 'tournament_invite',
+                tournamentId: tournamentId,
+                timestamp: new Date(),
+                tournamentName: tournament.tournamentName
+              };
+
+              global.io.to(captainId).emit('receiveMessage', msgToEmit);
+              // Also emit to sender (organizer) so they see it in their chat
+              global.io.to(organizerId).emit('receiveMessage', msgToEmit);
+            }
+          }
+        } catch (notificationError) {
+          console.error('Error sending team invitation notifications:', notificationError);
+          // Don't fail the update if notifications fail
+        }
+      }
+    }
 
     res.json({
       message: 'Tournament updated successfully',

@@ -119,19 +119,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Check approval status
-    if (organization.approvalStatus === 'pending') {
-      return res.status(403).json({ 
-        message: 'Your organization registration is pending admin approval' 
-      });
-    }
-
-    if (organization.approvalStatus === 'rejected') {
-      return res.status(403).json({ 
-        message: 'Your organization registration was rejected',
-        reason: organization.rejectionReason
-      });
-    }
+    // Allow login for all organizations (pending, approved, rejected)
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, organization.password);
@@ -340,13 +328,13 @@ router.get('/profile', async (req, res) => {
     // This would typically use auth middleware to get current org
     // For now, implementing basic version
     const token = req.cookies.token;
-    
+
     if (!token) {
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    
+
     if (decoded.type !== 'organization') {
       return res.status(403).json({ message: 'Not authorized' });
     }
@@ -357,6 +345,8 @@ router.get('/profile', async (req, res) => {
     if (!organization) {
       return res.status(404).json({ message: 'Organization not found' });
     }
+
+
 
     res.json({ organization });
 

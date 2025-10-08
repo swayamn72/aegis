@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 function timeAgo(date) {
@@ -27,6 +28,7 @@ function timeAgo(date) {
 
 const NotificationBar = () => {
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -101,7 +103,14 @@ const NotificationBar = () => {
             <div className="p-4 text-zinc-400">No new notifications</div>
           ) : (
             notifications.map((invitation) => (
-              <div key={invitation._id} className="p-3 border-b border-zinc-700 last:border-b-0 hover:bg-zinc-800 cursor-pointer flex items-center space-x-3">
+              <div
+                key={invitation._id}
+                className="p-3 border-b border-zinc-700 last:border-b-0 hover:bg-zinc-800 cursor-pointer flex items-center space-x-3"
+                onClick={() => {
+                  navigate('/chat', { state: { selectedUserId: invitation.fromPlayer._id } });
+                  setIsOpen(false);
+                }}
+              >
                 {invitation.team.logo ? (
                   <img
                     src={invitation.team.logo}

@@ -92,7 +92,7 @@ router.post('/apply/:teamId', auth, async (req, res) => {
   try {
     const { teamId } = req.params;
     const { message, appliedRoles } = req.body;
-    const playerId = req.user._id;
+    const playerId = req.user.id;
 
     // Check if player already has a team
     const player = await Player.findById(playerId);
@@ -157,7 +157,7 @@ router.post('/apply/:teamId', auth, async (req, res) => {
 router.get('/my-applications', auth, async (req, res) => {
   try {
     const applications = await TeamApplication.find({
-      player: req.user._id,
+      player: req.user.id,
     })
       .populate('team', 'teamName teamTag logo captain players')
       .populate({
@@ -192,12 +192,12 @@ router.get('/team/:teamId', auth, async (req, res) => {
       return res.status(500).json({ error: 'Team captain information missing' });
     }
 
-    if (!req.user || !req.user._id) {
-      console.error('User or user._id is undefined in request');
+    if (!req.user || !req.user.id) {
+      console.error('User or user.id is undefined in request');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    if (team.captain.toString() !== req.user._id.toString()) {
+    if (team.captain.toString() !== req.user.id.toString()) {
       return res.status(403).json({ error: 'Only team captain can view applications' });
     }
 
@@ -229,7 +229,7 @@ router.post('/:applicationId/start-tryout', auth, async (req, res) => {
     }
 
     // Verify user is team captain
-    if (application.team.captain.toString() !== req.user._id.toString()) {
+    if (application.team.captain.toString() !== req.user.id.toString()) {
       return res.status(403).json({ error: 'Only team captain can start tryouts' });
     }
 
@@ -245,7 +245,7 @@ router.post('/:applicationId/start-tryout', auth, async (req, res) => {
       participants: [...application.team.players, application.player._id],
       messages: [
         {
-          sender: req.user._id,
+          sender: req.user.id,
           message: `Tryout started for ${application.player.username}. Welcome to the team tryout!`,
           messageType: 'system',
         },
@@ -289,7 +289,7 @@ router.post('/:applicationId/accept', auth, async (req, res) => {
     }
 
     // Verify user is team captain
-    if (application.team.captain.toString() !== req.user._id.toString()) {
+    if (application.team.captain.toString() !== req.user.id.toString()) {
       return res.status(403).json({ error: 'Only team captain can accept players' });
     }
 
@@ -325,7 +325,7 @@ router.post('/:applicationId/accept', auth, async (req, res) => {
         endedAt: new Date(),
         $push: {
           messages: {
-            sender: req.user._id,
+            sender: req.user.id,
             message: `${application.player.username} has been accepted to the team! Welcome aboard! 🎉`,
             messageType: 'system',
           },
@@ -358,7 +358,7 @@ router.post('/:applicationId/reject', auth, async (req, res) => {
     }
 
     // Verify user is team captain
-    if (application.team.captain.toString() !== req.user._id.toString()) {
+    if (application.team.captain.toString() !== req.user.id.toString()) {
       return res.status(403).json({ error: 'Only team captain can reject players' });
     }
 
@@ -379,7 +379,7 @@ router.post('/:applicationId/reject', auth, async (req, res) => {
         endedAt: new Date(),
         $push: {
           messages: {
-            sender: req.user._id,
+            sender: req.user.id,
             message: `Tryout has ended. Thank you for your time, ${application.player.username}.`,
             messageType: 'system',
           },
@@ -408,7 +408,7 @@ router.delete('/:applicationId', auth, async (req, res) => {
     }
 
     // Verify user is the applicant
-    if (application.player.toString() !== req.user._id.toString()) {
+    if (application.player.toString() !== req.user.id.toString()) {
       return res.status(403).json({ error: 'You can only withdraw your own applications' });
     }
 

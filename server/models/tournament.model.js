@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import slugify from 'slugify'; // Consider installing 'slugify' package: npm install slugify
+import slugify from 'slugify'; 
 
 const tournamentSchema = new mongoose.Schema(
   {
@@ -33,19 +33,19 @@ const tournamentSchema = new mongoose.Schema(
     },
 
     // --- Tournament Classification ---
-    tier: { // S-Tier, A-Tier, B-Tier, C-Tier (common esports classification)
+    tier: { 
       type: String,
       enum: ['S', 'A', 'B', 'C', 'Community'],
-      default: 'Community', // More common for local/smaller events
+      default: 'Community', 
       index: true,
     },
-    region: { // Geographic scope
+    region: { 
       type: String,
       enum: ['Global', 'Asia', 'India', 'South Asia', 'Europe', 'North America', 'South America', 'Oceania', 'Middle East', 'Africa'],
       default: 'India',
       index: true,
     },
-    subRegion: { // More specific regional classification, e.g., "Maharashtra"
+    subRegion: { 
       type: String,
       trim: true,
     },
@@ -60,7 +60,7 @@ const tournamentSchema = new mongoose.Schema(
       },
       website: String, // URL to organizer's website
       contactEmail: String, // Organizer's contact email
-      organizationRef: { // Optional: reference to your Organization schema
+      organizationRef: { 
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Organization',
       },
@@ -162,7 +162,7 @@ const tournamentSchema = new mongoose.Schema(
           type: String,
           trim: true,
         },
-        // You can add aggregate team stats for THIS tournament here
+
         totalTournamentPoints: { type: Number, default: 0 },
         totalTournamentKills: { type: Number, default: 0 },
       },

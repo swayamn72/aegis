@@ -1,12 +1,15 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Clock, Mail, Building, User, MapPin, Globe, Phone, Calendar, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const AegisOrgPendingApproval = ({ organization }) => {
   const { logout } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
     await logout();
+    navigate('/login');
   };
 
   return (

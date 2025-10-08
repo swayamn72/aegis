@@ -7,6 +7,22 @@ import TeamInvitation from '../models/teamInvitation.model.js';
 import ChatMessage from '../models/chat.model.js';
 import auth from '../middleware/auth.js';
 import { sendEmail, emailTemplates } from '../utils/emailService.js';
+import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Configure Multer for memory storage
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  },
+});
 
 const router = express.Router();
 
@@ -31,7 +47,7 @@ router.get('/', async (req, res) => {
     if (region) filter.region = region;
     if (status) filter.status = status;
     if (lookingForPlayers === 'true') filter.lookingForPlayers = true;
-    
+
     if (search) {
       filter.$or = [
         { teamName: { $regex: search, $options: 'i' } },
@@ -72,21 +88,21 @@ router.get('/', async (req, res) => {
 router.get('/featured', async (req, res) => {
   try {
     const { game, limit = 10 } = req.query;
-    
+
     const filter = {
       profileVisibility: 'public',
       status: 'active'
     };
-    
+
     if (game) filter.primaryGame = game;
 
     const teams = await Team.find(filter)
       .populate('captain', 'username profilePicture primaryGame inGameName aegisRating')
       .populate('players', 'username profilePicture primaryGame inGameName aegisRating inGameRole')
-      .sort({ 
-        aegisRating: -1, 
+      .sort({
+        aegisRating: -1,
         totalEarnings: -1,
-        'statistics.tournamentsPlayed': -1 
+        'statistics.tournamentsPlayed': -1
       })
       .limit(parseInt(limit))
       .select('teamName teamTag logo primaryGame region aegisRating totalEarnings statistics captain players establishedDate');
@@ -163,10 +179,10 @@ router.get('/:id', async (req, res) => {
 
     // Separate ongoing and past tournaments
     const now = new Date();
-    const ongoingTournaments = tournaments.filter(t => 
+    const ongoingTournaments = tournaments.filter(t =>
       t.status !== 'completed' && t.status !== 'cancelled' && t.endDate >= now
     );
-    const recentTournaments = tournaments.filter(t => 
+    const recentTournaments = tournaments.filter(t =>
       t.status === 'completed' || t.endDate < now
     ).slice(0, 5);
 
@@ -185,17 +201,17 @@ router.get('/:id', async (req, res) => {
 // GET /api/teams/user/my-teams - Fetch teams the current user is part of
 router.get('/user/my-teams', auth, async (req, res) => {
   try {
-    const teams = await Team.find({ 
+    const teams = await Team.find({
       $or: [
         { captain: req.user.id },
         { players: req.user.id }
       ]
     })
-    .populate('captain', 'username profilePicture primaryGame')
-    .populate('players', 'username profilePicture primaryGame')
-    .populate('organization', 'orgName logo')
-    .sort({ establishedDate: -1 })
-    .select('-__v');
+      .populate('captain', 'username profilePicture primaryGame')
+      .populate('players', 'username profilePicture primaryGame')
+      .populate('organization', 'orgName logo')
+      .sort({ establishedDate: -1 })
+      .select('-__v');
 
     res.json({ teams });
   } catch (error) {
@@ -271,7 +287,7 @@ router.post('/', auth, async (req, res) => {
 router.post('/:id/invite', auth, async (req, res) => {
   try {
     const { playerId, message } = req.body;
-    
+
     const team = await Team.findById(req.params.id);
     if (!team) {
       return res.status(404).json({ message: 'Team not found' });
@@ -334,19 +350,19 @@ router.post('/:id/invite', auth, async (req, res) => {
     // Send email notification to invited player
     // In the POST /api/teams/:id/invite route, update the email section:
 
-// Send email notification to invited player
-try {
-  if (player.email) {
-    const playerName = player.username || 'Player';
-    const teamName = team.teamName || 'Your Team';
-    const { subject, html } = emailTemplates.teamInvitation(playerName, teamName, '', '');
-    
-    await sendEmail(player.email, subject, html);
-  }
-} catch (emailError) {
-  console.error('Error sending team invitation email:', emailError.message);
-  // Don't fail the invitation if email fails
-}
+    // Send email notification to invited player
+    try {
+      if (player.email) {
+        const playerName = player.username || 'Player';
+        const teamName = team.teamName || 'Your Team';
+        const { subject, html } = emailTemplates.teamInvitation(playerName, teamName, '', '');
+
+        await sendEmail(player.email, subject, html);
+      }
+    } catch (emailError) {
+      console.error('Error sending team invitation email:', emailError.message);
+      // Don't fail the invitation if email fails
+    }
 
     res.status(201).json({
       message: 'Team invitation sent successfully',
@@ -471,19 +487,48 @@ router.post('/invitations/:id/decline', auth, async (req, res) => {
 });
 
 // PUT /api/teams/:id - Update team
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', auth, upload.single('logo'), async (req, res) => {
   try {
     const team = await Team.findById(req.params.id);
-    
+
     if (!team) {
       return res.status(404).json({ message: 'Team not found' });
     }
 
-    if (team.captain.toString() !== req.user._id.toString()) {
+    if (team.captain.toString() !== req.user.id.toString()) {
       return res.status(403).json({ message: 'Only team captain can update team details' });
     }
 
-    const updateData = req.body;
+    const updateData = {};
+
+    // Handle file upload for logo
+    if (req.file) {
+      // Upload to Cloudinary
+      const result = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'aegis-team-logos',
+            public_id: `team-logo-${req.params.id}-${Date.now()}`,
+            transformation: [{ width: 300, height: 300, crop: 'fill' }],
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        stream.end(req.file.buffer);
+      });
+
+      updateData.logo = result.secure_url;
+    }
+
+    // Handle other form fields (JSON data)
+    if (req.body) {
+      const bodyData = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      Object.assign(updateData, bodyData);
+    }
+
+    // Remove protected fields
     delete updateData.captain;
     delete updateData.players;
 
@@ -492,9 +537,9 @@ router.put('/:id', auth, async (req, res) => {
       { $set: updateData },
       { new: true, runValidators: true }
     )
-    .populate('captain', 'username profilePicture primaryGame')
-    .populate('players', 'username profilePicture primaryGame')
-    .populate('organization', 'orgName logo');
+      .populate('captain', 'username profilePicture primaryGame')
+      .populate('players', 'username profilePicture primaryGame')
+      .populate('organization', 'orgName logo');
 
     res.json({
       message: 'Team updated successfully',
@@ -502,6 +547,9 @@ router.put('/:id', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating team:', error);
+    if (error.message === 'Only image files are allowed') {
+      return res.status(400).json({ message: error.message });
+    }
     res.status(500).json({ message: 'Server error updating team' });
   }
 });
@@ -510,15 +558,15 @@ router.put('/:id', auth, async (req, res) => {
 router.delete('/:id/players/:playerId', auth, async (req, res) => {
   try {
     const { id: teamId, playerId } = req.params;
-    
+
     const team = await Team.findById(teamId);
     if (!team) {
       return res.status(404).json({ message: 'Team not found' });
     }
 
-    const isCapt = team.captain.toString() === req.user._id.toString();
-    const isSelf = playerId === req.user._id.toString();
-    
+    const isCapt = team.captain.toString() === req.user.id.toString();
+    const isSelf = playerId === req.user.id.toString();
+
     if (!isCapt && !isSelf) {
       return res.status(403).json({ message: 'Insufficient permissions' });
     }
@@ -553,13 +601,13 @@ router.delete('/:id/players/:playerId', auth, async (req, res) => {
 router.post('/:id/transfer-captaincy', auth, async (req, res) => {
   try {
     const { newCaptainId } = req.body;
-    
+
     const team = await Team.findById(req.params.id);
     if (!team) {
       return res.status(404).json({ message: 'Team not found' });
     }
 
-    if (team.captain.toString() !== req.user._id.toString()) {
+    if (team.captain.toString() !== req.user.id.toString()) {
       return res.status(403).json({ message: 'Only current captain can transfer captaincy' });
     }
 
@@ -587,12 +635,12 @@ router.post('/:id/transfer-captaincy', auth, async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
   try {
     const team = await Team.findById(req.params.id);
-    
+
     if (!team) {
       return res.status(404).json({ message: 'Team not found' });
     }
 
-    if (team.captain.toString() !== req.user._id.toString()) {
+    if (team.captain.toString() !== req.user.id.toString()) {
       return res.status(403).json({ message: 'Only team captain can disband team' });
     }
 
@@ -618,6 +666,53 @@ router.delete('/:id', auth, async (req, res) => {
   } catch (error) {
     console.error('Error disbanding team:', error);
     res.status(500).json({ message: 'Server error disbanding team' });
+  }
+});
+
+// POST /api/teams/available - Get teams available for tournament phase
+router.post('/available', auth, async (req, res) => {
+  try {
+    const { tournamentId, phase } = req.body;
+
+    if (!tournamentId || !phase) {
+      return res.status(400).json({
+        message: 'Tournament ID and phase are required'
+      });
+    }
+
+    // Get tournament to check teams that might have pending invites
+    const tournament = await Tournament.findById(tournamentId)
+      .populate('participatingTeams.team', '_id')
+      .select('participatingTeams');
+
+    if (!tournament) {
+      return res.status(404).json({
+        message: 'Tournament not found'
+      });
+    }
+
+    // Get teams that have pending invites for this phase
+    const teamsWithPendingInvites = tournament.participatingTeams
+      .filter(pt => pt.invites?.some(inv => inv.phase === phase && inv.status === 'pending'))
+      .map(pt => pt.team._id.toString());
+
+    // Find all active teams except those with pending invites
+    const availableTeams = await Team.find({
+      _id: { $nin: teamsWithPendingInvites },
+      status: 'active',
+      profileVisibility: 'public'
+    })
+      .select('teamName teamTag logo primaryGame region aegisRating players')
+      .populate('players', 'username')
+      .sort({ aegisRating: -1, teamName: 1 })
+      .limit(50);
+
+    res.json({ teams: availableTeams });
+  } catch (err) {
+    console.error('Error getting available teams:', err);
+    res.status(500).json({
+      message: 'Error getting available teams'
+    });
   }
 });
 

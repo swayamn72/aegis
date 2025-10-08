@@ -5,19 +5,40 @@ import Match from '../models/match.model.js';
 import Team from '../models/team.model.js';
 import Player from '../models/player.model.js';
 import { sendTeamInvite, acceptTeamInvite } from '../controllers/tournament.controller.js';
+import auth from '../middleware/auth.js';
+import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Configure multer for memory storage
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  },
+});
 
 const router = express.Router();
+
+// Team invites
+router.post('/:tournamentId/invites', auth, async (req, res) => await sendTeamInvite(req, res));
+router.post('/invites/:inviteId/accept', auth, async (req, res) => await acceptTeamInvite(req, res));
 
 // Get all tournaments (excluding featured/primary ones)
 router.get('/all', async (req, res) => {
   try {
     const { page = 1, limit = 50, game, region, status, tier } = req.query;
-    
+
     // Build filter query
     const filter = {
       visibility: 'public'
     };
-    
+
     if (game) filter.gameTitle = game;
     if (region) filter.region = region;
     if (status) filter.status = status;
@@ -84,12 +105,12 @@ router.get('/status/:status', async (req, res) => {
   try {
     const { status } = req.params;
     const { limit = 20, game, region } = req.query;
-    
+
     const filter = {
       status: status,
       visibility: 'public'
     };
-    
+
     if (game) filter.gameTitle = game;
     if (region) filter.region = region;
 
@@ -126,7 +147,7 @@ router.get('/live', async (req, res) => {
   try {
     const now = new Date();
     const { limit = 10 } = req.query;
-    
+
     const tournaments = await Tournament.find({
       $and: [
         {
@@ -138,17 +159,17 @@ router.get('/live', async (req, res) => {
         { visibility: 'public' }
       ]
     })
-    .sort({ startDate: 1 })
-    .limit(parseInt(limit))
-    .select(`
+      .sort({ startDate: 1 })
+      .limit(parseInt(limit))
+      .select(`
       tournamentName shortName gameTitle region tier status startDate endDate 
       prizePool media organizer participatingTeams statistics streamLinks
     `)
-    .populate({
-      path: 'participatingTeams.team',
-      select: 'teamName teamTag logo'
-    })
-    .lean();
+      .populate({
+        path: 'participatingTeams.team',
+        select: 'teamName teamTag logo'
+      })
+      .lean();
 
     const enrichedTournaments = tournaments.map(tournament => ({
       ...tournament,
@@ -169,7 +190,7 @@ router.get('/upcoming', async (req, res) => {
   try {
     const now = new Date();
     const { limit = 20 } = req.query;
-    
+
     const tournaments = await Tournament.find({
       $or: [
         { startDate: { $gte: now } },
@@ -177,13 +198,13 @@ router.get('/upcoming', async (req, res) => {
       ],
       visibility: 'public'
     })
-    .sort({ startDate: 1 })
-    .limit(parseInt(limit))
-    .select(`
+      .sort({ startDate: 1 })
+      .limit(parseInt(limit))
+      .select(`
       tournamentName shortName gameTitle region tier status startDate endDate 
       prizePool media organizer participatingTeams statistics slots registrationStartDate registrationEndDate
     `)
-    .lean();
+      .lean();
 
     const enrichedTournaments = tournaments.map(tournament => {
       let registrationStatus = 'closed';
@@ -215,22 +236,22 @@ router.get('/upcoming', async (req, res) => {
 router.get('/featured', async (req, res) => {
   try {
     const { limit = 5 } = req.query;
-    
+
     const tournaments = await Tournament.find({
       featured: true,
       visibility: 'public'
     })
-    .sort({ startDate: -1, tier: 1 }) // S-tier first, then by date
-    .limit(parseInt(limit))
-    .select(`
+      .sort({ startDate: -1, tier: 1 }) // S-tier first, then by date
+      .limit(parseInt(limit))
+      .select(`
       tournamentName shortName gameTitle region tier status startDate endDate 
       prizePool media organizer participatingTeams statistics streamLinks
     `)
-    .populate({
-      path: 'participatingTeams.team',
-      select: 'teamName teamTag logo'
-    })
-    .lean();
+      .populate({
+        path: 'participatingTeams.team',
+        select: 'teamName teamTag logo'
+      })
+      .lean();
 
     const enrichedTournaments = tournaments.map(tournament => ({
       ...tournament,
@@ -249,7 +270,7 @@ router.get('/featured', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Validate MongoDB ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ error: 'Invalid tournament ID' });
@@ -316,32 +337,44 @@ router.get('/:id', async (req, res) => {
       region: tournament.region,
       tier: tournament.tier,
       status: tournament.status,
-      currentPhase: tournament.currentCompetitionPhase || 
-                   tournament.phases?.find(p => p.status === 'in_progress')?.name || 
-                   'Not Started',
+      currentPhase: tournament.currentCompetitionPhase ||
+        tournament.phases?.find(p => p.status === 'in_progress')?.name ||
+        'Not Started',
       startDate: tournament.startDate,
       endDate: tournament.endDate,
       registrationStartDate: tournament.registrationStartDate,
       registrationEndDate: tournament.registrationEndDate,
       teams: tournament.participatingTeams?.length || 0,
       totalSlots: tournament.slots?.total || 0,
+      participatingTeams: tournament.participatingTeams?.map(pt => ({
+        team: {
+          _id: pt.team.id,
+          teamName: pt.team.teamName,
+          teamTag: pt.team.teamTag,
+          logo: pt.team.logo
+        },
+        seed: pt.seed,
+        group: pt.group,
+        qualifiedThrough: pt.qualifiedThrough,
+        currentStage: pt.currentStage
+      })) || [],
       description: tournament.description || `${tournament.tournamentName} is a competitive ${tournament.gameTitle} tournament featuring top teams from ${tournament.region}.`,
-      
+
       media: {
         banner: tournament.media?.banner || null,
         coverImage: tournament.media?.coverImage || null,
         logo: tournament.media?.logo || null
       },
-      
+
       organizer: {
         name: tournament.organizer?.name || 'AEGIS Esports',
         website: tournament.organizer?.website || null,
         contactEmail: tournament.organizer?.contactEmail || null
       },
-      
+
       format: tournament.format || 'Battle Royale Points System',
       formatDetails: tournament.formatDetails,
-      
+
       gameSettings: tournament.gameSettings || {
         serverRegion: tournament.region || 'Asia',
         gameMode: 'TPP Squad',
@@ -353,14 +386,14 @@ router.get('/:id', async (req, res) => {
           }
         }
       },
-      
+
       prizePool: tournament.prizePool || {
         total: 0,
         currency: 'INR',
         distribution: [],
         individualAwards: []
       },
-      
+
       phases: tournament.phases?.map(phase => ({
         name: phase.name,
         type: phase.type,
@@ -370,7 +403,7 @@ router.get('/:id', async (req, res) => {
         description: phase.details,
         groups: phase.groups || []
       })) || [],
-      
+
       statistics: {
         totalMatches: liveStats.totalMatches || 0,
         totalParticipatingTeams: tournament.participatingTeams?.length || 0,
@@ -382,16 +415,16 @@ router.get('/:id', async (req, res) => {
           viewership: tournament.statistics.viewership
         }
       },
-      
+
       streamLinks: tournament.streamLinks?.map(stream => ({
         platform: stream.platform,
         url: stream.url,
         language: stream.language,
         isOfficial: stream.isOfficial || false
       })) || [],
-      
+
       socialMedia: tournament.socialMedia || {},
-      
+
       featured: tournament.featured || false,
       verified: tournament.verified || false
     };
@@ -402,7 +435,7 @@ router.get('/:id', async (req, res) => {
       phase: match.tournamentPhase || 'Group Stage',
       match: `Match ${match.matchNumber}`,
       matchType: match.matchType,
-      teams: match.participatingTeams?.slice(0, 2).map(pt => 
+      teams: match.participatingTeams?.slice(0, 2).map(pt =>
         pt.team?.teamName || 'TBD'
       ).join(' vs ') || 'TBD vs TBD',
       map: match.map,
@@ -489,10 +522,10 @@ router.get('/player/:playerId/recent', async (req, res) => {
 
     const formattedTournaments = tournaments.map(tournament => {
       // Find team's placement
-      const teamParticipation = tournament.participatingTeams.find(pt => 
+      const teamParticipation = tournament.participatingTeams.find(pt =>
         teamIds.some(tid => tid?.toString() === pt.team.toString())
       );
-      
+
       const standing = tournament.finalStandings?.find(fs =>
         teamIds.some(tid => tid?.toString() === fs.team.toString())
       );
@@ -549,10 +582,78 @@ router.get('/search/:query', async (req, res) => {
   }
 });
 
-// Send invite to team for a phase
-router.post('/:tournamentId/invite', sendTeamInvite);
+// Update tournament overview details (name, shortName, visibility, media)
+router.put('/:id', auth, upload.fields([
+  { name: 'logo', maxCount: 1 },
+  { name: 'coverImage', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body; // Get data from body
 
-// Accept invite
-router.post('/invite/:inviteId/accept', acceptTeamInvite);
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid tournament ID' });
+    }
+
+    const tournament = await Tournament.findById(id);
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    // Check if user is admin or organizer
+    if (tournament.organizer.toString() !== req.user.id.toString() && !req.user.isAdmin) {
+      return res.status(403).json({ error: 'Not authorized to update this tournament' });
+    }
+
+    // Upload new images if provided
+    const mediaUrls = {};
+    if (req.files) {
+      for (const [key, files] of Object.entries(req.files)) {
+        if (files && files[0]) {
+          const result = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+              { folder: 'tournament_media' },
+              (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+              }
+            );
+            stream.end(files[0].buffer);
+          });
+          mediaUrls[key] = result.secure_url;
+        }
+      }
+    }
+
+    // Merge media updates
+    if (Object.keys(mediaUrls).length > 0) {
+      updateData.media = {
+        ...tournament.media,
+        ...mediaUrls
+      };
+    }
+
+    // Update tournament
+    const updatedTournament = await Tournament.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).populate({
+      path: 'participatingTeams.team',
+      select: 'teamName teamTag logo'
+    });
+
+    res.json({
+      message: 'Tournament updated successfully',
+      tournament: updatedTournament
+    });
+  } catch (error) {
+    console.error('Error updating tournament:', error);
+    res.status(500).json({ error: 'Failed to update tournament', details: error.message });
+  }
+});
+
+// Send invite to team for a phase
 
 export default router;

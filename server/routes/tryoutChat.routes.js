@@ -10,7 +10,7 @@ const router = express.Router();
 router.get('/my-chats', auth, async (req, res) => {
   try {
     const chats = await TryoutChat.find({
-      participants: req.user._id,
+      participants: req.user.id,
       status: 'active',
     })
       .populate('team', 'teamName teamTag logo')
@@ -45,7 +45,7 @@ router.get('/:chatId', auth, async (req, res) => {
 
     // Verify user is a participant
     const isParticipant = chat.participants.some(
-      (p) => p._id.toString() === req.user._id.toString()
+      (p) => p._id.toString() === req.user.id.toString()
     );
 
     if (!isParticipant) {
@@ -81,7 +81,7 @@ router.post('/:chatId/messages', auth, async (req, res) => {
 
     // Verify user is a participant
     const isParticipant = chat.participants.some(
-      (p) => p.toString() === req.user._id.toString()
+      (p) => p.toString() === req.user.id.toString()
     );
 
     if (!isParticipant) {
@@ -90,7 +90,7 @@ router.post('/:chatId/messages', auth, async (req, res) => {
 
     // Add message
     chat.messages.push({
-      sender: req.user._id,
+      sender: req.user.id,
       message: message.trim(),
       messageType: 'text',
     });
@@ -140,7 +140,7 @@ router.get('/application/:applicationId', auth, async (req, res) => {
 
     // Verify user is a participant
     const isParticipant = chat.participants.some(
-      (p) => p._id.toString() === req.user._id.toString()
+      (p) => p._id.toString() === req.user.id.toString()
     );
 
     if (!isParticipant) {

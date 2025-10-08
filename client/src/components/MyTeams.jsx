@@ -153,13 +153,14 @@ const MyTeams = () => {
       if (response.ok) {
         toast.success('Invitation accepted successfully!');
         // Refresh data
-        fetchPlayerAndTeamData();
+        await fetchPlayerAndTeamData();
       } else {
         const error = await response.json();
         toast.error(error.message || 'Failed to accept invitation');
       }
     } catch (error) {
-      toast.error('Network error');
+      console.error('Error accepting invitation:', error);
+      toast.error('Network error accepting invitation');
     }
   };
 
@@ -720,53 +721,8 @@ const MyTeams = () => {
                     <span className="text-green-400 text-sm font-medium">Active</span>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 gap-6">
+                <div className="max-w-4xl">
                   {renderTeamCard(player.team, true)}
-                  
-                  {/* Team Performance Card */}
-                  <div className="bg-gradient-to-br from-zinc-900/80 to-zinc-800/80 backdrop-blur-sm border-2 border-zinc-700/50 rounded-2xl p-6">
-                    <h3 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
-                      <BarChart3 className="w-6 h-6 text-orange-400" />
-                      <span>Team Performance</span>
-                    </h3>
-                    
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="bg-zinc-800/50 rounded-lg p-3 text-center border border-zinc-700/50">
-                        <div className="text-2xl font-bold text-green-400 mb-1">73%</div>
-                        <div className="text-zinc-400 text-sm">Win Rate</div>
-                      </div>
-                      <div className="bg-zinc-800/50 rounded-lg p-3 text-center border border-zinc-700/50">
-                        <div className="text-2xl font-bold text-blue-400 mb-1">15</div>
-                        <div className="text-zinc-400 text-sm">Matches Played</div>
-                      </div>
-                      <div className="bg-zinc-800/50 rounded-lg p-3 text-center border border-zinc-700/50">
-                        <div className="text-2xl font-bold text-amber-400 mb-1">3</div>
-                        <div className="text-zinc-400 text-sm">Tournaments Won</div>
-                      </div>
-                      <div className="bg-zinc-800/50 rounded-lg p-3 text-center border border-zinc-700/50">
-                        <div className="text-2xl font-bold text-purple-400 mb-1">1,247</div>
-                        <div className="text-zinc-400 text-sm">Team Rating</div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-zinc-400 text-sm">Recent Form</span>
-                        <div className="flex space-x-1">
-                          {['W', 'W', 'L', 'W', 'W'].map((result, index) => (
-                            <div key={index} className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${result === 'W' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-                              {result}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <button className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg shadow-orange-500/30 flex items-center justify-center space-x-2">
-                        <Activity className="w-4 h-4" />
-                        <span>View Detailed Stats</span>
-                      </button>
-                    </div>
-                  </div>
                 </div>
               </div>
             )}

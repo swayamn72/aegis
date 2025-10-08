@@ -1,20 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext';
-import {
-  LayoutDashboard,
-  Trophy,
-  Gamepad2,
-  Users,
-  LogOut,
-  Menu,
-  X,
-  Shield,
-  Settings,
-  BarChart3,
-  Building2,
-  AlertCircle
-} from 'lucide-react';
+import { LayoutDashboard,Trophy,Gamepad2,Users,LogOut,Menu,X,Shield,Settings,BarChart3,Building2,AlertCircle} from 'lucide-react';
 
 const AdminLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);

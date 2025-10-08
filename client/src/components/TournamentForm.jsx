@@ -325,23 +325,25 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-zinc-800">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-white">
-              {isEditing ? 'Edit Tournament' : 'Create New Tournament'}
-            </h2>
-            <button
-              onClick={onCancel}
-              className="text-zinc-400 hover:text-white"
-            >
-              <X className="w-6 h-6" />
-            </button>
+    <div className={isEditing ? "w-full" : "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"}>
+      <div className={isEditing ? "w-full" : "bg-zinc-900 border border-zinc-800 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"}>
+        {!isEditing && (
+          <div className="p-6 border-b border-zinc-800">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">
+                {isEditing ? 'Edit Tournament' : 'Create New Tournament'}
+              </h2>
+              <button
+                onClick={onCancel}
+                className="text-zinc-400 hover:text-white"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className={isEditing ? "space-y-6" : "p-6 space-y-6"}>
           {/* Basic Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>

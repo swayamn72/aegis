@@ -167,7 +167,7 @@ const OrgDashboard = () => {
       <div className="bg-gray-800 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-8">
           <nav className="flex gap-6">
-            {['overview', 'tournaments', 'teams', 'settings'].map((tab) => (
+            {(organization.approvalStatus === 'approved' ? ['overview', 'tournaments', 'teams', 'settings'] : ['overview']).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}

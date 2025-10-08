@@ -16,11 +16,37 @@ router.get("/users/with-chats", auth, async (req, res) => {
 
     const chatUserIds = [...new Set([...sentMessages, ...receivedMessages])];
 
-    // Fetch user details for these IDs
+    // Fetch user details for these IDs from Player and Organization
     const Player = (await import('../models/player.model.js')).default;
-    const chatUsers = await Player.find({ _id: { $in: chatUserIds } })
+    const Organization = (await import('../models/organization.model.js')).default;
+
+    const players = await Player.find({ _id: { $in: chatUserIds } })
       .select('username profilePicture realName primaryGame aegisRating')
       .sort({ username: 1 });
+
+    const organizations = await Organization.find({ _id: { $in: chatUserIds } })
+      .select('orgName logo ownerName')
+      .sort({ orgName: 1 });
+
+    // Combine and format
+    const chatUsers = [
+      ...players.map(p => ({
+        _id: p._id,
+        username: p.username,
+        realName: p.realName,
+        profilePicture: p.profilePicture,
+        primaryGame: p.primaryGame,
+        aegisRating: p.aegisRating,
+        isOrganization: false
+      })),
+      ...organizations.map(o => ({
+        _id: o._id,
+        username: o.orgName,
+        realName: o.ownerName,
+        profilePicture: o.logo,
+        isOrganization: true
+      }))
+    ].sort((a, b) => a.username.localeCompare(b.username));
 
     res.json({ users: chatUsers });
   } catch (err) {
