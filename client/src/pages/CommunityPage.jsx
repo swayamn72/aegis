@@ -17,43 +17,86 @@ export default function CommunityPage() {
   const [showCreatePost, setShowCreatePost] = useState(false);
 
   useEffect(() => {
-    async function fetchCommunityData() {
+    const fetchCommunityData = async () => {
       try {
         setLoading(true);
-        const communityRes = await axios.get(`/api/communities/${communityId}`);
+        const [communityRes, postsRes] = await Promise.all([
+          axios.get(`/api/communities/${communityId}`),
+          axios.get(`/api/community-posts/community/${communityId}`)
+        ]);
         setCommunity(communityRes.data);
-
-        const postsRes = await axios.get(`/api/community-posts/community/${communityId}`);
         setPosts(postsRes.data);
       } catch (error) {
         console.error("Error fetching community data:", error);
       } finally {
         setLoading(false);
       }
-    }
+    };
 
-    if (communityId) {
-      fetchCommunityData();
-    }
+    if (communityId) fetchCommunityData();
   }, [communityId]);
 
-  const isMember = user && community?.members?.some(member => member._id === user._id);
+  // Check membership safely
+  const isMember =
+    user &&
+    Array.isArray(community?.members) &&
+    community.members.some((member) => member._id === user._id);
 
   const handlePostCreated = (newPost) => {
-    setPosts(prevPosts => [newPost, ...prevPosts]);
+    setPosts((prevPosts) => [newPost, ...prevPosts]);
   };
 
-  if (loading) {
-    return <div className="text-white p-6">Loading community...</div>;
-  }
+  const handleLeaveCommunity = async () => {
+    try {
+      await axios.put(`/api/communities/${communityId}/leave`);
+      // Safely update members locally
+      setCommunity((prev) =>
+        prev
+          ? {
+              ...prev,
+              members: prev.members?.filter(
+                (member) => member._id !== user._id
+              ),
+              membersCount: Math.max((prev.membersCount || 1) - 1, 0),
+            }
+          : prev
+      );
+    } catch (error) {
+      console.error("Error leaving community:", error);
+      alert("Failed to leave community. Please try again.");
+    }
+  };
 
-  if (!community) {
+  const handleJoinCommunity = async () => {
+    try {
+      const res = await axios.put(`/api/communities/${communityId}/join`);
+      // Update community state
+      setCommunity((prev) =>
+        prev
+          ? {
+              ...prev,
+              members: [...(prev.members || []), { _id: user._id, username: user.username, profilePic: user.profilePic }],
+              membersCount: (prev.membersCount || 0) + 1,
+            }
+          : prev
+      );
+    } catch (error) {
+      console.error("Error joining community:", error);
+      alert("Failed to join community. Please try again.");
+    }
+  };
+
+  if (loading)
+    return (
+      <div className="text-gray-400 p-6 text-center">Loading community...</div>
+    );
+
+  if (!community)
     return <div className="text-white p-6">Community not found.</div>;
-  }
 
   return (
     <div className="flex bg-black min-h-screen text-white">
-      {/* Left Sidebar - Channels */}
+      {/* Left Sidebar */}
       <CommunitySidebar />
 
       {/* Main Feed */}
@@ -75,15 +118,18 @@ export default function CommunityPage() {
           {posts.length === 0 ? (
             <p className="text-gray-300">No posts yet in this community.</p>
           ) : (
-            posts.map((post) => (
-              <CommunityPost key={post._id} post={post} />
-            ))
+            posts.map((post) => <CommunityPost key={post._id} post={post} />)
           )}
         </div>
       </main>
 
-      {/* Right Sidebar - Community Info */}
-      <CommunityInfo community={community} />
+      {/* Right Sidebar */}
+      <CommunityInfo
+        community={community}
+        isMember={isMember}
+        onLeaveCommunity={handleLeaveCommunity}
+        onJoinCommunity={handleJoinCommunity}
+      />
 
       {/* Create Post Modal */}
       {showCreatePost && (

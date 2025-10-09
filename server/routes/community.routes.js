@@ -53,7 +53,7 @@ router.put("/:id/join", auth, async (req, res) => {
       return res.status(404).json({ message: "Community not found" });
     }
 
-    if (community.members.includes(req.user.id)) {
+    if (community.members.some(member => member.toString() === req.user.id)) {
       return res.status(400).json({ message: "Already a member of this community" });
     }
 
@@ -76,7 +76,7 @@ router.put("/:id/leave", auth, async (req, res) => {
       return res.status(404).json({ message: "Community not found" });
     }
 
-    if (!community.members.includes(req.user.id)) {
+    if (!community.members.some(member => member.toString() === req.user.id)) {
       return res.status(400).json({ message: "Not a member of this community" });
     }
 

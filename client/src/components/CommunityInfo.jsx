@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import EditCommunityModal from "./EditCommunityModal";
 import axios from "axios";
 
-export default function CommunityInfo({ community }) {
+export default function CommunityInfo({ community, isMember, onLeaveCommunity, onJoinCommunity }) {
   const { user } = useAuth();
   const [showEditModal, setShowEditModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -74,6 +74,24 @@ export default function CommunityInfo({ community }) {
               {loading ? "Deleting..." : "Delete Community"}
             </button>
           </div>
+        )}
+
+        {isMember && !isAdmin && (
+          <button
+            onClick={onLeaveCommunity}
+            className="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+          >
+            Leave Community
+          </button>
+        )}
+
+        {!isMember && user && (
+          <button
+            onClick={onJoinCommunity}
+            className="w-full px-4 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-700 transition-colors"
+          >
+            Join Community
+          </button>
         )}
       </aside>
 
