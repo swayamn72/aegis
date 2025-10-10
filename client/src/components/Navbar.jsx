@@ -20,6 +20,7 @@ const Navbar = () => {
     { to: "/tournaments", text: "Tournaments" },
     { to: "/communities", text: "Communities" },
 
+
     // { to: "/scrims", text: "Scrims" },
   ];
 
@@ -61,7 +62,21 @@ const Navbar = () => {
 
         {/* Right Side: Desktop Buttons (Your original colors) */}
         <div className="hidden md:flex items-center gap-4">
-          {isAuthenticated && <NotificationBar />}
+  <NavLink
+    to="/notifications"
+    className={({ isActive }) =>
+      `relative p-2 rounded-xl transition-all duration-300 ${
+        isActive
+          ? "bg-blue-600 text-white"
+          : "text-gray-400 hover:text-white hover:bg-gray-800"
+      }`
+    }
+    title="Notifications"
+  >
+    <NotificationBar size={22} />
+    {/* Optional Notification Badge */}
+    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+  </NavLink>
           {isAuthenticated && (
             <button
               onClick={() => navigate('/chat')}
@@ -69,7 +84,9 @@ const Navbar = () => {
               aria-label="Chat"
               title="Chat"
             >
+              <NavLink to="/chat" className="text-gray-700 hover:text-blue-500">
               <MessageCircle size={24} />
+              </NavLink>
             </button>
           )}
           {!isAuthenticated ? (

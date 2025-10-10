@@ -8,20 +8,29 @@ dotenv.config();
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/aegis';
 
-async function seedCommunities() {
+async function resetCommunities() {
   try {
     // Connect to MongoDB
     await mongoose.connect(MONGO_URI);
     console.log('✅ Connected to MongoDB');
 
-    // Create a dummy player for admin
-    const dummyPlayer = new Player({
-      username: 'dummyadmin',
-      email: 'dummy@example.com',
-      password: 'dummy123', // plain password for seeding
-    });
-    await dummyPlayer.save();
-    console.log('✅ Created dummy player');
+    // Clear all communities
+    await Community.deleteMany({});
+    console.log('🗑️ Cleared all communities');
+
+    // Find or create a dummy player for admin
+    let dummyPlayer = await Player.findOne({ username: 'dummyadmin' });
+    if (!dummyPlayer) {
+      dummyPlayer = new Player({
+        username: 'dummyadmin',
+        email: 'dummy@example.com',
+        password: 'dummy123', // plain password for seeding
+      });
+      await dummyPlayer.save();
+      console.log('✅ Created dummy player');
+    } else {
+      console.log('✅ Found existing dummy player');
+    }
 
     // Create dummy communities
     const dummyCommunities = [
@@ -59,19 +68,15 @@ async function seedCommunities() {
     const allCommunities = await Community.find();
     console.log('📋 All communities:');
     allCommunities.forEach((community, index) => {
-      if (community && community.name) {
-        console.log(`${index + 1}. "${community.name}" - ${community.membersCount} members`);
-      } else {
-        console.log(`${index + 1}. Invalid community entry`);
-      }
+      console.log(`${index + 1}. "${community.name}" - ${community.membersCount} members`);
     });
 
   } catch (error) {
-    console.error('❌ Error seeding communities:', error);
+    console.error('❌ Error during reset:', error);
   } finally {
     await mongoose.disconnect();
     console.log('🔌 Disconnected from MongoDB');
   }
 }
 
-seedCommunities();
+resetCommunities();

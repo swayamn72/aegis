@@ -4,6 +4,7 @@ import FeedCard from "../components/FeedCard";
 import RightSideBar from "../components/RightSideBar";
 import { mockTournaments, mockNews } from "../data/mockData";
 import { mockCommunities } from "../data/mockCommunities";
+import Navbar from "../components/Navbar";
 
 export default function MyFeedPage() {
   const [posts, setPosts] = useState([]);
@@ -61,7 +62,12 @@ export default function MyFeedPage() {
   }, [loading, page]);
 
   return (
+    <div className="mt-10"> 
+<Navbar/>
     <div className="flex bg-black">
+      <div className="mb-2">
+
+      </div>
       <Sidebar />
 
       <main className="ml-64 w-full min-h-screen bg-gradient-to-b from-black via-zinc-900/80 to-black px-6 py-10">
@@ -85,6 +91,7 @@ export default function MyFeedPage() {
           />
         </div>
       </main>
+    </div>
     </div>
   );
 }

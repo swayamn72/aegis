@@ -53,7 +53,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/createpost" element={<CreatePost/>} />
             <Route path="/postlist" element={<PostList/>} />
-            <Route path="/tournaments" element={<TournamentsPage />} />
+            <Route path="/tournaments2" element={<TournamentsPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path='/players' element={<PlayersPage />} />
@@ -74,7 +74,7 @@ function App() {
             <Route path='/my-profile' element={<ProtectedRoute><MyProfilePage/></ProtectedRoute>} />
             <Route path='/settings' element={<ProtectedRoute><SettingsPage/></ProtectedRoute>} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
-            <Route path='/tournaments2' element={<Tournaments2Page />} />
+            <Route path='/tournaments' element={<Tournaments2Page />} />
             <Route path="/tournament/:id" element={<DetailedTournamentInfo2 />} />
             <Route path="/team/:id" element={<DetailedTeamInfo />} />
             <Route path="/matches/:id" element={<DetailedMatchInfoBGMI />} />
