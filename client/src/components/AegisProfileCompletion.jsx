@@ -36,7 +36,7 @@ const AegisProfileCompletion = () => {
     // Social & Contact
     discordTag: '',
     twitch: '',
-    YouTube: '',
+    youtube: '',
     profileVisibility: 'public'
   });
 
@@ -580,8 +580,8 @@ const AegisProfileCompletion = () => {
                       <ExternalLink className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
                       <input
                         type="text"
-                        name="YouTube"
-                        value={formData.YouTube}
+                        name="youtube"
+                        value={formData.youtube}
                         onChange={handleInputChange}
                         placeholder="youtube.com/@username"
                         className="w-full pl-12 pr-4 py-3 bg-zinc-800/50 border border-zinc-600 rounded-xl text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-400 transition-all"
@@ -592,10 +592,9 @@ const AegisProfileCompletion = () => {
 
                 <div>
                   <label className="block text-white font-medium mb-3">Profile Visibility</label>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {[
                       { value: 'public', label: 'Public', desc: 'Anyone can view your profile', icon: Globe },
-                      { value: 'friends', label: 'Friends Only', desc: 'Only friends can see details', icon: Users },
                       { value: 'private', label: 'Private', desc: 'Hidden from searches', icon: Shield }
                     ].map(option => (
                       <button

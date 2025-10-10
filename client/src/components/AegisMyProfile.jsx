@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import CreatePost from './CreatePost';
 import PostList from './PostList';
@@ -12,6 +13,7 @@ import {
 
 const AegisMyProfile = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [connections, setConnections] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
@@ -19,6 +21,7 @@ const AegisMyProfile = () => {
   const [recentTournaments, setRecentTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
+  const [team, setTeam] = useState(null);
 
   const isLoading = !user || !user.username;
 
@@ -43,6 +46,28 @@ const AegisMyProfile = () => {
           const data = await connectionsRes.json();
           setConnections(data.connections || []);
           setPendingRequests(data.pendingRequests || []);
+        }
+
+        // Fetch team details if user is in a team
+        if (user.team) {
+          try {
+            const teamId = typeof user.team === 'object' ? user.team._id : user.team;
+            const teamRes = await fetch(`/api/teams/${teamId}`, {
+              credentials: 'include'
+            });
+            if (teamRes.ok) {
+              const teamData = await teamRes.json();
+              setTeam(teamData.team);
+            } else {
+              console.error('Failed to fetch team data:', teamRes.status, teamRes.statusText);
+              setTeam(null);
+            }
+          } catch (error) {
+            console.error('Error fetching team:', error);
+            setTeam(null);
+          }
+        } else {
+          setTeam(null);
         }
 
         setLoading(false);
@@ -164,12 +189,8 @@ const AegisMyProfile = () => {
     </div>
   );
 
-  // Mock data for recent matches
-  const mockMatches = [
-    { id: 1, tournament: 'Aegis Weekly #12', result: 'win', position: 3, kills: 8, points: 13, date: '2 days ago' },
-    { id: 2, tournament: 'Aegis Weekly #11', result: 'loss', position: 12, kills: 4, points: 4, date: '1 week ago' },
-    { id: 3, tournament: 'Community Cup', result: 'win', position: 1, kills: 12, points: 22, date: '2 weeks ago' }
-  ];
+  // Mock data for recent matches - removed as per request
+  const mockMatches = [];
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white pt-24 pb-12">
@@ -221,7 +242,10 @@ const AegisMyProfile = () => {
               
               {/* Action Buttons */}
               <div className="flex gap-2 mt-4 md:mt-0">
-                <button className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg flex items-center gap-2 transition-colors">
+                <button
+                  onClick={() => navigate('/settings')}
+                  className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg flex items-center gap-2 transition-colors"
+                >
                   <Edit className="w-4 h-4" />
                   <span className="hidden sm:inline">Edit Profile</span>
                 </button>
@@ -355,7 +379,7 @@ const AegisMyProfile = () => {
                     <BarChart3 className="w-5 h-5 text-cyan-400" />
                     Performance
                   </h2>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div className="bg-zinc-800/50 rounded-lg p-4">
                       <p className="text-zinc-400 text-sm mb-1">Matches Played</p>
                       <p className="text-2xl font-bold text-white">{userData.statistics.matchesPlayed}</p>
@@ -368,12 +392,6 @@ const AegisMyProfile = () => {
                       <p className="text-zinc-400 text-sm mb-1">Avg Placement</p>
                       <p className="text-2xl font-bold text-cyan-400">
                         #{userData.statistics.averagePlacement || 'N/A'}
-                      </p>
-                    </div>
-                    <div className="bg-zinc-800/50 rounded-lg p-4">
-                      <p className="text-zinc-400 text-sm mb-1">Total Damage</p>
-                      <p className="text-2xl font-bold text-purple-400">
-                        {userData.statistics.totalDamage?.toLocaleString() || 0}
                       </p>
                     </div>
                   </div>
@@ -495,10 +513,20 @@ const AegisMyProfile = () => {
                 <Shield className="w-5 h-5 text-cyan-400" />
                 Team
               </h3>
-              {user.team ? (
+              {team ? (
                 <div className="text-center">
-                  <div className="w-16 h-16 bg-zinc-800 rounded-lg mx-auto mb-3"></div>
-                  <p className="text-white font-medium">Team Name</p>
+                  {team.logo ? (
+                    <img
+                      src={team.logo}
+                      alt={`${team.teamName} logo`}
+                      className="w-16 h-16 rounded-lg object-cover mx-auto mb-3 border border-zinc-700"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-lg mx-auto mb-3 flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">{team.teamName.charAt(0).toUpperCase()}</span>
+                    </div>
+                  )}
+                  <p className="text-white font-medium">{team.teamName}</p>
                   <p className="text-zinc-400 text-sm">Member since {userData.joinDate}</p>
                 </div>
               ) : (
@@ -537,24 +565,7 @@ const AegisMyProfile = () => {
               </div>
             )}
 
-            {/* Quick Actions */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-              <h3 className="text-lg font-bold mb-4">Quick Actions</h3>
-              <div className="space-y-2">
-                <button className="w-full py-2.5 px-4 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-left flex items-center justify-between transition-colors">
-                  <span>Edit Profile</span>
-                  <ChevronRight className="w-4 h-4 text-zinc-400" />
-                </button>
-                <button className="w-full py-2.5 px-4 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-left flex items-center justify-between transition-colors">
-                  <span>Privacy Settings</span>
-                  <ChevronRight className="w-4 h-4 text-zinc-400" />
-                </button>
-                <button className="w-full py-2.5 px-4 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-left flex items-center justify-between transition-colors">
-                  <span>Notifications</span>
-                  <ChevronRight className="w-4 h-4 text-zinc-400" />
-                </button>
-              </div>
-            </div>
+
           </div>
         </div>
       </div>

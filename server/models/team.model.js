@@ -42,7 +42,7 @@ const teamSchema = new mongoose.Schema(
     },
     region: {
       type: String,
-      enum: ['Global', 'Asia', 'India', 'South Asia', 'Europe', 'North America', 'South America', 'Oceania', 'Middle East', 'Africa'],
+      enum: ['Global', 'India'],
       default: 'India',
     },
     country: {
@@ -75,9 +75,7 @@ const teamSchema = new mongoose.Schema(
     statistics: {
       tournamentsPlayed: { type: Number, default: 0 },
       matchesPlayed: { type: Number, default: 0 },
-      matchesWon: { type: Number, default: 0 },
       totalKills: { type: Number, default: 0 },
-      totalDamage: { type: Number, default: 0 },
       chickenDinners: { type: Number, default: 0 },
       averagePlacement: { type: Number, default: 0 },
       winRate: { type: Number, default: 0 }, 

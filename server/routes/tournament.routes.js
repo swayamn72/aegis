@@ -32,7 +32,7 @@ router.post('/invites/:inviteId/accept', auth, async (req, res) => await acceptT
 // Get all tournaments (excluding featured/primary ones)
 router.get('/all', async (req, res) => {
   try {
-    const { page = 1, limit = 50, game, region, status, tier } = req.query;
+    const { page = 1, limit = 50, game, region, status, tier, subRegion } = req.query;
 
     // Build filter query
     const filter = {
@@ -41,6 +41,7 @@ router.get('/all', async (req, res) => {
 
     if (game) filter.gameTitle = game;
     if (region) filter.region = region;
+    if (subRegion) filter.subRegion = subRegion;
     if (status) filter.status = status;
     if (tier) filter.tier = tier;
 
@@ -51,19 +52,18 @@ router.get('/all', async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit))
       .select(`
-        tournamentName shortName gameTitle region tier status startDate endDate 
-        prizePool media organizer participatingTeams statistics slots featured verified
+        tournamentName shortName gameTitle region subRegion tier status startDate endDate
+        prizePool media organizer participatingTeams statistics slots featured verified tags
       `)
       .populate({
         path: 'participatingTeams.team',
         select: 'teamName teamTag logo',
         model: 'Team'
-      })
-      .lean();
+      });
 
     // Calculate additional fields
     const enrichedTournaments = tournaments.map(tournament => ({
-      ...tournament,
+      ...tournament.toObject(),
       // Ensure we have participant count
       participantCount: tournament.participatingTeams?.length || tournament.statistics?.totalParticipatingTeams || 0,
       totalSlots: tournament.slots?.total || null,
@@ -79,7 +79,8 @@ router.get('/all', async (req, res) => {
       // Ensure organizer has default
       organizer: {
         name: tournament.organizer?.name || 'Unknown Organizer'
-      }
+      },
+      registrationStatus: tournament.registrationDisplayStatus
     }));
 
     const total = await Tournament.countDocuments(filter);
@@ -104,7 +105,7 @@ router.get('/all', async (req, res) => {
 router.get('/status/:status', async (req, res) => {
   try {
     const { status } = req.params;
-    const { limit = 20, game, region } = req.query;
+    const { limit = 20, game, region, subRegion } = req.query;
 
     const filter = {
       status: status,
@@ -113,26 +114,27 @@ router.get('/status/:status', async (req, res) => {
 
     if (game) filter.gameTitle = game;
     if (region) filter.region = region;
+    if (subRegion) filter.subRegion = subRegion;
 
     const tournaments = await Tournament.find(filter)
       .sort({ startDate: status === 'completed' ? -1 : 1 })
       .limit(parseInt(limit))
       .select(`
-        tournamentName shortName gameTitle region tier status startDate endDate 
-        prizePool media organizer participatingTeams statistics slots
+        tournamentName shortName gameTitle region subRegion tier status startDate endDate
+        prizePool media organizer participatingTeams statistics slots tags
       `)
       .populate({
         path: 'participatingTeams.team',
         select: 'teamName teamTag logo'
-      })
-      .lean();
+      });
 
     const enrichedTournaments = tournaments.map(tournament => ({
-      ...tournament,
+      ...tournament.toObject(),
       participantCount: tournament.participatingTeams?.length || tournament.statistics?.totalParticipatingTeams || 0,
       totalSlots: tournament.slots?.total || null,
       startDate: tournament.startDate ? tournament.startDate.toISOString() : null,
-      endDate: tournament.endDate ? tournament.endDate.toISOString() : null
+      endDate: tournament.endDate ? tournament.endDate.toISOString() : null,
+      registrationStatus: tournament.registrationDisplayStatus
     }));
 
     res.json({ tournaments: enrichedTournaments });
@@ -145,37 +147,24 @@ router.get('/status/:status', async (req, res) => {
 // Get live tournaments with real-time status checking
 router.get('/live', async (req, res) => {
   try {
-    const now = new Date();
     const { limit = 10 } = req.query;
 
-    const tournaments = await Tournament.find({
-      $and: [
-        {
-          $or: [
-            { startDate: { $lte: now }, endDate: { $gte: now } },
-            { status: { $in: ['qualifiers_in_progress', 'in_progress', 'group_stage', 'playoffs', 'finals'] } }
-          ]
-        },
-        { visibility: 'public' }
-      ]
-    })
-      .sort({ startDate: 1 })
-      .limit(parseInt(limit))
+    const tournaments = await Tournament.findLive(parseInt(limit))
       .select(`
-      tournamentName shortName gameTitle region tier status startDate endDate 
-      prizePool media organizer participatingTeams statistics streamLinks
-    `)
+        tournamentName shortName gameTitle region subRegion tier status startDate endDate
+        prizePool media organizer participatingTeams statistics streamLinks tags
+      `)
       .populate({
         path: 'participatingTeams.team',
         select: 'teamName teamTag logo'
-      })
-      .lean();
+      });
 
     const enrichedTournaments = tournaments.map(tournament => ({
-      ...tournament,
+      ...tournament.toObject(),
       participantCount: tournament.participatingTeams?.length || 0,
-      isLive: ['qualifiers_in_progress', 'in_progress', 'group_stage', 'playoffs', 'finals'].includes(tournament.status),
-      hasActiveStreams: tournament.streamLinks?.length > 0
+      isLive: tournament.isLive(),
+      hasActiveStreams: tournament.streamLinks?.length > 0,
+      registrationStatus: tournament.registrationDisplayStatus
     }));
 
     res.json({ tournaments: enrichedTournaments });
@@ -191,39 +180,23 @@ router.get('/upcoming', async (req, res) => {
     const now = new Date();
     const { limit = 20 } = req.query;
 
-    const tournaments = await Tournament.find({
-      $or: [
-        { startDate: { $gte: now } },
-        { status: { $in: ['announced', 'registration_open', 'registration_closed'] } }
-      ],
-      visibility: 'public'
-    })
-      .sort({ startDate: 1 })
-      .limit(parseInt(limit))
+    const tournaments = await Tournament.findUpcoming(parseInt(limit))
       .select(`
-      tournamentName shortName gameTitle region tier status startDate endDate 
-      prizePool media organizer participatingTeams statistics slots registrationStartDate registrationEndDate
-    `)
-      .lean();
+        tournamentName shortName gameTitle region subRegion tier status startDate endDate
+        prizePool media organizer participatingTeams statistics slots registrationStartDate registrationEndDate tags
+      `)
+      .populate({
+        path: 'participatingTeams.team',
+        select: 'teamName teamTag logo'
+      });
 
-    const enrichedTournaments = tournaments.map(tournament => {
-      let registrationStatus = 'closed';
-      if (tournament.registrationStartDate && tournament.registrationEndDate) {
-        if (now < tournament.registrationStartDate) {
-          registrationStatus = 'upcoming';
-        } else if (now >= tournament.registrationStartDate && now <= tournament.registrationEndDate) {
-          registrationStatus = 'open';
-        }
-      }
-
-      return {
-        ...tournament,
-        participantCount: tournament.participatingTeams?.length || 0,
-        totalSlots: tournament.slots?.total || null,
-        registrationStatus,
-        daysUntilStart: tournament.startDate ? Math.ceil((new Date(tournament.startDate) - now) / (1000 * 60 * 60 * 24)) : null
-      };
-    });
+    const enrichedTournaments = tournaments.map(tournament => ({
+      ...tournament.toObject(),
+      participantCount: tournament.participatingTeams?.length || 0,
+      totalSlots: tournament.slots?.total || null,
+      registrationStatus: tournament.registrationDisplayStatus,
+      daysUntilStart: tournament.startDate ? Math.ceil((new Date(tournament.startDate) - now) / (1000 * 60 * 60 * 24)) : null
+    }));
 
     res.json({ tournaments: enrichedTournaments });
   } catch (error) {
@@ -244,19 +217,19 @@ router.get('/featured', async (req, res) => {
       .sort({ startDate: -1, tier: 1 }) // S-tier first, then by date
       .limit(parseInt(limit))
       .select(`
-      tournamentName shortName gameTitle region tier status startDate endDate 
-      prizePool media organizer participatingTeams statistics streamLinks
-    `)
+        tournamentName shortName gameTitle region subRegion tier status startDate endDate
+        prizePool media organizer participatingTeams statistics streamLinks tags
+      `)
       .populate({
         path: 'participatingTeams.team',
         select: 'teamName teamTag logo'
-      })
-      .lean();
+      });
 
     const enrichedTournaments = tournaments.map(tournament => ({
-      ...tournament,
+      ...tournament.toObject(),
       participantCount: tournament.participatingTeams?.length || 0,
-      isLive: ['qualifiers_in_progress', 'in_progress', 'group_stage', 'playoffs', 'finals'].includes(tournament.status)
+      isLive: tournament.isLive(),
+      registrationStatus: tournament.registrationDisplayStatus
     }));
 
     res.json({ tournaments: enrichedTournaments });
@@ -281,7 +254,6 @@ router.get('/:id', async (req, res) => {
         path: 'participatingTeams.team',
         select: 'teamName teamTag logo primaryGame region establishedDate'
       })
-      .populate('organizer', 'name website contactEmail')
       .populate({
         path: 'phases.groups.teams',
         select: 'teamName teamTag logo'
@@ -289,8 +261,7 @@ router.get('/:id', async (req, res) => {
       .populate({
         path: 'phases.groups.standings.team',
         select: 'teamName teamTag logo'
-      })
-      .lean();
+      });
 
     if (!tournament) {
       return res.status(404).json({ error: 'Tournament not found' });
@@ -317,11 +288,7 @@ router.get('/:id', async (req, res) => {
         $group: {
           _id: null,
           totalMatches: { $sum: 1 },
-          totalKills: { $sum: '$matchStats.totalKills' },
-          totalDamage: { $sum: '$matchStats.totalDamage' },
-          avgDuration: { $avg: '$matchDuration' },
-          minDuration: { $min: '$matchDuration' },
-          maxDuration: { $max: '$matchDuration' }
+          totalKills: { $sum: '$matchStats.totalKills' }
         }
       }
     ]);
@@ -337,9 +304,7 @@ router.get('/:id', async (req, res) => {
       region: tournament.region,
       tier: tournament.tier,
       status: tournament.status,
-      currentPhase: tournament.currentCompetitionPhase ||
-        tournament.phases?.find(p => p.status === 'in_progress')?.name ||
-        'Not Started',
+      currentPhase: tournament.currentCompetitionPhase,
       startDate: tournament.startDate,
       endDate: tournament.endDate,
       registrationStartDate: tournament.registrationStartDate,
@@ -353,7 +318,6 @@ router.get('/:id', async (req, res) => {
           teamTag: pt.team.teamTag,
           logo: pt.team.logo
         },
-        seed: pt.seed,
         group: pt.group,
         qualifiedThrough: pt.qualifiedThrough,
         currentStage: pt.currentStage
@@ -408,9 +372,6 @@ router.get('/:id', async (req, res) => {
         totalMatches: liveStats.totalMatches || 0,
         totalParticipatingTeams: tournament.participatingTeams?.length || 0,
         totalKills: liveStats.totalKills || 0,
-        averageMatchDuration: Math.round(liveStats.avgDuration || 0),
-        shortestMatch: liveStats.minDuration || 0,
-        longestMatch: liveStats.maxDuration || 0,
         ...tournament.statistics?.viewership && {
           viewership: tournament.statistics.viewership
         }
@@ -552,30 +513,43 @@ router.get('/player/:playerId/recent', async (req, res) => {
 router.get('/search/:query', async (req, res) => {
   try {
     const { query } = req.params;
-    const { limit = 20, game, region } = req.query;
+    const { limit = 20, game, region, subRegion } = req.query;
 
     const filter = {
       visibility: 'public',
       $or: [
         { tournamentName: { $regex: query, $options: 'i' } },
         { shortName: { $regex: query, $options: 'i' } },
-        { 'organizer.name': { $regex: query, $options: 'i' } }
+        { 'organizer.name': { $regex: query, $options: 'i' } },
+        { tags: { $in: [new RegExp(query, 'i')] } }
       ]
     };
 
     if (game) filter.gameTitle = game;
     if (region) filter.region = region;
+    if (subRegion) filter.subRegion = subRegion;
 
     const tournaments = await Tournament.find(filter)
       .sort({ startDate: -1, featured: -1 })
       .limit(parseInt(limit))
       .select(`
-        tournamentName shortName gameTitle region tier status startDate endDate 
-        prizePool media organizer participatingTeams
+        tournamentName shortName gameTitle region subRegion tier status startDate endDate
+        prizePool media organizer participatingTeams tags
       `)
-      .lean();
+      .populate({
+        path: 'participatingTeams.team',
+        select: 'teamName teamTag logo'
+      });
 
-    res.json({ tournaments });
+    const enrichedTournaments = tournaments.map(tournament => ({
+      ...tournament.toObject(),
+      participantCount: tournament.participatingTeams?.length || 0,
+      startDate: tournament.startDate ? tournament.startDate.toISOString() : null,
+      endDate: tournament.endDate ? tournament.endDate.toISOString() : null,
+      registrationStatus: tournament.registrationDisplayStatus
+    }));
+
+    res.json({ tournaments: enrichedTournaments });
   } catch (error) {
     console.error('Error searching tournaments:', error);
     res.status(500).json({ error: 'Failed to search tournaments' });
@@ -655,5 +629,92 @@ router.put('/:id', auth, upload.fields([
 });
 
 // Send invite to team for a phase
+
+// Admin routes for tournament approval system
+router.get('/admin/pending-approval', auth, async (req, res) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const tournaments = await Tournament.find({
+      _approvalStatus: 'pending'
+    })
+      .sort({ _submittedAt: -1 })
+      .populate('_submittedBy', 'name email')
+      .select('tournamentName shortName gameTitle region tier _submittedAt _submittedBy organizer');
+
+    res.json({ tournaments });
+  } catch (error) {
+    console.error('Error fetching pending tournaments:', error);
+    res.status(500).json({ error: 'Failed to fetch pending tournaments' });
+  }
+});
+
+router.post('/:id/approve', auth, async (req, res) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { id } = req.params;
+
+    const tournament = await Tournament.findByIdAndUpdate(
+      id,
+      {
+        _approvalStatus: 'approved',
+        _approvedBy: req.user.id,
+        _approvedAt: new Date()
+      },
+      { new: true }
+    );
+
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    res.json({
+      message: 'Tournament approved successfully',
+      tournament
+    });
+  } catch (error) {
+    console.error('Error approving tournament:', error);
+    res.status(500).json({ error: 'Failed to approve tournament' });
+  }
+});
+
+router.post('/:id/reject', auth, async (req, res) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const tournament = await Tournament.findByIdAndUpdate(
+      id,
+      {
+        _approvalStatus: 'rejected',
+        _rejectedBy: req.user.id,
+        _rejectedAt: new Date(),
+        _rejectionReason: reason
+      },
+      { new: true }
+    );
+
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    res.json({
+      message: 'Tournament rejected successfully',
+      tournament
+    });
+  } catch (error) {
+    console.error('Error rejecting tournament:', error);
+    res.status(500).json({ error: 'Failed to reject tournament' });
+  }
+});
 
 export default router;

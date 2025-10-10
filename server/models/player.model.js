@@ -100,7 +100,6 @@ const playerSchema = new mongoose.Schema(
       matchesPlayed: { type: Number, default: 0 },
       matchesWon: { type: Number, default: 0 },
       totalKills: { type: Number, default: 0 },
-      totalDamage: { type: Number, default: 0 },
       averagePlacement: { type: Number, default: 0 },
       winRate: { type: Number, default: 0 },
     },
@@ -162,7 +161,7 @@ const playerSchema = new mongoose.Schema(
     },
     profileVisibility: {
       type: String,
-      enum: ['public', 'friends', 'private'],
+      enum: ['public', 'private'],
       default: 'public',
     },
     cardTheme: {

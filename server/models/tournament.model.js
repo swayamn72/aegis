@@ -101,7 +101,6 @@ const tournamentSchema = new mongoose.Schema(
         'announced',
         'registration_open',
         'registration_closed',
-        'qualifiers_in_progress', // More specific phase
         'in_progress',
         'completed',
         'cancelled',
@@ -135,10 +134,6 @@ const tournamentSchema = new mongoose.Schema(
         type: Number,
         default: 0,
       },
-      fromQualifiers: { // Number of teams advancing from qualifiers
-        type: Number,
-        default: 0,
-      },
       openRegistrations: { // Number of teams from open registration
         type: Number,
         default: 0,
@@ -152,11 +147,9 @@ const tournamentSchema = new mongoose.Schema(
           ref: 'Team',
           required: true,
         },
-        seed: Number, // Initial seeding
-        group: String, // For group stage tournaments (e.g., "Group A")
         qualifiedThrough: { // How the team entered (invite, qualifier, open, wildcard)
           type: String,
-          enum: ['invite', 'qualifier', 'open_registration', 'wildcard'],
+          enum: ['invite', 'open_registration', 'wildcard'],
         },
         currentStage: { // Which stage the team is currently in/was eliminated from
           type: String,
@@ -171,10 +164,10 @@ const tournamentSchema = new mongoose.Schema(
     // --- Tournament Phases (e.g., Qualifiers, Group Stage, Grand Finals) ---
     phases: [
       {
-        name: String, // e.g., "Online Qualifiers", "Group Stage 1", "Semi-Finals", "Grand Finals"
+        name: String, 
         type: { // Type of phase
           type: String,
-          enum: ['qualifier', 'group_stage', 'elimination_stage', 'final_stage'],
+          enum: ['qualifiers', 'final_stage'],
           required: true,
         },
         startDate: Date,
@@ -193,7 +186,7 @@ const tournamentSchema = new mongoose.Schema(
         // --- Groups for this phase ---
         groups: [
           {
-            name: String, // e.g., "Group Alpha", "Group Beta"
+            name: String, // e.g., "Group A", "Group B"
             teams: [{ // Teams specifically in this group
               type: mongoose.Schema.Types.ObjectId,
               ref: 'Team',
@@ -216,9 +209,6 @@ const tournamentSchema = new mongoose.Schema(
         ],
       },
     ],
-
-
-
     // --- Overall Tournament Results ---
     finalStandings: [
       {
@@ -252,14 +242,13 @@ const tournamentSchema = new mongoose.Schema(
       },
       currency: {
         type: String,
-        enum: ['INR', 'USD', 'EUR', 'GBP'],
+        enum: ['INR', 'USD'],
         default: 'INR',
       },
       distribution: [ // How the prize pool is split for team positions
         {
           position: String, // "1st", "2nd", "3rd", "3rd-4th"
           amount: Number,
-          percentage: Number,
         },
       ],
       individualAwards: [ // Individual player awards (MVP, Best IGL, etc.)
@@ -276,13 +265,6 @@ const tournamentSchema = new mongoose.Schema(
           amount: {
             type: Number,
             min: 0,
-            default: 0,
-          },
-          percentage: {
-            type: Number,
-            min: 0,
-            max: 100,
-            default: 0,
           },
           recipient: { // Who won this award (populated after tournament ends)
             player: {
@@ -308,10 +290,6 @@ const tournamentSchema = new mongoose.Schema(
       totalMatches: { type: Number, default: 0 },
       totalParticipatingTeams: { type: Number, default: 0 }, // Count of teams in `participatingTeams`
       totalKills: { type: Number, default: 0 }, // Aggregate from all matches
-      totalDamage: { type: Number, default: 0 }, // Aggregate from all matches
-      averageMatchDuration: Number, // in minutes
-      longestMatch: Number, // in minutes
-      shortestMatch: Number, // in minutes
       mostKillsInMatch: {
         count: Number,
         player: { type: mongoose.Schema.Types.ObjectId, ref: 'Player' }, // Link to specific player
@@ -394,15 +372,15 @@ const tournamentSchema = new mongoose.Schema(
 
     // --- Game Specific Settings (BGMI) ---
     gameSettings: {
-      serverRegion: String, // e.g., "India", "Middle East"
+      serverRegion: String, // e.g., "India",
       gameMode: {
         type: String,
-        enum: ['TPP Squad', 'FPP Squad', 'TPP Duo', 'FPP Duo', 'TPP Solo', 'FPP Solo', 'Custom'],
+        enum: ['TPP Squad', 'FPP Squad', 'Custom'],
         default: 'TPP Squad',
       },
       maps: { // Maps in rotation for this tournament
         type: [String],
-        enum: ['Erangel', 'Miramar', 'Sanhok', 'Vikendi', 'Livik', 'Nusa', 'Rondo'],
+        enum: ['Erangel', 'Miramar', 'Sanhok', 'Vikendi', 'Rondo'],
         default: ['Erangel', 'Miramar'], // Common starting maps
       },
       pointsSystem: mongoose.Schema.Types.Mixed, // Detailed object for BGMI specific point system
@@ -424,12 +402,6 @@ const tournamentSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
-    admins: [ // Aegis platform users who administer this tournament
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Player', // Assuming 'Player' can also be an admin, or create a 'User' schema
-      },
-    ],
 
     // --- Qualification and Series Information ---
     parentSeries: { // If this tournament is part of a larger series (e.g., "BGIS Qualifiers" -> "BGIS Grand Finals")
@@ -452,9 +424,6 @@ const tournamentSchema = new mongoose.Schema(
     notes: String, // Internal notes for admins
     externalIds: { // IDs from other platforms for cross-referencing
       liquipedia: String,
-      battlefy: String,
-      challengermode: String,
-      // Add more as needed
     },
     // --- Organization Tournament Approval System ---
     _approvalStatus: {

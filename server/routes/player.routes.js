@@ -339,7 +339,7 @@ router.post("/upload-pfp", upload.single('profilePicture'), async (req, res) => 
 
 
 
-// //delete pist
+// //delete post
 // router.delete("/delete-post/:postId", async (req, res) => {
 //   try {
 //     const token = req.cookies.token;

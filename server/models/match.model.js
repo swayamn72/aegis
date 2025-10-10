@@ -8,18 +8,6 @@ const matchSchema = new mongoose.Schema(
       required: true,
       min: 1,
     },
-    matchType: {
-      type: String,
-      enum: [
-        'group_stage',
-        'qualifier',
-        'playoff',
-        'semifinal', 
-        'final'
-      ],
-      required: true,
-      index: true,
-    },
     
     // --- Tournament Reference ---
     tournament: {
@@ -40,12 +28,6 @@ const matchSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    actualStartTime: Date,
-    actualEndTime: Date,
-    matchDuration: { // in minutes
-      type: Number,
-      min: 0,
-    },
     
     // --- Match Status ---
     status: {
@@ -55,7 +37,6 @@ const matchSchema = new mongoose.Schema(
         'in_progress',
         'completed',
         'cancelled',
-        'abandoned'
       ],
       default: 'scheduled',
       index: true,
@@ -64,11 +45,11 @@ const matchSchema = new mongoose.Schema(
     // --- Map ---
     map: {
       type: String,
-      enum: ['Erangel', 'Miramar', 'Sanhok', 'Vikendi', 'Livik', 'Nusa', 'Rondo'],
+      enum: ['Erangel', 'Miramar', 'Sanhok', 'Vikendi', 'Rondo'],
       required: true,
     },
     
-    // --- Participating Teams (up to 16 teams) ---
+    // --- Participating Teams (up to 25 teams) ---
     participatingTeams: [
       {
         team: {
@@ -76,8 +57,8 @@ const matchSchema = new mongoose.Schema(
           ref: 'Team',
           required: true,
         },
-        teamName: String, // Snapshot at match time
-        teamTag: String, // Snapshot at match time  
+        teamName: String,
+        teamTag: String,
         players: [ // 4 players per team
           {
             player: {
@@ -85,7 +66,7 @@ const matchSchema = new mongoose.Schema(
               ref: 'Player',
               required: true,
             },
-            playerName: String, // IGN snapshot
+            playerName: String, 
             role: {
               type: String,
               enum: ['IGL', 'assaulter', 'support', 'sniper', 'fragger'],
@@ -96,7 +77,7 @@ const matchSchema = new mongoose.Schema(
         finalPosition: { // 1st, 2nd, 3rd, etc. - null for unplayed matches
           type: Number,
           min: 1,
-          max: 16,
+          max: 25,
           default: null,
         },
         points: {
@@ -110,19 +91,8 @@ const matchSchema = new mongoose.Schema(
             {
               player: { type: mongoose.Schema.Types.ObjectId, ref: 'Player' },
               kills: { type: Number, default: 0 },
-              assists: { type: Number, default: 0 },
-              damage: { type: Number, default: 0 },
-              survivalTime: Number, // in seconds
             }
           ]
-        },
-        survivalTime: { // Team survival time in seconds
-          type: Number,
-          default: 0,
-        },
-        totalDamage: {
-          type: Number,
-          default: 0,
         },
         chickenDinner: { // Did this team win the match?
           type: Boolean,
@@ -134,26 +104,9 @@ const matchSchema = new mongoose.Schema(
     // --- Match Statistics ---
     matchStats: {
       totalKills: { type: Number, default: 0 },
-      totalDamage: { type: Number, default: 0 },
-      averageSurvivalTime: Number, // in seconds
-      longestSurvivalTime: Number,
-      shortestSurvivalTime: Number,
-      firstBloodTime: Number, // seconds from match start
-      firstBloodTeam: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Team',
-      },
-      firstBloodPlayer: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Player',
-      },
       mostKillsPlayer: {
         player: { type: mongoose.Schema.Types.ObjectId, ref: 'Player' },
         kills: Number,
-      },
-      mostDamagePlayer: {
-        player: { type: mongoose.Schema.Types.ObjectId, ref: 'Player' },
-        damage: Number,
       },
     },
     
@@ -188,26 +141,7 @@ const matchSchema = new mongoose.Schema(
         default: 1, // 1 point per kill
       },
     },
-    
-    // --- Administrative ---
-    isOfficial: {
-      type: Boolean,
-      default: true,
-    },
-    
-    // --- Highlights & Media ---
-    highlights: [
-      {
-        title: String,
-        description: String,
-        timestamp: Number, // seconds from match start
-        clipUrl: String,
-        thumbnailUrl: String,
-        involvedPlayers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Player' }],
-        involvedTeams: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Team' }],
-      }
-    ],
-    
+
     // --- Metadata ---
     tags: [String], // For categorization
   },
@@ -227,15 +161,6 @@ matchSchema.index({ 'participatingTeams.team': 1 });
 matchSchema.index({ createdAt: -1 });
 
 // --- Virtuals ---
-
-// Virtual for match duration in minutes
-matchSchema.virtual('durationMinutes').get(function() {
-  if (this.actualStartTime && this.actualEndTime) {
-    const diffMs = this.actualEndTime.getTime() - this.actualStartTime.getTime();
-    return Math.round(diffMs / (1000 * 60));
-  }
-  return this.matchDuration || null;
-});
 
 // Virtual for winner team
 matchSchema.virtual('winner').get(function() {
@@ -259,27 +184,11 @@ matchSchema.virtual('isLive').get(function() {
 
 // --- Pre-save middleware ---
 matchSchema.pre('save', function(next) {
-  // Calculate match duration if we have start and end times
-  if (this.actualStartTime && this.actualEndTime && !this.matchDuration) {
-    const diffMs = this.actualEndTime.getTime() - this.actualStartTime.getTime();
-    this.matchDuration = Math.round(diffMs / (1000 * 60)); // Convert to minutes
-  }
   
   // Calculate total match stats from participating teams
   if (this.participatingTeams && this.participatingTeams.length > 0) {
     this.matchStats.totalKills = this.participatingTeams.reduce((total, team) => total + team.kills.total, 0);
-    this.matchStats.totalDamage = this.participatingTeams.reduce((total, team) => total + team.totalDamage, 0);
     
-    // Calculate average survival time
-    const totalSurvivalTime = this.participatingTeams.reduce((total, team) => total + team.survivalTime, 0);
-    this.matchStats.averageSurvivalTime = Math.round(totalSurvivalTime / this.participatingTeams.length);
-    
-    // Find longest and shortest survival times
-    const survivalTimes = this.participatingTeams.map(team => team.survivalTime).filter(time => time > 0);
-    if (survivalTimes.length > 0) {
-      this.matchStats.longestSurvivalTime = Math.max(...survivalTimes);
-      this.matchStats.shortestSurvivalTime = Math.min(...survivalTimes);
-    }
   }
   
   next();

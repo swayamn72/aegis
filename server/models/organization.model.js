@@ -14,6 +14,15 @@ const organizationSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    orgSocial: {
+      instagram: { type: String, trim: true, default: '' },
+      twitter: { type: String, trim: true, default: '' },
+      facebook: { type: String, trim: true, default: '' },
+      linkedin: { type: String, trim: true, default: '' },
+      youtube: { type: String, trim: true, default: '' },
+      twitch: { type: String, trim: true, default: '' },
+      website: { type: String, trim: true, default: '' },
+    },
     ownerSocial: {
       instagram: { type: String, trim: true, default: '' },
       twitter: { type: String, trim: true, default: '' },
@@ -34,7 +43,7 @@ const organizationSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true,
-      select: false, // Don't include password in queries by default
+      select: false, 
     },
     country: {
       type: String,

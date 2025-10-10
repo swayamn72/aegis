@@ -30,8 +30,8 @@ const AegisOrgRejected = ({ organization, reason }) => {
         ))}
       </div>
       <div className="absolute -top-40 -left-40 w-80 h-80 bg-gradient-to-r from-red-500/30 to-red-600/30 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute top-1/3 -right-40 w-96 h-96 bg-gradient-to-l from-red-600/25 to-red-500/25 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}} />
-      <div className="absolute -bottom-40 left-1/4 w-72 h-72 bg-gradient-to-t from-red-500/20 to-red-600/20 rounded-full blur-3xl animate-pulse" style={{animationDelay: '4s'}} />
+      <div className="absolute top-1/3 -right-40 w-96 h-96 bg-gradient-to-l from-red-600/25 to-red-500/25 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+      <div className="absolute -bottom-40 left-1/4 w-72 h-72 bg-gradient-to-t from-red-500/20 to-red-600/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }} />
 
       <div className="relative z-10 min-h-screen flex items-center justify-center px-4 sm:px-8">
         <div className="w-full max-w-2xl space-y-8 bg-black/20 backdrop-blur-md p-8 rounded-2xl border border-white/10">

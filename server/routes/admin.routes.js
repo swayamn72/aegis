@@ -25,7 +25,7 @@ router.post('/login', async (req, res) => {
 
     if (!admin) {
       return res.status(401).json({
-        error: 'Invalid credentials.'
+        error: 'Invalid email.'
       });
     }
 
@@ -40,7 +40,7 @@ router.post('/login', async (req, res) => {
     if (!isPasswordValid) {
       await admin.incLoginAttempts();
       return res.status(401).json({
-        error: 'Invalid credentials.'
+        error: 'Invalid password.'
       });
     }
 

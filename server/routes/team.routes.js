@@ -115,7 +115,7 @@ router.get('/featured', async (req, res) => {
 });
 
 // GET /api/teams/:id - Fetch a single team by ID with recent matches and tournaments
-router.get('/:id', async (req, res) => {
+router.get('/:id', auth, async (req, res) => {
   try {
     const teamId = req.params.id.trim();
     const team = await Team.findById(teamId)
@@ -135,7 +135,10 @@ router.get('/:id', async (req, res) => {
     }
 
     if (team.profileVisibility === 'private') {
-      return res.status(403).json({ message: 'This team profile is private' });
+      // Allow access if user is captain or player in the team
+      if (!team.players.includes(req.user.id) && team.captain.toString() !== req.user.id.toString()) {
+        return res.status(403).json({ message: 'This team profile is private' });
+      }
     }
 
     // Fetch recent matches

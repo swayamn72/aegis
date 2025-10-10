@@ -4,36 +4,36 @@ import { Search, ChevronDown, MapPin, Gamepad2, Trophy, Calendar, Users, Star, T
 import AegisProfileCardBGMI from './AegisProfileCardBGMI';
 
 const fetchPlayers = async () => {
-  try {
-    const response = await fetch('/api/players/all');
-    const data = await response.json();
-    return data.players || [];
-  } catch (error) {
-    console.error('Error fetching players:', error);
-    return [];
-  }
+    try {
+        const response = await fetch('/api/players/all');
+        const data = await response.json();
+        return data.players || [];
+    } catch (error) {
+        console.error('Error fetching players:', error);
+        return [];
+    }
 };
 
 const FilterDropdown = ({ options, selected, onSelect, placeholder, icon: Icon }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  return (
-    <div className="relative">
-      <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center justify-between bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 text-white transition-colors hover:bg-zinc-700">
-        <div className="flex items-center gap-2">
-          <Icon className="w-5 h-5 text-orange-400" />
-          <span>{selected || placeholder}</span>
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+        <div className="relative">
+            <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center justify-between bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 text-white transition-colors hover:bg-zinc-700">
+                <div className="flex items-center gap-2">
+                    <Icon className="w-5 h-5 text-orange-400" />
+                    <span>{selected || placeholder}</span>
+                </div>
+                <ChevronDown className={`w-5 h-5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isOpen && (
+                <div className="absolute top-full mt-2 w-full bg-zinc-900 border border-zinc-700 rounded-lg z-10 shadow-lg">
+                    {options.map(option => (
+                        <a href="#" key={option} onClick={(e) => { e.preventDefault(); onSelect(option); setIsOpen(false); }} className="block px-4 py-2 hover:bg-orange-500/10">{option}</a>
+                    ))}
+                </div>
+            )}
         </div>
-        <ChevronDown className={`w-5 h-5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className="absolute top-full mt-2 w-full bg-zinc-900 border border-zinc-700 rounded-lg z-10 shadow-lg">
-          {options.map(option => (
-            <a href="#" key={option} onClick={(e) => { e.preventDefault(); onSelect(option); setIsOpen(false); }} className="block px-4 py-2 hover:bg-orange-500/10">{option}</a>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+    );
 };
 
 const PlayerCard = ({ player }) => {
@@ -259,7 +259,7 @@ const PlayerCard = ({ player }) => {
 
 const AegisPlayers = () => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [filters, setFilters] = useState({ game: '', region: '', status: '', rank: '' });
+    const [filters, setFilters] = useState({ game: '', availability: '', status: '' });
     const [players, setPlayers] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -278,24 +278,24 @@ const AegisPlayers = () => {
     };
 
     const filteredPlayers = useMemo(() => {
+        const gameMap = { 'Valorant': 'VALO', 'CS2': 'CS2', 'BGMI': 'BGMI' };
         return players.filter(player => {
             const matchesSearch = player.inGameName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                 player.realName?.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesGame = filters.game ? player.game === filters.game : true;
-            const matchesRegion = filters.region ? player.region === filters.region : true;
-            const matchesStatus = filters.status ? player.status === filters.status : true;
-            const matchesRank = filters.rank ? player.rank?.includes(filters.rank) : true;
+            const matchesGame = filters.game && filters.game !== 'All Games' ? player.primaryGame === gameMap[filters.game] : true;
+            const matchesAvailability = filters.availability ? player.availability === filters.availability : true;
+            const matchesStatus = filters.status ? player.teamStatus === filters.status : true;
 
-            return matchesSearch && matchesGame && matchesRegion && matchesStatus && matchesRank;
+            return matchesSearch && matchesGame && matchesAvailability && matchesStatus;
         }).sort((a, b) => (b.aegisRating || 0) - (a.aegisRating || 0)); // Sort by rating descending
     }, [searchTerm, filters, players]);
-    
+
 
 
     return (
         <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans mt-20">
             <div className="container mx-auto px-6 py-12">
-                
+
                 {/* --- HEADER --- */}
                 <div className="text-center mb-12">
                     <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 mb-4">
@@ -308,7 +308,7 @@ const AegisPlayers = () => {
 
                 {/* --- FILTERS & SEARCH --- */}
                 <div className="mb-12 p-6 bg-zinc-900/50 border border-zinc-800 rounded-xl">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="relative lg:col-span-1">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
                             <input
@@ -319,10 +319,9 @@ const AegisPlayers = () => {
                                 className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg pl-12 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                             />
                         </div>
-                        <FilterDropdown options={['Valorant', 'CS2', 'LoL', 'BGMI', 'Dota 2']} selected={filters.game} onSelect={(v) => handleFilterChange('game', v)} placeholder="All Games" icon={Gamepad2} />
-                        <FilterDropdown options={['India', 'Asia', 'Europe', 'North America']} selected={filters.region} onSelect={(v) => handleFilterChange('region', v)} placeholder="All Regions" icon={MapPin} />
-                        <FilterDropdown options={['In Roster', 'Looking for Team']} selected={filters.status} onSelect={(v) => handleFilterChange('status', v)} placeholder="All Status" icon={Users} />
-                        <FilterDropdown options={['Radiant', 'Immortal', 'Global Elite', 'Challenger', 'Conqueror']} selected={filters.rank} onSelect={(v) => handleFilterChange('rank', v)} placeholder="All Ranks" icon={Trophy} />
+                        <FilterDropdown options={['All Games', 'Valorant', 'CS2', 'BGMI']} selected={filters.game} onSelect={(v) => handleFilterChange('game', v)} placeholder="All Games" icon={Gamepad2} />
+                        <FilterDropdown options={['weekends only', 'evenings', 'flexible', 'full time']} selected={filters.availability} onSelect={(v) => handleFilterChange('availability', v)} placeholder="All Availability" icon={Calendar} />
+                        <FilterDropdown options={['looking for a team', 'in a team', 'open for offers']} selected={filters.status} onSelect={(v) => handleFilterChange('status', v)} placeholder="All Status" icon={Users} />
                     </div>
                 </div>
 

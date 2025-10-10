@@ -4,7 +4,7 @@ import {
   ArrowLeft, Clock, MapPin, Trophy, Target, Shield,
   TrendingUp, Star, Crown, Calendar, Globe, Hash,
   ExternalLink, Users, Award, Flag, Activity, Zap,
-  ChevronDown, ChevronUp, Timer, Gamepad2, Medal,
+  Timer, Gamepad2, Medal,
   BarChart3, Eye, Share2, Download, AlertCircle
 } from 'lucide-react';
 
@@ -12,12 +12,6 @@ import ErangelMap from '../assets/mapImages/erangel.jpg';
 import MiramarMap from '../assets/mapImages/miramar.webp';
 import SanhokMap from '../assets/mapImages/sanhok.webp';
 import VikendiMap from '../assets/mapImages/vikendi.jpg';
-
-const formatTime = (seconds) => {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-};
 
 const mapImages = {
   'Erangel': ErangelMap,
@@ -33,7 +27,6 @@ const DetailedMatchInfo = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('leaderboard');
-  const [expandedTeam, setExpandedTeam] = useState(null);
   const [matchData, setMatchData] = useState(null);
   const [teamsData, setTeamsData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,10 +49,10 @@ const DetailedMatchInfo = () => {
         const formattedMatchData = {
           id: data._id,
           matchNumber: data.matchNumber,
-          matchType: data.matchType || 'Tournament Match',
+          matchType: 'Tournament Match',
           date: new Date(data.scheduledStartTime).toLocaleDateString(),
           time: new Date(data.scheduledStartTime).toLocaleTimeString(),
-          duration: data.matchDuration ? `${data.matchDuration}:00` : 'N/A',
+          duration: 'N/A',
           tournament: data.tournament?.tournamentName || 'Tournament',
           stage: data.tournamentPhase || 'Match',
           server: 'Asia',
@@ -67,10 +60,7 @@ const DetailedMatchInfo = () => {
           map: data.map,
           venue: 'Online',
           totalKills: data.matchStats?.totalKills || 0,
-          totalDamage: data.matchStats?.totalDamage || 0,
           chickenDinnerTeam: data.participatingTeams?.find(t => t.chickenDinner)?.team?.teamName || 'TBD',
-          firstBloodPlayer: data.matchStats?.firstBloodPlayer || 'N/A',
-          firstBloodTime: '0:45',
           status: data.status
         };
 
@@ -84,17 +74,7 @@ const DetailedMatchInfo = () => {
           placementPoints: pt.points?.placementPoints || 0,
           killPoints: pt.points?.killPoints || pt.kills?.total || 0,
           totalPoints: pt.points?.totalPoints || 0,
-          survivalTime: pt.survivalTime ? formatTime(pt.survivalTime) : 'N/A',
-          damage: pt.totalDamage || 0,
-          chickenDinner: pt.chickenDinner || false,
-          players: pt.kills?.breakdown?.map(pb => ({
-            name: pb.player?.username || pb.player?.inGameName || 'Player',
-            kills: pb.kills || 0,
-            assists: pb.assists || 0,
-            damage: pb.damage || 0,
-            survivalTime: pb.survivalTime ? formatTime(pb.survivalTime) : 'N/A',
-            role: pb.player?.inGameRole?.[0] || 'Player'
-          })) || []
+          chickenDinner: pt.chickenDinner || false
         })) || [];
 
         // Sort teams by position
@@ -207,120 +187,54 @@ const DetailedMatchInfo = () => {
               <th className="text-center py-3 px-2 text-zinc-300 font-medium">Placement</th>
               <th className="text-center py-3 px-2 text-zinc-300 font-medium">Kill Pts</th>
               <th className="text-center py-3 px-2 text-zinc-300 font-medium">Total</th>
-              <th className="text-center py-3 px-2 text-zinc-300 font-medium">Survival</th>
-              <th className="text-center py-3 px-2 text-zinc-300 font-medium">Damage</th>
-              <th className="text-center py-3 px-2 text-zinc-300 font-medium">Details</th>
             </tr>
           </thead>
           <tbody>
             {teamsData.map((team, index) => {
               const isTop3 = team.position <= 3;
-              const isExpanded = expandedTeam === index;
-              
+
               return (
-                <React.Fragment key={index}>
-                  <tr className={`border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors cursor-pointer ${
-                    team.chickenDinner ? 'bg-gradient-to-r from-amber-500/10 to-yellow-500/10' : 
-                    isTop3 ? 'bg-zinc-800/20' : ''
-                  }`}>
-                    <td className="py-4 px-4">
-                      <PositionBadge position={team.position} isHighlighted={isTop3} />
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-3">
-                        <img 
-                          src={team.logo} 
-                          alt={team.team} 
-                          className="w-10 h-10 rounded-lg object-cover"
-                          onError={(e) => {
-                            e.target.src = 'https://placehold.co/40x40/1a1a1a/ffffff?text=' + team.tag;
-                          }}
-                        />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-white font-medium">{team.team}</span>
-                            {team.chickenDinner && <Crown className="w-4 h-4 text-amber-400" />}
-                          </div>
-                          <div className="text-zinc-400 text-xs">{team.tag}</div>
+                <tr key={index} className={`border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors ${
+                  team.chickenDinner ? 'bg-gradient-to-r from-amber-500/10 to-yellow-500/10' :
+                  isTop3 ? 'bg-zinc-800/20' : ''
+                }`}>
+                  <td className="py-4 px-4">
+                    <PositionBadge position={team.position} isHighlighted={isTop3} />
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={team.logo}
+                        alt={team.team}
+                        className="w-10 h-10 rounded-lg object-cover"
+                        onError={(e) => {
+                          e.target.src = 'https://placehold.co/40x40/1a1a1a/ffffff?text=' + team.tag;
+                        }}
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-medium">{team.team}</span>
+                          {team.chickenDinner && <Crown className="w-4 h-4 text-amber-400" />}
                         </div>
+                        <div className="text-zinc-400 text-xs">{team.tag}</div>
                       </div>
-                    </td>
-                    <td className="text-center py-4 px-2">
-                      <span className="text-red-400 font-bold">{team.kills}</span>
-                    </td>
-                    <td className="text-center py-4 px-2">
-                      <span className="text-green-400 font-bold">{team.placementPoints}</span>
-                    </td>
-                    <td className="text-center py-4 px-2">
-                      <span className="text-blue-400 font-bold">{team.killPoints}</span>
-                    </td>
-                    <td className="text-center py-4 px-2">
-                      <span className={`font-bold text-lg ${isTop3 ? 'text-orange-400' : 'text-zinc-300'}`}>
-                        {team.totalPoints}
-                      </span>
-                    </td>
-                    <td className="text-center py-4 px-2">
-                      <span className="text-purple-400 font-medium">{team.survivalTime}</span>
-                    </td>
-                    <td className="text-center py-4 px-2">
-                      <span className="text-cyan-400 font-medium">{team.damage.toLocaleString()}</span>
-                    </td>
-                    <td className="text-center py-4 px-2">
-                      <button 
-                        onClick={() => setExpandedTeam(isExpanded ? null : index)}
-                        className="p-2 hover:bg-zinc-700/50 rounded-lg transition-colors"
-                      >
-                        {isExpanded ? <ChevronUp className="w-4 h-4 text-zinc-400" /> : <ChevronDown className="w-4 h-4 text-zinc-400" />}
-                      </button>
-                    </td>
-                  </tr>
-                  
-                  {isExpanded && team.players.length > 0 && (
-                    <tr>
-                      <td colSpan="9" className="px-4 py-0">
-                        <div className="bg-zinc-800/30 rounded-lg p-4 mb-2">
-                          <h4 className="text-white font-medium mb-3 flex items-center gap-2">
-                            <Users className="w-4 h-4" />
-                            {team.team} Player Statistics
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            {team.players.map((player, playerIndex) => (
-                              <div key={playerIndex} className="bg-zinc-700/40 rounded-lg p-3">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <div className="w-6 h-6 bg-zinc-600 rounded-full flex items-center justify-center text-xs text-white font-medium">
-                                    {player.name.charAt(0)}
-                                  </div>
-                                  <div>
-                                    <div className="text-white font-medium text-sm">{player.name}</div>
-                                    <div className="text-zinc-400 text-xs">{player.role}</div>
-                                  </div>
-                                </div>
-                                <div className="space-y-1 text-xs">
-                                  <div className="flex justify-between">
-                                    <span className="text-zinc-400">Kills:</span>
-                                    <span className="text-red-400 font-bold">{player.kills}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-zinc-400">Assists:</span>
-                                    <span className="text-green-400 font-bold">{player.assists}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-zinc-400">Damage:</span>
-                                    <span className="text-purple-400 font-bold">{player.damage.toLocaleString()}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-zinc-400">Survival:</span>
-                                    <span className="text-cyan-400 font-medium">{player.survivalTime}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
+                    </div>
+                  </td>
+                  <td className="text-center py-4 px-2">
+                    <span className="text-red-400 font-bold">{team.kills}</span>
+                  </td>
+                  <td className="text-center py-4 px-2">
+                    <span className="text-green-400 font-bold">{team.placementPoints}</span>
+                  </td>
+                  <td className="text-center py-4 px-2">
+                    <span className="text-blue-400 font-bold">{team.killPoints}</span>
+                  </td>
+                  <td className="text-center py-4 px-2">
+                    <span className={`font-bold text-lg ${isTop3 ? 'text-orange-400' : 'text-zinc-300'}`}>
+                      {team.totalPoints}
+                    </span>
+                  </td>
+                </tr>
               );
             })}
           </tbody>
@@ -335,23 +249,17 @@ const DetailedMatchInfo = () => {
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 mb-6">
           <h2 className="text-2xl font-bold text-white mb-6">Match Summary</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-400/30 rounded-lg p-4 text-center">
               <Crown className="w-8 h-8 text-amber-400 mx-auto mb-2" />
               <div className="text-2xl font-bold text-amber-400 mb-1">{matchData?.chickenDinnerTeam || 'TBD'}</div>
               <div className="text-zinc-300 text-sm font-medium">Chicken Dinner Winner</div>
             </div>
-            
+
             <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4 text-center">
               <Target className="w-8 h-8 text-red-400 mx-auto mb-2" />
               <div className="text-2xl font-bold text-red-400 mb-1">{matchData?.totalKills || 0}</div>
               <div className="text-zinc-400 text-sm">Total Eliminations</div>
-            </div>
-            
-            <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4 text-center">
-              <Zap className="w-8 h-8 text-purple-400 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-purple-400 mb-1">{matchData?.totalDamage?.toLocaleString() || 0}</div>
-              <div className="text-zinc-400 text-sm">Total Damage</div>
             </div>
           </div>
 
@@ -369,10 +277,6 @@ const DetailedMatchInfo = () => {
               <div className="flex items-center justify-between">
                 <span className="text-zinc-400">Most Kills (Team)</span>
                 <span className="text-red-400 font-medium">{teamsData[0]?.team} ({teamsData[0]?.kills} kills)</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-400">Highest Damage (Team)</span>
-                <span className="text-purple-400 font-medium">{teamsData[0]?.team} ({teamsData[0]?.damage?.toLocaleString()})</span>
               </div>
             </div>
           </div>
@@ -486,10 +390,6 @@ const DetailedMatchInfo = () => {
             <div className="text-zinc-400 text-sm">Total Kills</div>
           </div>
           <div className="bg-zinc-800/50 rounded-lg p-4 text-center">
-            <div className="text-3xl font-bold text-purple-400 mb-2">{matchData?.totalDamage?.toLocaleString() || 0}</div>
-            <div className="text-zinc-400 text-sm">Total Damage</div>
-          </div>
-          <div className="bg-zinc-800/50 rounded-lg p-4 text-center">
             <div className="text-3xl font-bold text-green-400 mb-2">{teamsData.length}</div>
             <div className="text-zinc-400 text-sm">Teams Participated</div>
           </div>
@@ -528,30 +428,12 @@ const DetailedMatchInfo = () => {
                 <div key={index} className="flex items-center gap-3">
                   <div className="w-16 text-zinc-400 text-sm">{team.team.substring(0, 8)}</div>
                   <div className="flex-1 bg-zinc-700 rounded-full h-2">
-                    <div 
-                      className="bg-red-400 h-2 rounded-full" 
+                    <div
+                      className="bg-red-400 h-2 rounded-full"
                       style={{ width: `${(team.kills / Math.max(...teamsData.map(t => t.kills))) * 100}%` }}
                     />
                   </div>
                   <div className="w-8 text-red-400 font-bold text-sm">{team.kills}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-white font-medium mb-3">Damage Distribution</h4>
-            <div className="space-y-2">
-              {teamsData.slice(0, 5).map((team, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <div className="w-16 text-zinc-400 text-sm">{team.team.substring(0, 8)}</div>
-                  <div className="flex-1 bg-zinc-700 rounded-full h-2">
-                    <div 
-                      className="bg-purple-400 h-2 rounded-full" 
-                      style={{ width: `${(team.damage / Math.max(...teamsData.map(t => t.damage))) * 100}%` }}
-                    />
-                  </div>
-                  <div className="w-12 text-purple-400 font-bold text-sm">{(team.damage / 1000).toFixed(1)}k</div>
                 </div>
               ))}
             </div>
@@ -656,7 +538,7 @@ const DetailedMatchInfo = () => {
                     <div className="text-right">
                       <div className="text-3xl font-bold text-amber-400">{teamsData[0].totalPoints}</div>
                       <div className="text-zinc-400 text-sm">Total Points</div>
-                      <div className="text-orange-400 text-sm">{teamsData[0].kills} Kills • {teamsData[0].survivalTime}</div>
+                      <div className="text-orange-400 text-sm">{teamsData[0].kills} Kills</div>
                     </div>
                   </div>
                 </div>

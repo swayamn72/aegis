@@ -61,7 +61,7 @@ const Navbar = () => {
 
         {/* Right Side: Desktop Buttons (Your original colors) */}
         <div className="hidden md:flex items-center gap-4">
-          <NotificationBar />
+          {isAuthenticated && <NotificationBar />}
           {isAuthenticated && (
             <button
               onClick={() => navigate('/chat')}

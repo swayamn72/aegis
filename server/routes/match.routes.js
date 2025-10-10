@@ -40,11 +40,8 @@ router.get('/tournament/:tournamentId', async (req, res) => {
       matchType: match.matchType,
       phase: match.tournamentPhase,
       scheduledStartTime: match.scheduledStartTime,
-      actualStartTime: match.actualStartTime,
-      actualEndTime: match.actualEndTime,
       status: match.status,
       map: match.map,
-      duration: match.matchDuration,
       teams: match.participatingTeams?.map(pt => ({
         _id: pt.team?._id,
         name: pt.team?.teamName || pt.teamName || 'Unknown Team',
@@ -53,16 +50,11 @@ router.get('/tournament/:tournamentId', async (req, res) => {
         position: pt.finalPosition,
         kills: pt.kills?.total || 0,
         points: pt.points?.totalPoints || 0,
-        damage: pt.totalDamage || 0,
-        survivalTime: pt.survivalTime || 0,
         chickenDinner: pt.chickenDinner || false
       })) || [],
       stats: {
         totalKills: match.matchStats?.totalKills || 0,
-        totalDamage: match.matchStats?.totalDamage || 0,
-        averageSurvivalTime: match.matchStats?.averageSurvivalTime || 0,
         mostKillsPlayer: match.matchStats?.mostKillsPlayer,
-        mostDamagePlayer: match.matchStats?.mostDamagePlayer
       }
     }));
 
@@ -112,7 +104,6 @@ router.get('/tournament/:tournamentId/results', async (req, res) => {
             matchesPlayed: 0,
             totalPoints: 0,
             totalKills: 0,
-            totalDamage: 0,
             chickenDinners: 0,
             averagePlacement: 0,
             totalPlacement: 0,
@@ -376,8 +367,6 @@ router.get('/tournament/:tournamentId/stats', async (req, res) => {
             $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
           },
           totalKills: { $sum: '$matchStats.totalKills' },
-          totalDamage: { $sum: '$matchStats.totalDamage' },
-          avgDuration: { $avg: '$matchDuration' },
           maps: { $push: '$map' }
         }
       }
@@ -387,8 +376,6 @@ router.get('/tournament/:tournamentId/stats', async (req, res) => {
       totalMatches: 0,
       completedMatches: 0,
       totalKills: 0,
-      totalDamage: 0,
-      avgDuration: 0,
       maps: []
     };
 

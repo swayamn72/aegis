@@ -36,12 +36,7 @@ const teamApplicationSchema = new mongoose.Schema(
       ref: 'TryoutChat',
       default: null,
     },
-    // Captain's notes during tryout
-    captainNotes: {
-      type: String,
-      trim: true,
-      default: '',
-    },
+
     // Rejection reason if rejected
     rejectionReason: {
       type: String,

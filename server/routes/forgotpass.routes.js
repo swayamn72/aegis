@@ -30,7 +30,7 @@ router.post("/forgot-password", async (req, res) => {
     await user.save();
 
     
-    const resetLink = `http://localhost:5174/reset-password/${token}`;
+    const resetLink = `http://localhost:5173/reset-password/${token}`;
 
     // Setup Nodemailer transporter
     const transporter = nodemailer.createTransport({

@@ -4,13 +4,11 @@ dotenv.config();
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
-
 import cookieParser from 'cookie-parser';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-
 
 // Import Routes
 import playerRoutes from './routes/player.routes.js';
@@ -44,10 +42,6 @@ import './models/organization.model.js';
 import './models/teamApplication.model.js';
 import './models/tryoutChat.model.js'
 
-
-// Load environment variables
-
-
 // Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -77,7 +71,6 @@ app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
-
 
 app.use((req, res, next) => {
   console.log(`Incoming request: ${req.method} ${req.url}`);
@@ -119,17 +112,15 @@ app.use("/api",forgotPassRoutes);
 
 const server = createServer(app);
 
-
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5174',
+    origin: 'http://localhost:5173',
     credentials: true,
   },
 });
 
 // Make io globally available
 global.io = io;
-
 
 io.on('connection', (socket) => {
   console.log('New Client Joined', socket.id);
@@ -160,27 +151,6 @@ io.on('connection', (socket) => {
       io.to(receiverId).emit('receiveMessage', msgToEmit);
     } catch (error) {
       console.error('Error saving message:', error);
-    }
-  });
-
-  // Tryout chat message handler
-  socket.on('tryoutMessage', async ({ chatId, message }) => {
-    try {
-      // Import TryoutChat model
-      const TryoutChat = (await import('./models/tryoutChat.model.js')).default;
-      
-      const chat = await TryoutChat.findById(chatId);
-      if (chat) {
-        // Emit to all participants
-        chat.participants.forEach(participantId => {
-          io.to(participantId.toString()).emit('tryoutMessage', {
-            chatId,
-            message,
-          });
-        });
-      }
-    } catch (error) {
-      console.error('Error handling tryout message:', error);
     }
   });
 

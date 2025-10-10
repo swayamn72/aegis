@@ -53,7 +53,6 @@ export const sendEmail = async (to, subject, html) => {
     return result;
   } catch (error) {
     console.error('❌ Error sending email:', error.message);
-    // Don't throw - just log and return null so the main operation continues
     return null;
   }
 };
