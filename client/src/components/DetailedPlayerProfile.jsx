@@ -12,7 +12,7 @@ import {
 const DetailedPlayerProfile = () => {
   const { playerId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [playerData, setPlayerData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -134,6 +134,7 @@ const DetailedPlayerProfile = () => {
       });
       if (response.ok) {
         setConnectionStatus('pending');
+        await refreshUser();
         alert('Connection request sent!');
       }
     } catch (error) {

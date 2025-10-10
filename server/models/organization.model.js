@@ -40,6 +40,11 @@ const organizationSchema = new mongoose.Schema(
       lowercase: true,
       index: true,
     },
+    googleId: {
+      type: String,
+      trim: true,
+      index: true,
+    },
     password: {
       type: String,
       required: true,

@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'; // Imported useRef
 import { useNavigate } from 'react-router-dom';
-// NOTE: useAuth is assumed to be defined in the runtime environment
-// import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-toastify';
 import {
-  Trophy, Users, Target, TrendingUp, Calendar, MessageSquare, 
-  Sparkles, Zap, Award, Activity, Gamepad2, ArrowRight, X
+  Trophy, Users, Target, TrendingUp, Calendar, MessageSquare,
+  Sparkles, Zap, Award, Activity, Gamepad2, ArrowRight, X, Coins
 } from 'lucide-react';
 
 // Mocked Auth Context for standalone display (KEPT FOR CANVAS RUNNABILITY)
@@ -53,7 +52,7 @@ const mockData = {
 const LoggedInHomepage = () => {
   // Original function definitions and state hooks kept as is
   const navigate = (path) => console.log('Navigating to:', path);
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState('feed');
   const [recentMatches, setRecentMatches] = useState([]);
   const [upcomingTournaments, setUpcomingTournaments] = useState([]);
@@ -63,6 +62,7 @@ const LoggedInHomepage = () => {
   const [activityFeed, setActivityFeed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showProfileAlert, setShowProfileAlert] = useState(false);
+  const [checkInLoading, setCheckInLoading] = useState(false);
 
   // FIX: Ref to ensure the initial data loading runs exactly once.
   const dataLoaded = useRef(false);
@@ -120,39 +120,77 @@ const LoggedInHomepage = () => {
     // while checking for 'user' existence inside the function.
   }, [user]);
 
+  const handleDailyCheckIn = async () => {
+    if (checkInLoading) return;
+
+    try {
+      setCheckInLoading(true);
+      const response = await fetch('/api/reward/daily-checkin', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`Daily check-in successful! You earned ${data.reward} coins!`, {
+          position: "top-center",
+          autoClose: 5000,
+          theme: "dark",
+        });
+        await refreshUser(); // Refresh user data to update navbar
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Failed to check in', {
+          position: "top-center",
+          autoClose: 3000,
+          theme: "dark",
+        });
+      }
+    } catch (error) {
+      console.error('Daily check-in error:', error);
+      toast.error('Network error. Please try again.', {
+        position: "top-center",
+        autoClose: 3000,
+        theme: "dark",
+      });
+    } finally {
+      setCheckInLoading(false);
+    }
+  };
+
   const quickStats = [
-    { 
-      label: 'Aegis Rating', 
-      value: user?.aegisRating || 1200, 
-      change: '+45', 
-      icon: TrendingUp, 
+    {
+      label: 'Aegis Rating',
+      value: user?.aegisRating || 1200,
+      change: '+45',
+      icon: TrendingUp,
       bgColor: 'bg-[#FF4500]/10',
       textColor: 'text-[#FF4500]', // Primary Accent
       ringColor: 'ring-[#FF4500]',
     },
-    { 
-      label: 'Tournaments', 
-      value: user?.statistics?.tournamentsPlayed || 0, 
-      change: '+3', 
-      icon: Trophy, 
+    {
+      label: 'Tournaments',
+      value: user?.statistics?.tournamentsPlayed || 0,
+      change: '+3',
+      icon: Trophy,
       bgColor: 'bg-cyan-500/10',
       textColor: 'text-cyan-400', // Secondary Accent 1
       ringColor: 'ring-cyan-400',
     },
-    { 
-      label: 'Connections', 
-      value: connections.length || 0, 
-      change: `+${connections.filter(c => c.isRecent).length || 0}`, 
-      icon: Users, 
+    {
+      label: 'Connections',
+      value: connections.length || 0,
+      change: `+${connections.filter(c => c.isRecent).length || 0}`,
+      icon: Users,
       bgColor: 'bg-purple-500/10',
       textColor: 'text-purple-400', // Secondary Accent 2
       ringColor: 'ring-purple-400',
     },
-    { 
-      label: 'Win Rate', 
-      value: `${user?.statistics?.winRate || 0}%`, 
-      change: '+2%', 
-      icon: Award, 
+    {
+      label: 'Win Rate',
+      value: `${user?.statistics?.winRate || 0}%`,
+      change: '+2%',
+      icon: Award,
       bgColor: 'bg-green-500/10',
       textColor: 'text-green-400',
       ringColor: 'ring-green-400',
@@ -256,28 +294,36 @@ const LoggedInHomepage = () => {
 
         {/* Quick Action Buttons - Neon Segmented */}
         <div className="flex flex-wrap gap-4 mb-16 p-4 rounded-xl bg-zinc-900/50 border border-zinc-800 shadow-inner shadow-black/50">
-          <button 
+          <button
+            onClick={handleDailyCheckIn}
+            disabled={checkInLoading}
+            className="flex items-center gap-2 bg-black/50 px-5 py-2.5 rounded-lg border border-green-500/50 text-green-400 hover:bg-green-500 hover:text-black transition-all font-semibold uppercase text-sm tracking-widest shadow-lg shadow-black/30 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Coins className="w-5 h-5" />
+            {checkInLoading ? 'CHECKING...' : 'DAILY CHECK-IN'}
+          </button>
+          <button
             onClick={() => navigate('/players')}
             className="flex items-center gap-2 bg-black/50 px-5 py-2.5 rounded-lg border border-[#FF4500]/50 text-[#FF4500] hover:bg-[#FF4500] hover:text-black transition-all font-semibold uppercase text-sm tracking-widest shadow-lg shadow-black/30"
           >
             <Users className="w-5 h-5" />
             FIND TEAMS
           </button>
-          <button 
+          <button
             onClick={() => navigate('/players')}
             className="flex items-center gap-2 bg-black/50 px-5 py-2.5 rounded-lg border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500 hover:text-black transition-all font-semibold uppercase text-sm tracking-widest shadow-lg shadow-black/30"
           >
             <Target className="w-5 h-5" />
             SCOUT TALENT
           </button>
-          <button 
+          <button
             onClick={() => navigate('/tournaments')}
             className="flex items-center gap-2 bg-black/50 px-5 py-2.5 rounded-lg border border-purple-500/50 text-purple-400 hover:bg-purple-500 hover:text-white transition-all font-semibold uppercase text-sm tracking-widest shadow-lg shadow-black/30"
           >
             <Trophy className="w-5 h-5" />
             COMPETE NOW
           </button>
-          <button 
+          <button
             onClick={() => navigate('/chat')}
             className="flex items-center gap-2 bg-black/50 px-5 py-2.5 rounded-lg border border-zinc-600/50 text-zinc-400 hover:bg-zinc-700/80 transition-all font-semibold uppercase text-sm tracking-widest shadow-lg shadow-black/30"
           >

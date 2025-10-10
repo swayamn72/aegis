@@ -34,6 +34,14 @@ router.post("/send/:playerId", auth, async (req, res) => {
     sender.sentRequests.push(receiverId);
     receiver.receivedRequests.push(senderId);
 
+    // Reward sender with 1 coin
+    sender.coins += 1;
+    sender.rewardsHistory.push({
+      type: "other",
+      amount: 1,
+      description: "Reward for sending connection request",
+    });
+
     await sender.save();
     await receiver.save();
 

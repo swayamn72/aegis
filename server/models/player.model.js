@@ -169,6 +169,37 @@ const playerSchema = new mongoose.Schema(
       enum: ['orange', 'blue', 'purple', 'red', 'green', 'pink'],
       default: 'orange',
     },
+      coins: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    lastCheckIn: {
+      type: Date,
+      default: null,
+    },
+    checkInStreak: {
+      type: Number,
+      default: 0,
+    },
+    totalCheckIns: {
+      type: Number,
+      default: 0,
+    },
+    rewardsHistory: [
+      {
+        type: {
+          type: String,
+          enum: ["daily_checkin", "tournament_join", "streak_bonus", "other"],
+        },
+        amount: Number,
+        date: {
+          type: Date,
+          default: Date.now,
+        },
+        description: String,
+      },
+    ],
     posts: [
       {
         type: mongoose.Schema.Types.ObjectId,

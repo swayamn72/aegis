@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }) => {
       // Regular user authentication check
       try {
         // First check player auth
-        let response = await fetch('http://localhost:5000/api/players/me', {
+        let response = await fetch('/api/players/me', {
           credentials: 'include',
         });
         if (response.ok) {
@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }) => {
         }
 
         // If player auth fails, check organization auth
-        response = await fetch('http://localhost:5000/api/organizations/profile', {
+        response = await fetch('/api/organizations/profile', {
           credentials: 'include',
         });
         if (response.ok) {
@@ -94,7 +94,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
 
       // First try player login
-      let response = await fetch('http://localhost:5000/api/players/login', {
+      let response = await fetch('/api/players/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -107,7 +107,7 @@ export const AuthProvider = ({ children }) => {
 
       if (!response.ok) {
         // If player login fails, try organization login
-        response = await fetch('http://localhost:5000/api/organizations/login', {
+        response = await fetch('/api/organizations/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -125,7 +125,7 @@ export const AuthProvider = ({ children }) => {
           // After login, re-fetch user data to ensure fresh state
           const checkAuth = async () => {
             try {
-              const response = await fetch('http://localhost:5000/api/players/me', {
+              const response = await fetch('/api/players/me', {
                 credentials: 'include',
               });
               if (response.ok) {
@@ -186,8 +186,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const logoutUrl =
         userType === 'organization'
-          ? 'http://localhost:5000/api/organizations/logout'
-          : 'http://localhost:5000/api/players/logout';
+          ? '/api/organizations/logout'
+          : '/api/players/logout';
 
       await fetch(logoutUrl, {
         method: 'POST',
@@ -204,7 +204,7 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async (profileData) => {
     try {
-      const response = await fetch('http://localhost:5000/api/players/update-profile', {
+      const response = await fetch('/api/players/update-profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -224,6 +224,20 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Profile update failed:', error);
       return { success: false, message: 'Network error' };
+    }
+  };
+
+  const refreshUser = async () => {
+    try {
+      const response = await fetch('/api/players/me', {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error);
     }
   };
 
@@ -248,6 +262,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     updateProfile,
+    refreshUser,
     isProfileComplete,
   };
 

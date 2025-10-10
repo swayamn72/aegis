@@ -285,6 +285,15 @@ router.post("/upload-pfp", upload.single('profilePicture'), async (req, res) => 
 });
 
 
+
+
+
+
+
+
+
+
+
 // // Creation of Posts
 // router.post("/create-post", async (req, res) => {
 //   try {

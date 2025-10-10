@@ -31,6 +31,9 @@ import supportRoutes from './routes/support.routes.js';
 import teamApplicationRoutes from './routes/teamApplication.routes.js';
 import tryoutChatRoutes from './routes/tryoutChat.routes.js';
 import forgotPassRoutes from "./routes/forgotpass.routes.js";
+import rewardRoutes from "./routes/reward.routes.js";
+import googleRoutes from "./routes/google.routes.js";
+
 
 // Import Models
 import './models/player.model.js';
@@ -95,6 +98,7 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/feed', feedRoutes);
 app.use('/api/connections', connectionRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/reward',rewardRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/organizations', organizationRoutes);
@@ -109,6 +113,7 @@ app.use('/api/support', supportRoutes);
 app.use('/api/team-applications', teamApplicationRoutes);
 app.use('/api/tryout-chats', tryoutChatRoutes);
 app.use("/api",forgotPassRoutes);
+app.use('/api/auth', googleRoutes);
 
 const server = createServer(app);
 
