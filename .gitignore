@@ -157,3 +157,4 @@ build/
 
 
 echo "serviceAccountKey.json" >> .gitignoreserviceAccountKey.json
+serviceAccountKey.json
