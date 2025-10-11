@@ -156,4 +156,4 @@ dist/
 build/
 
 
-echo "serviceAccountKey.json" >> .gitignore
+echo "serviceAccountKey.json" >> .gitignoreserviceAccountKey.json
