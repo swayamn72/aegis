@@ -154,3 +154,6 @@ $RECYCLE.BIN/
 # Build outputs
 dist/
 build/
+
+
+echo "serviceAccountKey.json" >> .gitignore
