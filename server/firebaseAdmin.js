@@ -1,16 +1,15 @@
 import admin from 'firebase-admin';
-import { readFileSync } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+dotenv.config(); // Load environment variables from .env
 
-// Initialize Firebase Admin SDK
-const serviceAccount = JSON.parse(readFileSync(path.join(__dirname, '../serviceAccountKey.json'), 'utf8'));
-
+// Initialize Firebase Admin SDK using env variables
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+  credential: admin.credential.cert({
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+  }),
 });
 
 export default admin;
