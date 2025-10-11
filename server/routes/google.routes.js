@@ -1,12 +1,10 @@
 import express from 'express';
-import { OAuth2Client } from 'google-auth-library';
+import admin from '../firebaseAdmin.js'; // Use Firebase Admin for verification
 import Player from '../models/player.model.js';
 import Organization from '../models/organization.model.js';
 import jwt from 'jsonwebtoken';
 
 const router = express.Router();
-
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Google signup for players and organizations
 router.post('/google-signup', async (req, res) => {
@@ -17,20 +15,17 @@ router.post('/google-signup', async (req, res) => {
       return res.status(400).json({ message: 'ID token is required' });
     }
 
-    if (!role || !['player', 'organization'].includes(role)) {
-      return res.status(400).json({ message: 'Role must be player or organization' });
+    if (!role || !['Player', 'Organization'].includes(role)) {
+      return res.status(400).json({ message: 'Role must be Player or Organization' });
     }
 
-    // Verify the token with Google
-    const ticket = await client.verifyIdToken({
-      idToken: id_token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
+    const lowerRole = role.toLowerCase();
 
-    const payload = ticket.getPayload();
-    const { sub: googleId, email, name, picture } = payload;
+    // Verify Firebase ID token
+    const decodedToken = await admin.auth().verifyIdToken(id_token);
+    const { email, name, picture, uid: googleId } = decodedToken;
 
-    if (role === 'player') {
+    if (lowerRole === 'player') {
       
       let player = await Player.findOne({ $or: [{ email }, { googleId }] });
 
@@ -54,7 +49,8 @@ router.post('/google-signup', async (req, res) => {
         email,
         googleId,
         profilePicture: picture,
-        isVerified: true, // Google accounts are pre-verified
+        password: 'google-auth', // Dummy password for Google signups
+        verified: true, // Google accounts are pre-verified
       });
 
       await player.save();
@@ -84,7 +80,7 @@ router.post('/google-signup', async (req, res) => {
           role: 'player',
         },
       });
-    } else if (role === 'organization') {
+    } else if (lowerRole === 'organization') {
       
       let organization = await Organization.findOne({ $or: [{ email }, { googleId }] });
 
@@ -129,8 +125,9 @@ router.post('/google-signup', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Google signup error:', error);
-    res.status(500).json({ message: 'Server error during Google signup' });
+    console.error('Google signup error:', error.message);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ message: 'Server error during Google signup', details: error.message });
   }
 });
 
@@ -143,55 +140,81 @@ router.post('/google-login', async (req, res) => {
       return res.status(400).json({ message: 'ID token is required' });
     }
 
-    // Verify the token with Google
-    const ticket = await client.verifyIdToken({
-      idToken: id_token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
+    // Verify Firebase ID token
+    const decodedToken = await admin.auth().verifyIdToken(id_token);
+    const { email, uid: googleId } = decodedToken;
 
-    const payload = ticket.getPayload();
-    const { sub: googleId, email } = payload;
+    // Check for player first
+    let user = await Player.findOne({ $or: [{ googleId }, { email }] });
 
-   
-    const player = await Player.findOne({ $or: [{ googleId }, { email }] });
+    if (user) {
+      // Player login
+      if (!user.googleId) {
+        user.googleId = googleId;
+        await user.save();
+      }
 
-    if (!player) {
-      return res.status(404).json({ message: 'No account found with this Google account. Please sign up first.' });
+      const token = jwt.sign(
+        { id: user._id, role: 'player' },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      return res.json({
+        message: 'Login successful',
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          profilePicture: user.profilePicture,
+          role: 'player',
+        },
+      });
     }
 
-  
-    if (!player.googleId) {
-      player.googleId = googleId;
-      await player.save();
+    // Check for organization
+    const organization = await Organization.findOne({ $or: [{ googleId }, { email }] });
+
+    if (organization) {
+      const token = jwt.sign(
+        { id: organization._id, role: 'organization' },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      return res.json({
+        message: 'Login successful',
+        user: {
+          id: organization._id,
+          orgName: organization.orgName,
+          email: organization.email,
+          logo: organization.logo,
+          role: 'organization',
+          status: organization.approvalStatus,
+        },
+      });
     }
 
-  
-    const token = jwt.sign(
-      { id: player._id, role: 'player' },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    res.json({
-      message: 'Login successful',
-      user: {
-        id: player._id,
-        username: player.username,
-        email: player.email,
-        profilePicture: player.profilePicture,
-        role: 'player',
-      },
-    });
+    return res.status(404).json({ message: 'No account found with this Google account. Please sign up first.' });
   } catch (error) {
     console.error('Google login error:', error);
+    if (error.code === 'auth/invalid-id-token') {
+      return res.status(401).json({ message: 'Invalid ID token' });
+    }
     res.status(500).json({ message: 'Server error during Google login' });
   }
 });

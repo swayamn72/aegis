@@ -3,7 +3,8 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Gamepad2, Shield, CheckCircle, AlertCircle, ArrowRight, Building2, Phone, MapPin, Calendar } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { useGoogleLogin } from '@react-oauth/google';
+import { signInWithPopup } from 'firebase/auth';
+import { auth, provider } from '../firebaseConfig';
 
 const AegisSignup = () => {
   const navigate = useNavigate();
@@ -191,43 +192,37 @@ const AegisSignup = () => {
     }
   };
 
-  const googleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      const token = tokenResponse.id_token || tokenResponse.credential;
-      if (!token) {
-        toast.error('Google authentication failed. Please try again.');
-        return;
+  const handleGoogleSignup = async () => {
+    try {
+      setIsLoading(true);
+      const result = await signInWithPopup(auth, provider);
+      const idToken = await result.user.getIdToken();
+
+      // Send the id_token to backend
+      const endpoint = '/api/auth/google-signup';
+      let successMessage = 'Account created successfully with Google! Redirecting to login...';
+
+      if (formData.role === 'organization') {
+        successMessage = 'Organization account created with Google! Pending approval. Redirecting to login...';
       }
-      try {
-        setIsLoading(true);
-        const endpoint = '/api/auth/google-signup';
-        let successMessage = 'Account created successfully with Google! Redirecting to login...';
 
-        if (formData.role === 'organization') {
-          successMessage = 'Organization account created with Google! Pending approval. Redirecting to login...';
-        }
+      const response = await axios.post(endpoint, {
+        id_token: idToken,
+        role: formData.role.charAt(0).toUpperCase() + formData.role.slice(1),
+      }, {
+        withCredentials: true,
+      });
 
-        const response = await axios.post(endpoint, {
-          id_token: token,
-          role: formData.role,
-        }, {
-          withCredentials: true,
-        });
-
-        console.log('Google signup response:', response.data);
-        toast.success(successMessage);
-        setTimeout(() => navigate('/login'), 2000);
-      } catch (error) {
-        console.error('Google signup error:', error.response?.data || error.message);
-        toast.error(`Google signup failed: ${error.response?.data?.message || 'Server error'}`);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    onError: () => {
-      toast.error('Google signup failed');
-    },
-  });
+      console.log('Google signup response:', response.data);
+      toast.success(successMessage);
+      setTimeout(() => navigate('/login'), 2000);
+    } catch (error) {
+      console.error('Google signup error:', error);
+      toast.error('Google signup failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSocialLogin = (provider) => {
     if (provider === 'Google') {
@@ -235,7 +230,7 @@ const AegisSignup = () => {
         toast.error('Please select your role (Player or Organization) before signing up with Google.');
         return;
       }
-      googleLogin();
+      handleGoogleSignup();
     } else {
       alert(`${provider} login clicked`);
     }

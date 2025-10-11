@@ -3,9 +3,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Player from "../models/player.model.js";
 import Post from "../models/post.model.js";
-import multer from 'multer';
-import { v2 as cloudinary } from 'cloudinary';
-
+import multer from "multer";
+import { v2 as cloudinary } from "cloudinary";
 const router = express.Router();
 
 // Configure Multer for memory storage
@@ -14,15 +13,14 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    if (file.mimetype.startsWith("image/")) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed'), false);
+      cb(new Error("Only image files are allowed"), false);
     }
   },
 });
-
-// --- Signup Route ---
+// --- Signup Route (Email/Password) ---
 router.post("/signup", async (req, res) => {
   try {
     const { email, password, username } = req.body;
@@ -31,22 +29,18 @@ router.post("/signup", async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // check if email already exists
     const existingEmail = await Player.findOne({ email });
     if (existingEmail) {
       return res.status(400).json({ message: "Email already in use" });
     }
 
-    // check if username already exists
     const existingUsername = await Player.findOne({ username });
     if (existingUsername) {
       return res.status(400).json({ message: "Username already taken" });
     }
 
-    // hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // create new player
     const newPlayer = new Player({
       email,
       password: hashedPassword,
@@ -55,12 +49,10 @@ router.post("/signup", async (req, res) => {
 
     await newPlayer.save();
 
-    // generate token
     const token = jwt.sign({ id: newPlayer._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 
-    // send cookie
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -69,7 +61,11 @@ router.post("/signup", async (req, res) => {
     res.status(201).json({
       message: "Signup successful",
       redirect: "/complete-profile",
-      player: { id: newPlayer._id, email: newPlayer.email, username: newPlayer.username },
+      player: {
+        id: newPlayer._id,
+        email: newPlayer.email,
+        username: newPlayer.username,
+      },
     });
   } catch (error) {
     console.error("Signup error:", error);
@@ -77,37 +73,42 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-// --- Login Route ---
+
+// --- Login Route (Email/Password) ---
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+      return res
+        .status(400)
+        .json({ message: "Email and password are required" });
     }
 
-    // find user by email
     const user = await Player.findOne({ email });
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // compare password
+    if (!user.password) {
+      return res
+        .status(400)
+        .json({ message: "This account uses Google login only" });
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // generate token
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 
-    // send cookie
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.status(200).json({
@@ -120,39 +121,39 @@ router.post("/login", async (req, res) => {
   }
 });
 
+// --- Logout Route (Same for all users) ---
+router.post("/logout", (req, res) => {
+  res.clearCookie("token");
+  res.status(200).json({ message: "Logout successful" });
+});
+
 // --- Get Current User Route ---
 router.get("/me", async (req, res) => {
   try {
-    console.log("GET /me - Cookies received:", req.cookies);
     const token = req.cookies.token;
     if (!token) {
-      console.log("GET /me - No token provided");
       return res.status(401).json({ message: "No token provided" });
     }
 
-    console.log("GET /me - Token found, verifying...");
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("GET /me - Token decoded:", decoded);
+    const userId = decoded.id;
 
-    const user = await Player.findById(decoded.id).select("-password").populate('team').populate('previousTeams');
-    console.log("GET /me - User found:", user ? user.username : "null");
-
+    const user = await Player.findById(userId).select("-password");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
     res.status(200).json(user);
   } catch (error) {
-    console.error("Get user error:", error);
-    res.status(401).json({ message: "Invalid token" });
+    console.error("Get current user error:", error);
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ message: "Invalid token" });
+    }
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-// --- Logout Route ---
-router.post("/logout", (req, res) => {
-  res.clearCookie("token");
-  res.status(200).json({ message: "Logout successful" });
-});
+
 
 // --- Get All Players Route ---
 router.get("/all", async (req, res) => {

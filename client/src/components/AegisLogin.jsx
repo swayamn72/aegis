@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, Shield, CheckCircle, ArrowRight, UserCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useGoogleLogin } from '@react-oauth/google';
+import { signInWithPopup } from 'firebase/auth';
+import { auth, provider } from '../firebaseConfig';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import AegisOrgPendingApproval from './AegisOrgPendingApproval';
@@ -137,36 +138,34 @@ const AegisLogin = () => {
     alert('Forgot password clicked');
   };
 
-  const googleLogin = useGoogleLogin({
-  onSuccess: async (tokenResponse) => {
-    const token = tokenResponse.id_token || tokenResponse.credential;
-    if (!token) {
-      toast.error('Google authentication failed. Please try again.');
-      return;
-    }
+  const handleGoogleLogin = async () => {
     try {
       setIsLoading(true);
-      // Send the JWT credential as `id_token` to backend
+      const result = await signInWithPopup(auth, provider);
+      const idToken = await result.user.getIdToken();
+
+      // Send the id_token to backend
       const response = await axios.post(
         '/api/auth/google-login',
-        { id_token: token }, // <- token here
+        { id_token: idToken },
         { withCredentials: true }
       );
 
       console.log('Google login response:', response.data);
+
+      const user = response.data.user;
+
       toast.success('Login successful! Redirecting...');
+
+      // Redirect to my-profile page
       setTimeout(() => navigate('/my-profile'), 2000);
     } catch (error) {
-      console.error('Google login error:', error.response?.data || error.message);
-      toast.error(`Google login failed: ${error.response?.data?.message || 'Server error'}`);
+      console.error('Google login error:', error);
+      toast.error('Google authentication failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
-  },
-  onError: () => {
-    toast.error('Google login failed');
-  },
-});
+  };
 
 
   // Show organization status screens if applicable
@@ -350,7 +349,7 @@ const AegisLogin = () => {
               </div>
 
               <button
-                onClick={() => googleLogin()}
+                onClick={handleGoogleLogin}
                 disabled={isLoading}
                 className="w-full bg-white hover:bg-gray-100 disabled:bg-gray-200 text-gray-900 font-semibold py-4 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl disabled:scale-100 disabled:shadow-none flex items-center justify-center space-x-3 group"
               >
