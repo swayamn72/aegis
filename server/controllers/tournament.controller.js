@@ -89,6 +89,98 @@ export const sendTeamInvite = async (req, res) => {
   }
 };
 
+export const addTeamToPhase = async (req, res) => {
+  try {
+    const { id: tournamentId, phase } = req.params;
+    const { teamId } = req.body;
+
+    const tournament = await Tournament.findById(tournamentId);
+    if (!tournament) {
+      return res.status(404).json({ message: 'Tournament not found' });
+    }
+
+    // Check authorization (admin or organizer)
+    if (tournament.organizer.toString() !== req.user.id.toString() && !req.user.isAdmin) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    // Find phase by name
+    const phaseIndex = tournament.phases.findIndex(p => p.name === phase);
+    if (phaseIndex === -1) {
+      return res.status(404).json({ message: 'Phase not found' });
+    }
+
+    const targetPhase = tournament.phases[phaseIndex];
+    targetPhase.teams = targetPhase.teams || [];
+
+    // Check if team already in phase
+    if (targetPhase.teams.includes(teamId)) {
+      return res.status(400).json({ message: 'Team already in this phase' });
+    }
+
+    // Add team to phase
+    targetPhase.teams.push(teamId);
+
+    // Update participatingTeam's currentStage
+    const participatingTeamIndex = tournament.participatingTeams.findIndex(pt => pt.team.toString() === teamId);
+    if (participatingTeamIndex !== -1) {
+      tournament.participatingTeams[participatingTeamIndex].currentStage = phase;
+    }
+
+    await tournament.save();
+
+    res.json({ tournament });
+  } catch (error) {
+    console.error('Error adding team to phase:', error);
+    res.status(500).json({ message: 'Failed to add team to phase' });
+  }
+};
+
+export const removeTeamFromPhase = async (req, res) => {
+  try {
+    const { id: tournamentId, phase, teamId } = req.params;
+
+    const tournament = await Tournament.findById(tournamentId);
+    if (!tournament) {
+      return res.status(404).json({ message: 'Tournament not found' });
+    }
+
+    // Check authorization
+    if (tournament.organizer.toString() !== req.user.id.toString() && !req.user.isAdmin) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    // Find phase
+    const phaseIndex = tournament.phases.findIndex(p => p.name === phase);
+    if (phaseIndex === -1) {
+      return res.status(404).json({ message: 'Phase not found' });
+    }
+
+    const targetPhase = tournament.phases[phaseIndex];
+    targetPhase.teams = targetPhase.teams || [];
+
+    // Remove team from phase
+    const teamIndexInPhase = targetPhase.teams.findIndex(t => t.toString() === teamId);
+    if (teamIndexInPhase === -1) {
+      return res.status(400).json({ message: 'Team not in this phase' });
+    }
+    targetPhase.teams.splice(teamIndexInPhase, 1);
+
+    // Update participatingTeam's currentStage to empty
+    const participatingTeamIndex = tournament.participatingTeams.findIndex(pt => pt.team.toString() === teamId);
+    if (participatingTeamIndex !== -1) {
+      tournament.participatingTeams[participatingTeamIndex].currentStage = '';
+    }
+
+    await tournament.save();
+
+    res.json({ tournament });
+  } catch (error) {
+    console.error('Error removing team from phase:', error);
+    res.status(500).json({ message: 'Failed to remove team from phase' });
+  }
+};
+
 // Accept invite
 export const acceptTeamInvite = async (req, res) => {
   try {

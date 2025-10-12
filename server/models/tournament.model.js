@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import slugify from 'slugify'; 
+import slugify from 'slugify';
 
 const tournamentSchema = new mongoose.Schema(
   {
@@ -33,19 +33,19 @@ const tournamentSchema = new mongoose.Schema(
     },
 
     // --- Tournament Classification ---
-    tier: { 
+    tier: {
       type: String,
       enum: ['S', 'A', 'B', 'C', 'Community'],
-      default: 'Community', 
+      default: 'Community',
       index: true,
     },
-    region: { 
+    region: {
       type: String,
       enum: ['Global', 'Asia', 'India', 'South Asia', 'Europe', 'North America', 'South America', 'Oceania', 'Middle East', 'Africa'],
       default: 'India',
       index: true,
     },
-    subRegion: { 
+    subRegion: {
       type: String,
       trim: true,
     },
@@ -60,7 +60,7 @@ const tournamentSchema = new mongoose.Schema(
       },
       website: String, // URL to organizer's website
       contactEmail: String, // Organizer's contact email
-      organizationRef: { 
+      organizationRef: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Organization',
       },
@@ -164,7 +164,7 @@ const tournamentSchema = new mongoose.Schema(
     // --- Tournament Phases (e.g., Qualifiers, Group Stage, Grand Finals) ---
     phases: [
       {
-        name: String, 
+        name: String,
         type: { // Type of phase
           type: String,
           enum: ['qualifiers', 'final_stage'],
@@ -183,6 +183,10 @@ const tournamentSchema = new mongoose.Schema(
         }],
         rulesetSpecifics: String, // Any rules specific to this phase
         details: String, // e.g., "Top 8 teams advance"
+        teams: [{ // Teams directly assigned to this phase
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Team',
+        }],
         // --- Groups for this phase ---
         groups: [
           {
@@ -478,7 +482,7 @@ const tournamentSchema = new mongoose.Schema(
       },
     ],
   },
-  
+
   {
     timestamps: true, // Adds createdAt and updatedAt
     toJSON: { virtuals: true },
@@ -497,7 +501,7 @@ tournamentSchema.index({ 'organizer.name': 1 }); // Index on organizer name
 // --- Virtuals (derived properties not stored in DB) ---
 
 // Virtual for tournament duration in days
-tournamentSchema.virtual('durationDays').get(function() {
+tournamentSchema.virtual('durationDays').get(function () {
   if (this.startDate && this.endDate) {
     const diffTime = Math.abs(this.endDate.getTime() - this.startDate.getTime());
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -506,7 +510,7 @@ tournamentSchema.virtual('durationDays').get(function() {
 });
 
 // Virtual for registration status (more robust)
-tournamentSchema.virtual('registrationDisplayStatus').get(function() {
+tournamentSchema.virtual('registrationDisplayStatus').get(function () {
   const now = new Date();
   if (this.status === null || this.status === undefined) return 'Unknown';
   if (this.status === 'cancelled') return 'Cancelled';
@@ -529,7 +533,7 @@ tournamentSchema.virtual('registrationDisplayStatus').get(function() {
 
 
 // Virtual for current competition phase
-tournamentSchema.virtual('currentCompetitionPhase').get(function() {
+tournamentSchema.virtual('currentCompetitionPhase').get(function () {
   if (!this.phases || this.phases.length === 0) return null;
   const now = new Date();
   const current = this.phases.find(phase => phase.startDate <= now && phase.endDate >= now);
@@ -542,7 +546,7 @@ tournamentSchema.virtual('currentCompetitionPhase').get(function() {
 });
 
 // --- Pre-save middleware to generate slug ---
-tournamentSchema.pre('save', function(next) {
+tournamentSchema.pre('save', function (next) {
   if (this.isModified('tournamentName') && this.tournamentName) {
     this.slug = slugify(this.tournamentName, { lower: true, strict: true });
   }
@@ -554,45 +558,45 @@ tournamentSchema.pre('save', function(next) {
 // --- Methods (instance methods) ---
 
 // Method to check if tournament is currently live/in-progress
-tournamentSchema.methods.isLive = function() {
+tournamentSchema.methods.isLive = function () {
   const now = new Date();
-  return (this.startDate <= now && this.endDate >= now && 
-          ['in_progress', 'qualifiers_in_progress', 'group_stage', 'playoffs', 'finals'].includes(this.status));
+  return (this.startDate <= now && this.endDate >= now &&
+    ['in_progress', 'qualifiers_in_progress', 'group_stage', 'playoffs', 'finals'].includes(this.status));
 };
 
 // Method to get a specific phase by name
-tournamentSchema.methods.getPhase = function(phaseName) {
+tournamentSchema.methods.getPhase = function (phaseName) {
   return this.phases.find(phase => phase.name === phaseName);
 };
 
 // --- Statics (static methods) ---
 
 // Static method to find tournaments by game and region
-tournamentSchema.statics.findByGameAndRegion = function(gameTitle, region, limit = 10) {
+tournamentSchema.statics.findByGameAndRegion = function (gameTitle, region, limit = 10) {
   return this.find({
     gameTitle,
     region,
     visibility: 'public'
   })
-  .sort({ startDate: -1 })
-  .limit(limit)
-  .populate('participatingTeams.team', 'teamName logo') // Only participating teams now
-  .populate('winner', 'teamName logo'); // Populate winner if needed
+    .sort({ startDate: -1 })
+    .limit(limit)
+    .populate('participatingTeams.team', 'teamName logo') // Only participating teams now
+    .populate('winner', 'teamName logo'); // Populate winner if needed
 };
 
 // Static method to find upcoming tournaments
-tournamentSchema.statics.findUpcoming = function(limit = 10) {
+tournamentSchema.statics.findUpcoming = function (limit = 10) {
   const now = new Date();
   return this.find({
     startDate: { $gte: now },
     visibility: 'public'
   })
-  .sort({ startDate: 1 })
-  .limit(limit);
+    .sort({ startDate: 1 })
+    .limit(limit);
 };
 
 // Static method to find live tournaments
-tournamentSchema.statics.findLive = function(limit = 10) {
+tournamentSchema.statics.findLive = function (limit = 10) {
   const now = new Date();
   return this.find({
     startDate: { $lte: now },
@@ -600,8 +604,8 @@ tournamentSchema.statics.findLive = function(limit = 10) {
     status: { $in: ['qualifiers_in_progress', 'in_progress', 'group_stage', 'playoffs', 'finals'] },
     visibility: 'public'
   })
-  .sort({ startDate: 1 })
-  .limit(limit);
+    .sort({ startDate: 1 })
+    .limit(limit);
 };
 
 

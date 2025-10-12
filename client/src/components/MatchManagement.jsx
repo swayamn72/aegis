@@ -24,11 +24,11 @@ const MatchManagement = ({ tournament, onUpdate }) => {
   const allGroups = phases.flatMap(phase => phase.groups || []);
   const groups = newMatch.tournamentPhase
     ? allGroups.filter(group => {
-        const phaseWithGroup = phases.find(phase =>
-          phase.groups?.some(g => g.id === group.id || g.name === group.name)
-        );
-        return phaseWithGroup?.name === newMatch.tournamentPhase;
-      })
+      const phaseWithGroup = phases.find(phase =>
+        phase.groups?.some(g => g.id === group.id || g.name === group.name)
+      );
+      return phaseWithGroup?.name === newMatch.tournamentPhase;
+    })
     : [];
   const teams = tournament.participatingTeams || [];
 
@@ -186,9 +186,9 @@ const MatchManagement = ({ tournament, onUpdate }) => {
     // Create a more robust key that handles undefined teamIds
     const safeTeamId = teamId || 'unknown';
     const key = `${matchId}-${safeTeamId}-${field}`;
-    
+
     console.log(`Setting pending change: ${key} = ${value}`);
-    
+
     setPendingChanges(prev => {
       const newChanges = {
         ...prev,
@@ -197,17 +197,17 @@ const MatchManagement = ({ tournament, onUpdate }) => {
       console.log('Updated pending changes:', newChanges);
       return newChanges;
     });
-    
+
     setHasUnsavedChanges(true);
   };
 
   const handleSave = async () => {
     if (saving) return; // Prevent multiple concurrent saves
-    
+
     try {
       setSaving(true);
       setError(null);
-      
+
       console.log('Starting save process with pending changes:', pendingChanges);
 
       // Group changes by match and team
@@ -219,16 +219,16 @@ const MatchManagement = ({ tournament, onUpdate }) => {
           console.warn('Invalid key format:', key);
           return;
         }
-        
+
         const [matchId, teamId, field] = parts;
-        
+
         if (!updatesByMatch[matchId]) {
           updatesByMatch[matchId] = {};
         }
         if (!updatesByMatch[matchId][teamId]) {
           updatesByMatch[matchId][teamId] = { kills: null, position: null };
         }
-        
+
         if (field === 'kills') {
           updatesByMatch[matchId][teamId].kills = parseInt(pendingChanges[key]) || 0;
         }
@@ -256,7 +256,7 @@ const MatchManagement = ({ tournament, onUpdate }) => {
           // Use pending changes if available, otherwise use current values
           const currentKills = team.kills?.total || 0;
           const currentPosition = team.finalPosition || null;
-          
+
           const kills = teamUpdates?.kills !== null && teamUpdates?.kills !== undefined ? teamUpdates.kills : currentKills;
           const position = teamUpdates?.position !== null && teamUpdates?.position !== undefined ? teamUpdates.position : currentPosition;
 
@@ -301,7 +301,7 @@ const MatchManagement = ({ tournament, onUpdate }) => {
 
       // Wait for all updates to complete
       const results = await Promise.all(updatePromises);
-      
+
       // Update local state with all successful updates
       const updatedMatches = [...matches];
       results.forEach(result => {
@@ -312,13 +312,13 @@ const MatchManagement = ({ tournament, onUpdate }) => {
           }
         }
       });
-      
+
       setMatches(updatedMatches);
 
       // Clear pending changes only after successful save
       setPendingChanges({});
       setHasUnsavedChanges(false);
-      
+
       console.log('All changes saved successfully');
     } catch (err) {
       setError(`Error saving changes: ${err.message}`);
@@ -455,11 +455,10 @@ const MatchManagement = ({ tournament, onUpdate }) => {
                 <button
                   key={group.id}
                   onClick={() => handleGroupToggle(group.id)}
-                  className={`p-2 rounded text-sm transition-colors ${
-                    isSelected
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
-                  }`}
+                  className={`p-2 rounded text-sm transition-colors ${isSelected
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+                    }`}
                 >
                   {group.name}
                 </button>
@@ -520,12 +519,11 @@ const MatchManagement = ({ tournament, onUpdate }) => {
                 <p className="text-zinc-400 text-sm">{match.map} • {new Date(match.scheduledStartTime).toLocaleString()}</p>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  match.status === 'scheduled' ? 'bg-blue-500/20 text-blue-400' :
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${match.status === 'scheduled' ? 'bg-blue-500/20 text-blue-400' :
                   match.status === 'in_progress' ? 'bg-green-500/20 text-green-400' :
-                  match.status === 'completed' ? 'bg-gray-500/20 text-gray-400' :
-                  'bg-red-500/20 text-red-400'
-                }`}>
+                    match.status === 'completed' ? 'bg-gray-500/20 text-gray-400' :
+                      'bg-red-500/20 text-red-400'
+                  }`}>
                   {match.status}
                 </span>
                 <button
@@ -545,11 +543,11 @@ const MatchManagement = ({ tournament, onUpdate }) => {
                 const teamData = team.team || team;
                 const teamId = teamData._id || teamData.id;
                 const teamName = teamData.teamName || teamData.name || 'Unknown Team';
-                
+
                 // Get current values, checking pending changes first
                 const killsKey = `${match._id}-${teamId}-kills`;
                 const positionKey = `${match._id}-${teamId}-position`;
-                
+
                 const currentKills = pendingChanges[killsKey] !== undefined ? pendingChanges[killsKey] : (team.kills?.total || 0);
                 const currentPosition = pendingChanges[positionKey] !== undefined ? pendingChanges[positionKey] : (team.finalPosition || '');
                 const currentPoints = team.points?.totalPoints || 0;
@@ -625,19 +623,17 @@ const MatchManagement = ({ tournament, onUpdate }) => {
                         const points = team.points?.totalPoints || 0;
 
                         return (
-                          <div key={teamData._id || teamData.id} className={`flex items-center gap-4 p-2 rounded ${
-                            position === 1 ? 'bg-yellow-500/20 border border-yellow-500/30' :
+                          <div key={teamData._id || teamData.id} className={`flex items-center gap-4 p-2 rounded ${position === 1 ? 'bg-yellow-500/20 border border-yellow-500/30' :
                             position === 2 ? 'bg-gray-400/20 border border-gray-400/30' :
-                            position === 3 ? 'bg-orange-500/20 border border-orange-500/30' :
-                            'bg-zinc-600/30'
-                          }`}>
+                              position === 3 ? 'bg-orange-500/20 border border-orange-500/30' :
+                                'bg-zinc-600/30'
+                            }`}>
                             <div className="w-8 text-center">
-                              <span className={`font-bold ${
-                                position === 1 ? 'text-yellow-400' :
+                              <span className={`font-bold ${position === 1 ? 'text-yellow-400' :
                                 position === 2 ? 'text-gray-300' :
-                                position === 3 ? 'text-orange-400' :
-                                'text-zinc-400'
-                              }`}>
+                                  position === 3 ? 'text-orange-400' :
+                                    'text-zinc-400'
+                                }`}>
                                 #{position}
                               </span>
                             </div>

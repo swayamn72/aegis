@@ -301,6 +301,16 @@ router.post('/register/:tournamentId', verifyTeamCaptain, async (req, res) => {
       totalTournamentKills: 0
     });
 
+    // Add to first phase
+    if (tournament.phases && tournament.phases.length > 0) {
+      const firstPhase = tournament.phases[0];
+      firstPhase.teams = firstPhase.teams || [];
+      firstPhase.teams.push(req.team._id);
+      // Update currentStage
+      tournament.participatingTeams[tournament.participatingTeams.length - 1].currentStage = firstPhase.name;
+    }
+
+
     await tournament.save();
 
     // Send registration confirmation emails to all team players

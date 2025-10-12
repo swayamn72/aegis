@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Users, Plus, X, Save, Shuffle, AlertCircle } from 'lucide-react';
 
 const TeamGrouping = ({ tournament, onUpdate }) => {
-  const [groups, setGroups] = useState([]);
-  const [newGroupName, setNewGroupName] = useState('');
-  const [selectedPhase, setSelectedPhase] = useState('');
+  const [phaseGroups, setPhaseGroups] = useState({});
+  const [teamsPerGroup, setTeamsPerGroup] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -12,61 +11,122 @@ const TeamGrouping = ({ tournament, onUpdate }) => {
   // Get teams from participatingTeams array
   const participatingTeams = tournament.participatingTeams || [];
 
-  // Extract team objects properly
-  const getTeams = () => {
-    return participatingTeams.map((team, index) => {
-      // Handle both direct team objects and nested team objects
-      const teamData = team.team || team;
-
-      // Debug logging to understand the team structure
-      console.log('Team data:', teamData);
-
-      return {
-        _id: teamData._id || team._id || `team_${index}`,
-        teamName: teamData.teamName || teamData.name || teamData.team_name || 'Unknown Team',
-        logo: teamData.logo || teamData.team_logo || null
-      };
-    });
+  const getPhaseTeams = (phaseName) => {
+    // Use participatingTeams with matching currentStage (always populated with teamName)
+    return participatingTeams
+      .filter(pt => pt.currentStage === phaseName)
+      .map(pt => {
+        const teamData = pt.team || pt;
+        return {
+          _id: teamData._id,
+          teamName: teamData.teamName || teamData.name || 'Unknown Team',
+          logo: teamData.logo || null
+        };
+      });
   };
 
-  const teams = getTeams();
-
-  // Load groups from the selected phase when component mounts or phase changes
+  // Load groups and initialize teamsPerGroup for all phases
   useEffect(() => {
-    if (selectedPhase) {
-      const phase = tournament.phases?.find(p => p.name === selectedPhase);
-      if (phase && phase.groups) {
-        setGroups(phase.groups);
-      } else {
-        setGroups([]);
-      }
-    } else {
-      // If no phase selected, load from tournament-level groups for backward compatibility
-      setGroups(tournament.groups || []);
+    const initialTeamsPerGroup = {};
+    const initialPhaseGroups = {};
+    tournament.phases?.forEach(phase => {
+      initialTeamsPerGroup[phase.name] = 16; // default
+      initialPhaseGroups[phase.name] = phase.groups || [];
+    });
+    setTeamsPerGroup(initialTeamsPerGroup);
+    setPhaseGroups(initialPhaseGroups);
+  }, [tournament.phases]);
+
+  const updatePhaseGroups = (phaseName, updatedGroups) => {
+    setPhaseGroups(prev => ({
+      ...prev,
+      [phaseName]: updatedGroups
+    }));
+  };
+
+  const updateTeamsPerGroup = (phaseName, value) => {
+    setTeamsPerGroup(prev => ({
+      ...prev,
+      [phaseName]: parseInt(value) || 16
+    }));
+  };
+
+  const handleAllocateGroups = (phaseName) => {
+    const phaseTeams = getPhaseTeams(phaseName);
+    if (phaseTeams.length === 0) {
+      setError(`No teams available for phase: ${phaseName}`);
+      return;
     }
-  }, [selectedPhase, tournament.phases, tournament.groups]);
 
-  const handleAddGroup = () => {
-    if (!newGroupName.trim()) return;
+    const groupSize = teamsPerGroup[phaseName] || 16;
+    if (groupSize <= 0) {
+      setError('Number of teams per group must be greater than 0');
+      return;
+    }
 
-    const newGroup = {
-      id: Date.now().toString(),
-      name: newGroupName,
-      teams: []
-    };
+    const numGroups = Math.ceil(phaseTeams.length / groupSize);
+    const shuffledTeams = [...phaseTeams].sort(() => Math.random() - 0.5);
 
-    setGroups([...groups, newGroup]);
-    setNewGroupName('');
+    const newGroups = [];
+    for (let i = 0; i < numGroups; i++) {
+      const start = i * groupSize;
+      const end = start + groupSize;
+      const groupTeams = shuffledTeams.slice(start, end).map(t => t._id);
+      const groupName = `Group ${String.fromCharCode(65 + i)}`; // A, B, C...
+      newGroups.push({
+        id: `${phaseName}-group-${i}`,
+        name: groupName,
+        teams: groupTeams
+      });
+    }
+
+    updatePhaseGroups(phaseName, newGroups);
+    setError(null);
+    setSuccess(`Groups allocated for ${phaseName}`);
+    setTimeout(() => setSuccess(null), 3000);
   };
 
-  const handleRemoveGroup = (groupId) => {
-    setGroups(groups.filter(g => g.id !== groupId));
+  const handleShuffle = (phaseName) => {
+    const currentGroups = phaseGroups[phaseName] || [];
+    if (currentGroups.length === 0) {
+      setError('No groups to shuffle. Please allocate groups first.');
+      return;
+    }
+
+    const phaseTeams = getPhaseTeams(phaseName);
+    const shuffledTeams = [...phaseTeams].sort(() => Math.random() - 0.5);
+
+    // Distribute evenly to existing groups
+    const newGroups = currentGroups.map((group, i) => {
+      const start = i * (shuffledTeams.length / currentGroups.length);
+      const end = (i + 1) * (shuffledTeams.length / currentGroups.length);
+      const groupTeams = shuffledTeams.slice(Math.floor(start), Math.ceil(end)).map(t => t._id);
+      return { ...group, teams: groupTeams };
+    });
+
+    updatePhaseGroups(phaseName, newGroups);
+    setError(null);
+    setSuccess(`Groups shuffled for ${phaseName}`);
+    setTimeout(() => setSuccess(null), 3000);
   };
 
-  const handleAddTeamToGroup = (groupId, teamId) => {
+  const getAvailableTeams = (phaseName, groupId) => {
+    const phaseTeams = getPhaseTeams(phaseName);
+    const currentGroups = phaseGroups[phaseName] || [];
+    const group = currentGroups.find(g => g.id === groupId);
+    const usedTeamIds = currentGroups
+      .filter(g => g.id !== groupId)
+      .flatMap(g => g.teams);
+    return phaseTeams.filter(team => 
+      !usedTeamIds.includes(team._id) || (group && group.teams.includes(team._id))
+    );
+  };
+
+  const handleAddTeamToGroup = (phaseName, groupId, teamId) => {
     if (!teamId) return;
 
-    const updatedGroups = groups.map(group => {
+    const currentGroups = phaseGroups[phaseName] || [];
+    const updatedGroups = currentGroups.map(group => {
       if (group.id === groupId) {
         if (!group.teams.includes(teamId)) {
           return { ...group, teams: [...group.teams, teamId] };
@@ -74,99 +134,90 @@ const TeamGrouping = ({ tournament, onUpdate }) => {
       }
       return group;
     });
-    setGroups(updatedGroups);
+    updatePhaseGroups(phaseName, updatedGroups);
   };
 
-  const handleRemoveTeamFromGroup = (groupId, teamId) => {
-    const updatedGroups = groups.map(group => {
+  const handleRemoveTeamFromGroup = (phaseName, groupId, teamId) => {
+    const currentGroups = phaseGroups[phaseName] || [];
+    const updatedGroups = currentGroups.map(group => {
       if (group.id === groupId) {
         return { ...group, teams: group.teams.filter(t => t !== teamId) };
       }
       return group;
     });
-    setGroups(updatedGroups);
+    updatePhaseGroups(phaseName, updatedGroups);
   };
 
-  const handleRandomizeGroups = () => {
-    if (teams.length === 0) return;
-
-    const shuffledTeams = [...teams].sort(() => Math.random() - 0.5);
-    const teamsPerGroup = Math.ceil(shuffledTeams.length / groups.length);
-    const newGroups = groups.map((group, index) => ({
-      ...group,
-      teams: shuffledTeams.slice(index * teamsPerGroup, (index + 1) * teamsPerGroup).map(t => t._id)
-    }));
-    setGroups(newGroups);
+  const handleRemoveGroup = (phaseName, groupId) => {
+    const currentGroups = phaseGroups[phaseName] || [];
+    const updatedGroups = currentGroups.filter(g => g.id !== groupId);
+    updatePhaseGroups(phaseName, updatedGroups);
   };
 
   const handleSave = async () => {
-    if (groups.length === 0) {
-      setError('Please create at least one group before saving');
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      // Find the phase by name to get its ID
-      const phase = tournament.phases?.find(p => p.name === selectedPhase);
-      const phaseId = phase?._id || phase?.id;
+      for (const phase of tournament.phases || []) {
+        const phaseName = phase.name;
+        const groupsToSave = phaseGroups[phaseName] || [];
+        if (groupsToSave.length === 0) continue;
 
-      const response = await fetch(`http://localhost:5000/api/tournaments/${tournament._id}/groups`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          groups,
-          phaseId: phaseId || null
-        }),
-      });
+        const response = await fetch(`http://localhost:5000/api/tournaments/${tournament._id}/groups`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            groups: groupsToSave,
+            phaseId: phase._id
+          }),
+        });
 
-      if (response.ok) {
-        const updatedTournament = await response.json();
-        onUpdate(updatedTournament.tournament);
-        setError(null);
-        setSuccess('Groups saved successfully!');
-        setTimeout(() => setSuccess(null), 3000); // Clear success message after 3 seconds
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to save groups');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`Failed to save groups for ${phaseName}: ${errorData.error || 'Unknown error'}`);
+        }
       }
+
+      const updatedTournament = await fetch(`http://localhost:5000/api/tournaments/${tournament._id}`).then(res => res.json());
+      onUpdate(updatedTournament);
+      setSuccess('All groups saved successfully!');
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError('Error saving groups. Please check your connection and try again.');
+      setError(err.message || 'Error saving groups');
       console.error('Error saving groups:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const getAvailableTeams = (groupId) => {
-    const usedTeamIds = groups.flatMap(g => g.teams);
-    return teams.filter(team => !usedTeamIds.includes(team._id) || groups.find(g => g.id === groupId)?.teams.includes(team._id));
-  };
+  if (!tournament.phases || tournament.phases.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <Users className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
+        <p className="text-zinc-400">No phases configured. Create phases first to manage groups.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-xl font-semibold text-white">Team Grouping</h3>
-        <div className="flex gap-2">
-          <button
-            onClick={handleRandomizeGroups}
-            className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
-          >
-            <Shuffle className="w-4 h-4 mr-2" />
-            Randomize
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            Save Groups
-          </button>
-        </div>
+        <button
+          onClick={handleSave}
+          disabled={loading}
+          className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50"
+        >
+          {loading ? 'Saving...' : (
+            <>
+              <Save className="w-4 h-4 mr-2" />
+              Save All Groups
+            </>
+          )}
+        </button>
       </div>
 
       {error && (
@@ -183,114 +234,109 @@ const TeamGrouping = ({ tournament, onUpdate }) => {
         </div>
       )}
 
-      {/* Add New Group */}
-      <div className="bg-zinc-800/50 rounded-lg p-6">
-        <h4 className="text-lg font-medium text-white mb-4">Add New Group</h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <input
-            type="text"
-            placeholder="Group Name (e.g., Group A)"
-            value={newGroupName}
-            onChange={(e) => setNewGroupName(e.target.value)}
-            className="bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white"
-          />
-          <select
-            value={selectedPhase}
-            onChange={(e) => setSelectedPhase(e.target.value)}
-            className="bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white"
-          >
-            <option value="">Select Phase (Optional)</option>
-            {tournament.phases?.map(phase => (
-              <option key={phase._id || phase.id} value={phase.name}>{phase.name}</option>
-            ))}
-          </select>
-          <button
-            onClick={handleAddGroup}
-            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Group
-          </button>
-        </div>
-        <p className="text-xs text-zinc-400">
-          Note: Groups can be associated with phases to organize them better. If no phase is selected, the group will be available for all phases.
-        </p>
-      </div>
+      {tournament.phases.map(phase => {
+        const phaseName = phase.name;
+        const phaseTeams = getPhaseTeams(phaseName);
+        const currentGroups = phaseGroups[phaseName] || [];
 
-      {/* Groups */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {groups.map(group => (
-          <div key={group.id} className="bg-zinc-800/50 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-lg font-medium text-white">{group.name}</h4>
+        return (
+          <div key={phase._id || phaseName} className="bg-zinc-800/50 rounded-lg p-6 border border-zinc-700">
+            <h4 className="text-lg font-semibold text-white mb-4">Phase: {phaseName}</h4>
+            <p className="text-zinc-400 mb-4">Available teams: {phaseTeams.length}</p>
+
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-zinc-400">Teams per group:</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={teamsPerGroup[phaseName] || 16}
+                  onChange={(e) => updateTeamsPerGroup(phaseName, e.target.value)}
+                  className="w-20 bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white text-center"
+                />
+              </div>
               <button
-                onClick={() => handleRemoveGroup(group.id)}
-                className="text-red-400 hover:text-red-300"
+                onClick={() => handleAllocateGroups(phaseName)}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
               >
-                <X className="w-4 h-4" />
+                <Users className="w-4 h-4" />
+                Allocate Groups
+              </button>
+              <button
+                onClick={() => handleShuffle(phaseName)}
+                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors flex items-center gap-2"
+              >
+                <Shuffle className="w-4 h-4" />
+                Shuffle
               </button>
             </div>
 
-            {/* Add Team to Group */}
-            <div className="mb-4">
-              <select
-                onChange={(e) => handleAddTeamToGroup(group.id, e.target.value)}
-                className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white"
-                value=""
-              >
-                <option value="">Add Team to Group</option>
-                {getAvailableTeams(group.id).map(team => (
-                  <option key={team._id} value={team._id}>{team.teamName}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Teams in Group */}
-            <div className="space-y-2">
-              {group.teams.map(teamId => {
-                // Try to find the team in participatingTeams with different possible structures
-                const team = participatingTeams.find(t => {
-                  const teamData = t.team || t;
-                  return (teamData._id === teamId) || (t._id === teamId);
-                });
-
-                // Also try to find in the processed teams array
-                const processedTeam = teams.find(t => t._id === teamId);
-
-                console.log('Looking for team:', teamId, 'Found team:', team, 'Processed team:', processedTeam);
-
-                return (
-                  <div key={teamId} className="flex items-center justify-between p-2 bg-zinc-700/50 rounded">
-                    <div className="flex items-center gap-2">
-                      {(team?.logo || processedTeam?.logo) && (
-                        <img src={team?.logo || processedTeam?.logo} alt={team?.teamName || processedTeam?.teamName} className="w-6 h-6 rounded" />
-                      )}
-                      <span className="text-white text-sm">
-                        {team?.teamName || processedTeam?.teamName || `Team ${teamId}`}
-                      </span>
+            {currentGroups.length === 0 ? (
+              <p className="text-zinc-400 text-sm">No groups created yet. Use "Allocate Groups" to create groups automatically.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {currentGroups.map(group => (
+                  <div key={group.id} className="bg-zinc-700/50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h5 className="text-white font-medium">{group.name}</h5>
+                      <button
+                        onClick={() => handleRemoveGroup(phaseName, group.id)}
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleRemoveTeamFromGroup(group.id, teamId)}
-                      className="text-red-400 hover:text-red-300"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
 
-            {group.teams.length === 0 && (
-              <p className="text-zinc-400 text-sm">No teams in this group yet.</p>
+                    {/* Add Team to Group */}
+                    <select
+                      onChange={(e) => handleAddTeamToGroup(phaseName, group.id, e.target.value)}
+                      className="w-full bg-zinc-600 border border-zinc-500 rounded px-3 py-2 text-white mb-3 text-sm"
+                      value=""
+                    >
+                      <option value="">Add Team to {group.name}</option>
+                      {getAvailableTeams(phaseName, group.id).map((team, index) => (
+                        <option key={team._id || index} value={team._id}>{team.teamName}</option>
+                      ))}
+                    </select>
+
+                    {/* Teams in Group */}
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {group.teams.map((teamId, index) => {
+                        const team = phaseTeams.find(t => t._id === teamId);
+                        if (!team) return null;
+                        return (
+                          <div key={teamId || index} className="flex items-center justify-between p-2 bg-zinc-600/50 rounded">
+                            <div className="flex items-center gap-2">
+                              {team.logo && (
+                                <img src={team.logo} alt={team.teamName} className="w-6 h-6 rounded" />
+                              )}
+                              <span className="text-white text-sm">{team.teamName}</span>
+                            </div>
+                            <button
+                              onClick={() => handleRemoveTeamFromGroup(phaseName, group.id, teamId)}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                      {group.teams.length === 0 && (
+                        <p className="text-zinc-400 text-xs italic">No teams in this group</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
-        ))}
-      </div>
+        );
+      })}
 
-      {groups.length === 0 && (
+      {tournament.phases.length === 0 && (
         <div className="text-center py-8">
           <Users className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
-          <p className="text-zinc-400">No groups created yet. Add groups to organize teams.</p>
+          <p className="text-zinc-400">No phases configured. Create phases first to manage groups.</p>
         </div>
       )}
     </div>

@@ -6,61 +6,50 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
   const [errors, setErrors] = useState({});
 
   const phaseTypes = [
-    'qualifier',
-    'group_stage',
-    'elimination_stage',
+    'qualifiers',
     'final_stage'
   ];
 
   // Map UI-friendly phase types to schema enum values
   const mapPhaseTypeToSchema = (uiType) => {
-    return uiType; // Already using schema enum values
+    // Standardize to backend enum
+    if (uiType === 'qualifier') return 'qualifiers';
+    return uiType;
   };
-
-  const formatOptions = [
-    'Single Elimination',
-    'Double Elimination',
-    'Round Robin',
-    'Swiss System',
-    'Battle Royale',
-    'Points System',
-    'Custom'
-  ];
 
   useEffect(() => {
     if (initialPhases.length > 0) {
-      setPhases(initialPhases.map(phase => ({ ...phase, groups: phase.groups || [] })));
+      // Format dates for datetime-local
+      setPhases(initialPhases.map(phase => ({ 
+        ...phase, 
+        startDate: phase.startDate ? new Date(phase.startDate).toISOString().slice(0, 16) : '',
+        endDate: phase.endDate ? new Date(phase.endDate).toISOString().slice(0, 16) : '',
+        rulesetSpecifics: phase.rulesetSpecifics || '',
+        details: phase.details || ''
+      })));
     } else {
-      // Initialize with default phases
+      // Initialize with default phases matching schema
       setPhases([
         {
-          name: 'Registration',
-          type: 'qualifier',
-          format: 'Custom',
-          startDate: '',
-          endDate: '',
-          description: 'Team registration period',
-          status: 'upcoming',
-          groups: []
-        },
-        {
           name: 'Qualifiers',
-          type: 'qualifier',
-          format: 'Battle Royale',
+          type: 'qualifiers',
           startDate: '',
           endDate: '',
-          description: 'Open qualifiers for all teams',
+          details: 'Open qualifiers for all teams',
           status: 'upcoming',
+          rulesetSpecifics: '',
+          teams: [],
           groups: []
         },
         {
-          name: 'Finals',
+          name: 'Final Stage',
           type: 'final_stage',
-          format: 'Single Elimination',
           startDate: '',
           endDate: '',
-          description: 'Main tournament finals',
+          details: 'Main tournament finals',
           status: 'upcoming',
+          rulesetSpecifics: '',
+          teams: [],
           groups: []
         }
       ]);
@@ -77,12 +66,14 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
   const addPhase = () => {
     const newPhase = {
       name: '',
-      type: 'qualifier',
-      format: 'Single Elimination',
+      type: 'qualifiers',
       startDate: '',
       endDate: '',
-      description: '',
-      status: 'upcoming'
+      details: '',
+      status: 'upcoming',
+      rulesetSpecifics: '',
+      teams: [],
+      groups: []
     };
     setPhases([...phases, newPhase]);
   };
@@ -94,34 +85,16 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
     validatePhases(newPhases);
   };
 
-  const addGroup = (phaseIndex) => {
-    const newPhases = [...phases];
-    newPhases[phaseIndex].groups.push({
-      name: '',
-      teams: [],
-      standings: []
-    });
-    setPhases(newPhases);
-  };
-
-  const removeGroup = (phaseIndex, groupIndex) => {
-    const newPhases = [...phases];
-    newPhases[phaseIndex].groups.splice(groupIndex, 1);
-    setPhases(newPhases);
-  };
-
-  const handleGroupChange = (phaseIndex, groupIndex, field, value) => {
-    const newPhases = [...phases];
-    newPhases[phaseIndex].groups[groupIndex][field] = value;
-    setPhases(newPhases);
-  };
-
   const validatePhases = (phaseList) => {
     const newErrors = {};
 
     phaseList.forEach((phase, index) => {
       if (!phase.name.trim()) {
         newErrors[`${index}_name`] = 'Phase name is required';
+      }
+
+      if (!phase.type || !phaseTypes.includes(phase.type)) {
+        newErrors[`${index}_type`] = 'Valid phase type is required';
       }
 
       if (!phase.startDate) {
@@ -162,7 +135,11 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
 
     const validPhases = phases.filter(phase => phase.name.trim()).map(phase => ({
       ...phase,
-      type: mapPhaseTypeToSchema(phase.type) // Map UI type to schema enum value
+      type: mapPhaseTypeToSchema(phase.type), // Map UI type to schema enum value
+      teams: [], // No UI input, default to empty array
+      groups: phase.groups || [], // Preserve existing groups from separate management
+      // Matches will be populated later via backend
+      matches: phase.matches || []
     }));
     onSave(validPhases);
     onClose();
@@ -170,12 +147,9 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
 
   const getPhaseIcon = (type) => {
     switch (type) {
-      case 'Registration':
-        return <Settings className="w-5 h-5" />;
-      case 'Qualifiers':
+      case 'qualifiers':
         return <Calendar className="w-5 h-5" />;
-      case 'Finals':
-      case 'Grand Finals':
+      case 'final_stage':
         return <Trophy className="w-5 h-5" />;
       default:
         return <Clock className="w-5 h-5" />;
@@ -216,7 +190,7 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
                       <h3 className="text-white font-medium">
                         Phase {index + 1}: {phase.name || 'Untitled Phase'}
                       </h3>
-                      <p className="text-zinc-400 text-sm">{phase.description}</p>
+                      <p className="text-zinc-400 text-sm">{phase.details}</p>
                     </div>
                   </div>
                   {phases.length > 1 && (
@@ -253,22 +227,12 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
                       className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                     >
                       {phaseTypes.map(type => (
-                        <option key={type} value={type}>{type}</option>
+                        <option key={type} value={type}>{type.replace('_', ' ').toUpperCase()}</option>
                       ))}
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-zinc-400 mb-2">Format</label>
-                    <select
-                      value={phase.format}
-                      onChange={(e) => handlePhaseChange(index, 'format', e.target.value)}
-                      className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    >
-                      {formatOptions.map(format => (
-                        <option key={format} value={format}>{format}</option>
-                      ))}
-                    </select>
+                    {errors[`${index}_type`] && (
+                      <p className="text-red-400 text-xs mt-1">{errors[`${index}_type`]}</p>
+                    )}
                   </div>
 
                   <div>
@@ -281,7 +245,6 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
                       <option value="upcoming">Upcoming</option>
                       <option value="in_progress">In Progress</option>
                       <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
                     </select>
                   </div>
 
@@ -313,65 +276,25 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
                 </div>
 
                 <div className="mt-4">
-                  <label className="block text-sm text-zinc-400 mb-2">Description</label>
+                  <label className="block text-sm text-zinc-400 mb-2">Details</label>
                   <textarea
-                    value={phase.description}
-                    onChange={(e) => handlePhaseChange(index, 'description', e.target.value)}
+                    value={phase.details}
+                    onChange={(e) => handlePhaseChange(index, 'details', e.target.value)}
                     className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                     rows={2}
-                    placeholder="Enter phase description"
+                    placeholder="Enter phase details (e.g., advancement rules)"
                   />
                 </div>
 
-                {/* Groups Section */}
-                <div className="mt-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-white font-medium">Groups</h4>
-                    <button
-                      onClick={() => addGroup(index)}
-                      className="text-orange-500 hover:text-orange-400 transition-colors"
-                      title="Add group to this phase"
-                    >
-                      <Plus size={20} />
-                    </button>
-                  </div>
-                  <div className="space-y-4">
-                    {phase.groups.map((group, groupIndex) => (
-                      <div key={groupIndex} className="bg-zinc-700/50 rounded-lg p-4 border border-zinc-600">
-                        <div className="flex items-center justify-between mb-2">
-                          <h5 className="text-white font-medium">Group {groupIndex + 1}: {group.name || 'Untitled Group'}</h5>
-                          <button
-                            onClick={() => removeGroup(index, groupIndex)}
-                            className="text-red-400 hover:text-red-300 transition-colors"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm text-zinc-400 mb-2">Group Name</label>
-                            <input
-                              type="text"
-                              value={group.name}
-                              onChange={(e) => handleGroupChange(index, groupIndex, 'name', e.target.value)}
-                              className="w-full bg-zinc-600 border border-zinc-500 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                              placeholder="Enter group name"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm text-zinc-400 mb-2">Teams (comma-separated IDs)</label>
-                            <input
-                              type="text"
-                              value={group.teams.join(', ')}
-                              onChange={(e) => handleGroupChange(index, groupIndex, 'teams', e.target.value.split(',').map(id => id.trim()))}
-                              className="w-full bg-zinc-600 border border-zinc-500 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                              placeholder="Enter team IDs"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                <div className="mt-4">
+                  <label className="block text-sm text-zinc-400 mb-2">Ruleset Specifics</label>
+                  <textarea
+                    value={phase.rulesetSpecifics}
+                    onChange={(e) => handlePhaseChange(index, 'rulesetSpecifics', e.target.value)}
+                    className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    rows={3}
+                    placeholder="Enter phase-specific rules (e.g., scoring, map rotation)"
+                  />
                 </div>
 
                 {errors[`${index}_dates`] && (

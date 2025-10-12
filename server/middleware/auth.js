@@ -2,7 +2,15 @@ import jwt from "jsonwebtoken";
 import Community from "../models/community.model.js";
 
 export default function auth(req, res, next) {
-  const token = req.cookies.token; // read cookie
+  let token = req.cookies.token; // read cookie
+
+  // If no cookie token, check Authorization header
+  if (!token) {
+    const authHeader = req.header('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.replace('Bearer ', '');
+    }
+  }
 
   if (!token) {
     return res.status(401).json({ message: "No token provided" });
@@ -11,7 +19,17 @@ export default function auth(req, res, next) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log('Decoded JWT token:', decoded);
-    req.user = decoded; // contains id
+
+    if (decoded.type === 'admin') {
+      req.user = {
+        id: decoded.adminId,
+        isAdmin: true,
+        type: 'admin'
+      };
+    } else {
+      req.user = decoded; // player token
+    }
+
     next();
   } catch (err) {
     return res.status(401).json({ message: "Invalid token" });

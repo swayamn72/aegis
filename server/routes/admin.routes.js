@@ -49,6 +49,14 @@ router.post('/login', async (req, res) => {
 
     const token = generateAdminToken(admin._id);
 
+    // Set cookie for compatibility with auth middleware
+    res.cookie('token', token, {
+      httpOnly: false, // Allow client-side access
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
     res.json({
       message: 'Login successful',
       token,
