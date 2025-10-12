@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, Save, Calendar, Users, Trophy, Target, AlertCircle, Trash2 } from 'lucide-react';
+import { Plus, X, Save, Calendar, Users, Trophy, Target, AlertCircle, Trash2, MoreVertical, Edit, Eye, Settings, ChevronDown, ChevronUp } from 'lucide-react';
 
 const MatchManagement = ({ tournament, onUpdate }) => {
   const [matches, setMatches] = useState([]);
@@ -19,6 +19,10 @@ const MatchManagement = ({ tournament, onUpdate }) => {
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, matchId: null, matchNumber: null });
   const [deletingMatch, setDeletingMatch] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [matchesPerPage, setMatchesPerPage] = useState(5);
+  const [dropdownOpen, setDropdownOpen] = useState(null);
+  const [expandedMatches, setExpandedMatches] = useState(new Set());
 
   const phases = tournament.phases || [];
   const allGroups = phases.flatMap(phase => phase.groups || []);
@@ -34,9 +38,20 @@ const MatchManagement = ({ tournament, onUpdate }) => {
 
   const maps = ['Erangel', 'Miramar', 'Sanhok', 'Vikendi', 'Livik', 'Nusa', 'Rondo'];
 
+  // Pagination calculations
+  const totalPages = Math.ceil(matches.length / matchesPerPage);
+  const startIndex = (currentPage - 1) * matchesPerPage;
+  const endIndex = startIndex + matchesPerPage;
+  const currentMatches = matches.slice(startIndex, endIndex);
+
   useEffect(() => {
     fetchMatches();
   }, [tournament._id]);
+
+  // Reset to first page when matches change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [matches.length]);
 
   const fetchMatches = async () => {
     try {
@@ -71,17 +86,20 @@ const MatchManagement = ({ tournament, onUpdate }) => {
 
     try {
       const selectedGroups = groups.filter(group => newMatch.participatingGroups.includes(group.id));
-      const participatingTeamIds = selectedGroups.flatMap(group => group.teams);
+      const groupTeamIds = selectedGroups.flatMap(group => group.teams);
+      const allParticipatingTeamIds = [...new Set([...groupTeamIds, ...newMatch.participatingTeams])];
 
       console.log('Tournament ID:', tournament._id);
-      console.log('Participating Team IDs:', participatingTeamIds);
+      console.log('Group Team IDs:', groupTeamIds);
+      console.log('Manually Selected Team IDs:', newMatch.participatingTeams);
+      console.log('All Participating Team IDs:', allParticipatingTeamIds);
       console.log('Teams data:', teams);
 
       const matchData = {
         ...newMatch,
         tournament: tournament._id,
         matchType: 'group_stage',
-        participatingTeams: participatingTeamIds.map(teamId => {
+        participatingTeams: allParticipatingTeamIds.map(teamId => {
           const participatingTeamData = teams.find(t => t.team._id.toString() === teamId);
           console.log('Team ID:', teamId, 'Participating Team Data:', participatingTeamData);
 
@@ -180,6 +198,39 @@ const MatchManagement = ({ tournament, onUpdate }) => {
         ? prev.participatingTeams.filter(id => id !== teamId)
         : [...prev.participatingTeams, teamId]
     }));
+  };
+
+  const handleStatusChange = async (matchId, newStatus) => {
+    try {
+      setError(null);
+
+      const response = await fetch(`http://localhost:5000/api/matches/${matchId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        const updatedMatch = await response.json();
+        setMatches(matches.map(match =>
+          match._id === matchId ? { ...match, status: newStatus } : match
+        ));
+        console.log('Match status updated successfully');
+      } else {
+        const errorText = await response.text();
+        try {
+          const errorData = JSON.parse(errorText);
+          setError(errorData.error || 'Failed to update match status');
+        } catch {
+          setError(`Server error: ${response.status} - ${errorText}`);
+        }
+      }
+    } catch (err) {
+      setError('Error updating match status');
+      console.error('Error updating match status:', err);
+    }
   };
 
   const handleInputChange = (matchId, teamId, field, value) => {
@@ -366,6 +417,43 @@ const MatchManagement = ({ tournament, onUpdate }) => {
     setDeleteConfirm({ show: false, matchId: null, matchNumber: null });
   };
 
+  const toggleDropdown = (matchId) => {
+    setDropdownOpen(dropdownOpen === matchId ? null : matchId);
+  };
+
+  const toggleMatchExpansion = (matchId) => {
+    setExpandedMatches(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(matchId)) {
+        newSet.delete(matchId);
+      } else {
+        newSet.add(matchId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleDropdownAction = (action, match) => {
+    setDropdownOpen(null);
+    // Handle different actions here
+    switch (action) {
+      case 'edit':
+        // Handle edit action
+        console.log('Edit match:', match._id);
+        break;
+      case 'view':
+        // Handle view action
+        console.log('View match:', match._id);
+        break;
+      case 'settings':
+        // Handle settings action
+        console.log('Settings for match:', match._id);
+        break;
+      default:
+        break;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -470,6 +558,35 @@ const MatchManagement = ({ tournament, onUpdate }) => {
           </p>
         </div>
 
+        {/* Team Selection */}
+        <div className="mt-4">
+          <label className="block text-sm text-zinc-400 mb-2">Participating Teams</label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-40 overflow-y-auto">
+            {teams.map((teamData) => {
+              const team = teamData.team || teamData;
+              const teamId = team._id || team.id;
+              const teamName = team.teamName || team.name || 'Unknown Team';
+              const isSelected = newMatch.participatingTeams.includes(teamId);
+
+              return (
+                <button
+                  key={teamId}
+                  onClick={() => handleTeamToggle(teamId)}
+                  className={`p-2 rounded text-sm transition-colors ${isSelected
+                    ? 'bg-green-500 text-white'
+                    : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+                    }`}
+                >
+                  {teamName}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-zinc-500 mt-1">
+            Selected: {newMatch.participatingTeams.length} teams
+          </p>
+        </div>
+
         <button
           onClick={handleAddMatch}
           className="mt-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
@@ -509,23 +626,77 @@ const MatchManagement = ({ tournament, onUpdate }) => {
 
       {/* Existing Matches */}
       <div className="space-y-4">
-        {matches.map(match => (
+        {currentMatches.map(match => (
           <div key={match._id} className="bg-zinc-800/50 rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
-              <div>
-                <h4 className="text-lg font-medium text-white">
-                  Match #{match.matchNumber} - {match.tournamentPhase}
-                </h4>
-                <p className="text-zinc-400 text-sm">{match.map} • {new Date(match.scheduledStartTime).toLocaleString()}</p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => toggleMatchExpansion(match._id)}
+                  className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded transition-colors"
+                  title={expandedMatches.has(match._id) ? "Collapse match details" : "Expand match details"}
+                >
+                  {expandedMatches.has(match._id) ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                </button>
+                <div>
+                  <h4 className="text-lg font-medium text-white">
+                    Match #{match.matchNumber} - {match.tournamentPhase}
+                  </h4>
+                  <p className="text-zinc-400 text-sm">{match.map} • {new Date(match.scheduledStartTime).toLocaleString()}</p>
+                </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${match.status === 'scheduled' ? 'bg-blue-500/20 text-blue-400' :
-                  match.status === 'in_progress' ? 'bg-green-500/20 text-green-400' :
-                    match.status === 'completed' ? 'bg-gray-500/20 text-gray-400' :
-                      'bg-red-500/20 text-red-400'
-                  }`}>
-                  {match.status}
-                </span>
+                <select
+                  value={match.status}
+                  onChange={(e) => handleStatusChange(match._id, e.target.value)}
+                  className={`px-2 py-1 rounded text-xs font-medium border-0 ${match.status === 'scheduled' ? 'bg-blue-500/20 text-blue-400' :
+                    match.status === 'in_progress' ? 'bg-green-500/20 text-green-400' :
+                      match.status === 'completed' ? 'bg-gray-500/20 text-gray-400' :
+                        'bg-red-500/20 text-red-400'
+                    }`}
+                >
+                  <option value="scheduled">Scheduled</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+                <div className="relative">
+                  <button
+                    onClick={() => toggleDropdown(match._id)}
+                    className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-lg transition-colors"
+                    title="More options"
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                  {dropdownOpen === match._id && (
+                    <div className="absolute right-0 top-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg z-10 min-w-32">
+                      <button
+                        onClick={() => handleDropdownAction('edit', match)}
+                        className="w-full px-3 py-2 text-left text-zinc-300 hover:bg-zinc-700 hover:text-white flex items-center gap-2 rounded-t-lg"
+                      >
+                        <Edit className="w-4 h-4" />
+                        Edit Match
+                      </button>
+                      <button
+                        onClick={() => handleDropdownAction('view', match)}
+                        className="w-full px-3 py-2 text-left text-zinc-300 hover:bg-zinc-700 hover:text-white flex items-center gap-2"
+                      >
+                        <Eye className="w-4 h-4" />
+                        View Details
+                      </button>
+                      <button
+                        onClick={() => handleDropdownAction('settings', match)}
+                        className="w-full px-3 py-2 text-left text-zinc-300 hover:bg-zinc-700 hover:text-white flex items-center gap-2 rounded-b-lg"
+                      >
+                        <Settings className="w-4 h-4" />
+                        Settings
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <button
                   onClick={() => confirmDelete(match._id, match.matchNumber)}
                   disabled={deletingMatch === match._id}
@@ -537,128 +708,173 @@ const MatchManagement = ({ tournament, onUpdate }) => {
               </div>
             </div>
 
-            {/* Match Results Input */}
-            <div className="space-y-3">
-              {match.participatingTeams?.map(team => {
-                const teamData = team.team || team;
-                const teamId = teamData._id || teamData.id;
-                const teamName = teamData.teamName || teamData.name || 'Unknown Team';
+            {/* Match Details - Only show when expanded */}
+            {expandedMatches.has(match._id) && (
+              <>
+                {/* Match Results Input */}
+                <div className="space-y-3">
+                  {match.participatingTeams?.map(team => {
+                    const teamData = team.team || team;
+                    const teamId = teamData._id || teamData.id;
+                    const teamName = teamData.teamName || teamData.name || 'Unknown Team';
 
-                // Get current values, checking pending changes first
-                const killsKey = `${match._id}-${teamId}-kills`;
-                const positionKey = `${match._id}-${teamId}-position`;
+                    // Get current values, checking pending changes first
+                    const killsKey = `${match._id}-${teamId}-kills`;
+                    const positionKey = `${match._id}-${teamId}-position`;
 
-                const currentKills = pendingChanges[killsKey] !== undefined ? pendingChanges[killsKey] : (team.kills?.total || 0);
-                const currentPosition = pendingChanges[positionKey] !== undefined ? pendingChanges[positionKey] : (team.finalPosition || '');
-                const currentPoints = team.points?.totalPoints || 0;
+                    const currentKills = pendingChanges[killsKey] !== undefined ? pendingChanges[killsKey] : (team.kills?.total || 0);
+                    const currentPosition = pendingChanges[positionKey] !== undefined ? pendingChanges[positionKey] : (team.finalPosition || '');
+                    const currentPoints = team.points?.totalPoints || 0;
 
-                return (
-                  <div key={teamId} className="flex items-center gap-4 p-3 bg-zinc-700/50 rounded">
-                    <div className="flex-1">
-                      <span className="text-white font-medium">{teamName}</span>
-                      <span className="text-zinc-400 text-sm ml-2">({teamId})</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-zinc-400 text-sm">Kills:</label>
-                      <input
-                        type="number"
-                        value={currentKills}
-                        onChange={(e) => {
-                          const newKills = parseInt(e.target.value) || 0;
-                          handleInputChange(match._id, teamId, 'kills', newKills);
-                        }}
-                        className="w-16 bg-zinc-600 border border-zinc-500 rounded px-2 py-1 text-white text-center"
-                        min="0"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-zinc-400 text-sm">Position:</label>
-                      <input
-                        type="number"
-                        value={currentPosition}
-                        onChange={(e) => {
-                          const newPosition = parseInt(e.target.value) || '';
-                          handleInputChange(match._id, teamId, 'position', newPosition);
-                        }}
-                        className="w-16 bg-zinc-600 border border-zinc-500 rounded px-2 py-1 text-white text-center"
-                        min="1"
-                        max="16"
-                        placeholder="1-16"
-                      />
-                    </div>
-                    <div className="w-20 text-center">
-                      <span className="text-orange-400 font-medium">{currentPoints} pts</span>
-                    </div>
-                    {team.chickenDinner && (
-                      <div className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center">
-                        <Trophy className="w-3 h-3 text-white" />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Match Leaderboard */}
-            {match.participatingTeams?.some(team => team.finalPosition > 0) && (
-              <div className="mt-6">
-                <h5 className="text-white font-medium mb-3">Match Leaderboard</h5>
-                <div className="bg-zinc-700/30 rounded-lg p-4">
-                  <div className="space-y-2">
-                    {[...match.participatingTeams]
-                      .filter(team => team.finalPosition > 0)
-                      .sort((a, b) => {
-                        const pointsA = a.points?.totalPoints || 0;
-                        const pointsB = b.points?.totalPoints || 0;
-                        if (pointsA !== pointsB) {
-                          return pointsB - pointsA; // Sort by points descending
-                        }
-                        return (b.kills?.total || 0) - (a.kills?.total || 0); // Tiebreaker by kills
-                      })
-                      .map((team) => {
-                        const teamData = team.team || team;
-                        const teamName = teamData.teamName || teamData.name || 'Unknown Team';
-                        const position = team.finalPosition;
-                        const kills = team.kills?.total || 0;
-                        const points = team.points?.totalPoints || 0;
-
-                        return (
-                          <div key={teamData._id || teamData.id} className={`flex items-center gap-4 p-2 rounded ${position === 1 ? 'bg-yellow-500/20 border border-yellow-500/30' :
-                            position === 2 ? 'bg-gray-400/20 border border-gray-400/30' :
-                              position === 3 ? 'bg-orange-500/20 border border-orange-500/30' :
-                                'bg-zinc-600/30'
-                            }`}>
-                            <div className="w-8 text-center">
-                              <span className={`font-bold ${position === 1 ? 'text-yellow-400' :
-                                position === 2 ? 'text-gray-300' :
-                                  position === 3 ? 'text-orange-400' :
-                                    'text-zinc-400'
-                                }`}>
-                                #{position}
-                              </span>
-                            </div>
-                            <div className="flex-1">
-                              <span className="text-white font-medium">{teamName}</span>
-                            </div>
-                            <div className="flex items-center gap-4 text-sm">
-                              <span className="text-zinc-400">Kills: <span className="text-white">{kills}</span></span>
-                              <span className="text-zinc-400">Points: <span className="text-orange-400 font-medium">{points}</span></span>
-                            </div>
-                            {team.chickenDinner && (
-                              <div className="w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center">
-                                <Trophy className="w-2.5 h-2.5 text-white" />
-                              </div>
-                            )}
+                    return (
+                      <div key={teamId} className="flex items-center gap-4 p-3 bg-zinc-700/50 rounded">
+                        <div className="flex-1">
+                          <span className="text-white font-medium">{teamName}</span>
+                          <span className="text-zinc-400 text-sm ml-2">({teamId})</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="text-zinc-400 text-sm">Kills:</label>
+                          <input
+                            type="number"
+                            value={currentKills}
+                            onChange={(e) => {
+                              const newKills = parseInt(e.target.value) || 0;
+                              handleInputChange(match._id, teamId, 'kills', newKills);
+                            }}
+                            className="w-16 bg-zinc-600 border border-zinc-500 rounded px-2 py-1 text-white text-center"
+                            min="0"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="text-zinc-400 text-sm">Position:</label>
+                          <input
+                            type="number"
+                            value={currentPosition}
+                            onChange={(e) => {
+                              const newPosition = parseInt(e.target.value) || '';
+                              handleInputChange(match._id, teamId, 'position', newPosition);
+                            }}
+                            className="w-16 bg-zinc-600 border border-zinc-500 rounded px-2 py-1 text-white text-center"
+                            min="1"
+                            max="16"
+                            placeholder="1-16"
+                          />
+                        </div>
+                        <div className="w-20 text-center">
+                          <span className="text-orange-400 font-medium">{currentPoints} pts</span>
+                        </div>
+                        {team.chickenDinner && (
+                          <div className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center">
+                            <Trophy className="w-3 h-3 text-white" />
                           </div>
-                        );
-                      })}
-                  </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
+
+                {/* Match Leaderboard */}
+                {match.participatingTeams?.some(team => team.finalPosition > 0) && (
+                  <div className="mt-6">
+                    <h5 className="text-white font-medium mb-3">Match Leaderboard</h5>
+                    <div className="bg-zinc-700/30 rounded-lg p-4">
+                      <div className="space-y-2">
+                        {[...match.participatingTeams]
+                          .filter(team => team.finalPosition > 0)
+                          .sort((a, b) => {
+                            const pointsA = a.points?.totalPoints || 0;
+                            const pointsB = b.points?.totalPoints || 0;
+                            if (pointsA !== pointsB) {
+                              return pointsB - pointsA; // Sort by points descending
+                            }
+                            return (b.kills?.total || 0) - (a.kills?.total || 0); // Tiebreaker by kills
+                          })
+                          .map((team) => {
+                            const teamData = team.team || team;
+                            const teamName = teamData.teamName || teamData.name || 'Unknown Team';
+                            const position = team.finalPosition;
+                            const kills = team.kills?.total || 0;
+                            const points = team.points?.totalPoints || 0;
+
+                            return (
+                              <div key={teamData._id || teamData.id} className={`flex items-center gap-4 p-2 rounded ${position === 1 ? 'bg-yellow-500/20 border border-yellow-500/30' :
+                                position === 2 ? 'bg-gray-400/20 border border-gray-400/30' :
+                                  position === 3 ? 'bg-orange-500/20 border border-orange-500/30' :
+                                    'bg-zinc-600/30'
+                                }`}>
+                                <div className="w-8 text-center">
+                                  <span className={`font-bold ${position === 1 ? 'text-yellow-400' :
+                                    position === 2 ? 'text-gray-300' :
+                                      position === 3 ? 'text-orange-400' :
+                                        'text-zinc-400'
+                                    }`}>
+                                    #{position}
+                                  </span>
+                                </div>
+                                <div className="flex-1">
+                                  <span className="text-white font-medium">{teamName}</span>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm">
+                                  <span className="text-zinc-400">Kills: <span className="text-white">{kills}</span></span>
+                                  <span className="text-zinc-400">Points: <span className="text-orange-400 font-medium">{points}</span></span>
+                                </div>
+                                {team.chickenDinner && (
+                                  <div className="w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center">
+                                    <Trophy className="w-2.5 h-2.5 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         ))}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages >= 1 && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-zinc-400">Matches per page:</label>
+            <select
+              value={matchesPerPage}
+              onChange={(e) => {
+                setMatchesPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="bg-zinc-700 border border-zinc-600 rounded px-2 py-1 text-white text-sm"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 bg-zinc-700 text-white rounded hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              Previous
+            </button>
+            <span className="text-zinc-400 text-sm">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 bg-zinc-700 text-white rounded hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {matches.length === 0 && (
         <div className="text-center py-12">

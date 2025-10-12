@@ -27,7 +27,7 @@ const PointsTable = ({ tournament, onUpdate }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await fetch(`http://localhost:5000/api/matches/tournament/${tournament._id}`);
       if (response.ok) {
         const matchesData = await response.json();
@@ -190,11 +190,10 @@ const PointsTable = ({ tournament, onUpdate }) => {
       const phase = tournament.phases?.find(p => p.name === selectedPhase);
       const groupTeams = phase?.groups?.find(g => g.name === selectedGroup)?.teams || [];
       relevantTeams = relevantTeams.filter(pt => {
-        const teamId = (pt.team || pt)?._id;
-        const teamIdStr = teamId?.toString();
+        const ptTeamId = pt.team?._id || pt.team || pt._id;
         return groupTeams.some(gt => {
-          const gtIdStr = gt?._id?.toString();
-          return gtIdStr === teamIdStr;
+          const gtTeamId = gt?._id || gt;
+          return ptTeamId?.toString() === gtTeamId?.toString();
         });
       });
     }
@@ -225,29 +224,33 @@ const PointsTable = ({ tournament, onUpdate }) => {
     // Filter matches
     let filteredMatches = matches;
     if (selectedPhase) {
-      filteredMatches = matches.filter(match => match.phase === selectedPhase);
+      filteredMatches = matches.filter(match => match.tournamentPhase === selectedPhase);
     }
 
     // Process matches
     filteredMatches.forEach(match => {
-      match.teams?.forEach(teamResult => {
-        const teamId = teamResult._id;
+      match.participatingTeams?.forEach(teamResult => {
+        // Handle both populated and non-populated team data
+        const teamId = teamResult.team?._id || teamResult.team || teamResult._id;
         const teamIdStr = teamId ? teamId.toString() : null;
 
         if (teamIdStr && teamPoints[teamIdStr]) {
-          if (teamResult.position || (teamResult.kills > 0)) {
-            const placementPoints = getPlacementPoints(teamResult.position);
-            const killPoints = teamResult.kills || 0;
+          const position = teamResult.finalPosition;
+          const kills = teamResult.kills?.total || 0;
+
+          if (position || kills > 0) {
+            const placementPoints = getPlacementPoints(position);
+            const killPoints = kills;
             const totalMatchPoints = placementPoints + killPoints;
 
             teamPoints[teamIdStr].totalPositionPoints += placementPoints;
             teamPoints[teamIdStr].totalKillPoints += killPoints;
             teamPoints[teamIdStr].totalPoints += totalMatchPoints;
-            teamPoints[teamIdStr].kills += teamResult.kills || 0;
+            teamPoints[teamIdStr].kills += kills;
             teamPoints[teamIdStr].matchesPlayed += 1;
 
-            if (teamResult.position) {
-              teamPoints[teamIdStr].placements.push(teamResult.position);
+            if (position) {
+              teamPoints[teamIdStr].placements.push(position);
             }
 
             if (teamResult.chickenDinner) {
@@ -330,8 +333,8 @@ const PointsTable = ({ tournament, onUpdate }) => {
 
   // Get available groups for selected phase
   const selectedPhaseObj = tournament.phases?.find(p => p.name === selectedPhase);
-  const availableGroups = selectedPhaseObj?.groups && selectedPhaseObj.groups.length > 0 
-    ? ['overall', ...selectedPhaseObj.groups.map(g => g.name)] 
+  const availableGroups = selectedPhaseObj?.groups && selectedPhaseObj.groups.length > 0
+    ? ['overall', ...selectedPhaseObj.groups.map(g => g.name)]
     : [];
 
   if (loading) {
@@ -546,9 +549,9 @@ const PointsTable = ({ tournament, onUpdate }) => {
         <div className="text-center py-8">
           <Trophy className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
           <p className="text-zinc-400">
-            {matches.length === 0 
+            {matches.length === 0
               ? "No match results yet. Points table will be generated automatically as matches are completed."
-              : selectedPhase 
+              : selectedPhase
                 ? `No results found for ${selectedPhase} ${selectedGroup}.`
                 : "No standings available yet."
             }

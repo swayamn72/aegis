@@ -7,6 +7,7 @@ import MatchManagement from './MatchManagement';
 import PointsTable from './PointsTable';
 import TeamGrouping from './TeamGrouping';
 import TeamSelector from './TeamSelector';
+import PrizeDistributionForm from './PrizeDistributionForm';
 
 const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false }) => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -14,6 +15,7 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
   const [selectedPhase, setSelectedPhase] = useState('');
   const [isEditingOverview, setIsEditingOverview] = useState(false);
   const [isEditingPrizePool, setIsEditingPrizePool] = useState(false);
+  const [isPrizeFormOpen, setIsPrizeFormOpen] = useState(false);
   const [overviewData, setOverviewData] = useState({
     tournamentName: tournament.tournamentName || '',
     shortName: tournament.shortName || '',
@@ -24,7 +26,8 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
   const [prizePoolData, setPrizePoolData] = useState({
     total: tournament.prizePool?.total || 0,
     currency: tournament.prizePool?.currency || 'INR',
-    distribution: tournament.prizePool?.distribution || []
+    distribution: tournament.prizePool?.distribution || [],
+    individualAwards: tournament.prizePool?.individualAwards || []
   });
   const [logoFile, setLogoFile] = useState(null);
   const [coverFile, setCoverFile] = useState(null);
@@ -41,7 +44,8 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
     setPrizePoolData({
       total: tournament.prizePool?.total || 0,
       currency: tournament.prizePool?.currency || 'INR',
-      distribution: tournament.prizePool?.distribution || []
+      distribution: tournament.prizePool?.distribution || [],
+      individualAwards: tournament.prizePool?.individualAwards || []
     });
   }, [tournament]);
 
@@ -135,10 +139,43 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
   const updatePrizeDistribution = (index, field, value) => {
     setPrizePoolData(prev => ({
       ...prev,
-      distribution: prev.distribution.map((item, i) => 
+      distribution: prev.distribution.map((item, i) =>
         i === index ? { ...item, [field]: value } : item
       )
     }));
+  };
+
+  const handleSavePrizeDistribution = async (distribution, individualAwards) => {
+    try {
+      const updatedPrizePool = {
+        ...prizePoolData,
+        distribution,
+        individualAwards
+      };
+
+      const res = await fetch(`http://localhost:5000/api/tournaments/${tournament._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ prizePool: updatedPrizePool })
+      });
+
+      if (res.ok) {
+        const updatedTournament = await res.json();
+        setEditedTournament(updatedTournament);
+        onSave(updatedTournament);
+        setPrizePoolData(updatedPrizePool);
+        setIsPrizeFormOpen(false);
+        toast.success('Prize distribution updated successfully');
+      } else {
+        toast.error('Failed to update prize distribution');
+      }
+    } catch (err) {
+      console.error('Error updating prize distribution:', err);
+      toast.error('Failed to update prize distribution');
+    }
   };
 
   const handleAdminAddTeamToPhase = async (team, phase) => {
@@ -305,11 +342,10 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'text-orange-400 border-b-2 border-orange-400'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
+                className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab.id
+                  ? 'text-orange-400 border-b-2 border-orange-400'
+                  : 'text-zinc-400 hover:text-white'
+                  }`}
               >
                 <Icon className="w-4 h-4" />
                 {tab.name}
@@ -402,11 +438,10 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
                     </div>
                     <div className="flex justify-between">
                       <span className="text-zinc-400">Status</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        tournament.status === 'upcoming' ? 'bg-blue-500/20 text-blue-400' :
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${tournament.status === 'upcoming' ? 'bg-blue-500/20 text-blue-400' :
                         tournament.status === 'in_progress' ? 'bg-green-500/20 text-green-400' :
-                        'bg-gray-500/20 text-gray-400'
-                      }`}>
+                          'bg-gray-500/20 text-gray-400'
+                        }`}>
                         {tournament.status}
                       </span>
                     </div>
@@ -422,18 +457,18 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
                   <div className="space-y-3">
                     <div>
                       <p className="text-zinc-400 text-sm">Start Date</p>
-                      <p className="text-white font-medium">{new Date(tournament.startDate).toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
+                      <p className="text-white font-medium">{new Date(tournament.startDate).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
                       })}</p>
                     </div>
                     <div>
                       <p className="text-zinc-400 text-sm">End Date</p>
-                      <p className="text-white font-medium">{new Date(tournament.endDate).toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
+                      <p className="text-white font-medium">{new Date(tournament.endDate).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
                       })}</p>
                     </div>
                     <div>
@@ -455,11 +490,10 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
                       <div key={index} className="bg-zinc-700/50 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="text-white font-medium">{phase.name}</h4>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            phase.status === 'upcoming' ? 'bg-blue-500/20 text-blue-400' :
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${phase.status === 'upcoming' ? 'bg-blue-500/20 text-blue-400' :
                             phase.status === 'in_progress' ? 'bg-green-500/20 text-green-400' :
-                            'bg-gray-500/20 text-gray-400'
-                          }`}>
+                              'bg-gray-500/20 text-gray-400'
+                            }`}>
                             {phase.status}
                           </span>
                         </div>
@@ -524,10 +558,10 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
                           className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white text-sm file:mr-4 file:py-1 file:px-4 file:rounded file:border-0 file:bg-orange-500 file:text-white hover:file:bg-orange-600"
                         />
                         {(overviewData.logo || logoFile) && (
-                          <img 
-                            src={logoFile ? URL.createObjectURL(logoFile) : overviewData.logo} 
-                            alt="Logo Preview" 
-                            className="w-20 h-20 object-cover rounded-lg mt-2 border border-zinc-600" 
+                          <img
+                            src={logoFile ? URL.createObjectURL(logoFile) : overviewData.logo}
+                            alt="Logo Preview"
+                            className="w-20 h-20 object-cover rounded-lg mt-2 border border-zinc-600"
                           />
                         )}
                       </div>
@@ -540,10 +574,10 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
                           className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white text-sm file:mr-4 file:py-1 file:px-4 file:rounded file:border-0 file:bg-orange-500 file:text-white hover:file:bg-orange-600"
                         />
                         {(overviewData.coverImage || coverFile) && (
-                          <img 
-                            src={coverFile ? URL.createObjectURL(coverFile) : overviewData.coverImage} 
-                            alt="Cover Preview" 
-                            className="w-32 h-16 object-cover rounded-lg mt-2 border border-zinc-600" 
+                          <img
+                            src={coverFile ? URL.createObjectURL(coverFile) : overviewData.coverImage}
+                            alt="Cover Preview"
+                            className="w-32 h-16 object-cover rounded-lg mt-2 border border-zinc-600"
                           />
                         )}
                       </div>
@@ -624,7 +658,7 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-semibold text-white">Tournament Phases</h3>
                 {isAdmin && (
-                  <button 
+                  <button
                     onClick={() => setActiveTab('phases-edit')}
                     className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2"
                   >
@@ -650,12 +684,11 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              phase.status === 'upcoming' ? 'bg-blue-500/20 text-blue-400' :
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${phase.status === 'upcoming' ? 'bg-blue-500/20 text-blue-400' :
                               phase.status === 'in_progress' ? 'bg-green-500/20 text-green-400' :
-                              phase.status === 'completed' ? 'bg-gray-500/20 text-gray-400' :
-                              'bg-red-500/20 text-red-400'
-                            }`}>
+                                phase.status === 'completed' ? 'bg-gray-500/20 text-gray-400' :
+                                  'bg-red-500/20 text-red-400'
+                              }`}>
                               {phase.status}
                             </span>
                           </div>
@@ -696,7 +729,7 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
                   <h3 className="text-lg font-semibold text-white mb-2">No Phases Configured</h3>
                   <p className="text-zinc-400 mb-6">Create phases to organize your tournament structure</p>
                   {isAdmin && (
-                    <button 
+                    <button
                       onClick={() => setActiveTab('phases-edit')}
                       className="px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
                     >
@@ -771,10 +804,10 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
               {/* Teams list */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {(() => {
-                  const filteredTeams = selectedPhase 
+                  const filteredTeams = selectedPhase
                     ? (tournament.participatingTeams || []).filter(pt => pt.currentStage === selectedPhase)
                     : (tournament.participatingTeams || []);
-                  
+
                   if (filteredTeams.length > 0) {
                     return filteredTeams.map((participatingTeam, index) => {
                       const team = participatingTeam.team || participatingTeam;
@@ -799,7 +832,7 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
                             </div>
                           </div>
                           {isAdmin && selectedPhase && (
-                            <button 
+                            <button
                               onClick={() => handleAdminRemoveTeamFromPhase(team, selectedPhase)}
                               className="w-full px-3 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-sm"
                             >
@@ -816,17 +849,17 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
                           <Users className="w-8 h-8 text-zinc-400" />
                         </div>
                         <p className="text-zinc-400">
-                          {selectedPhase 
-                            ? `No teams in ${selectedPhase} yet` 
+                          {selectedPhase
+                            ? `No teams in ${selectedPhase} yet`
                             : 'No teams participating yet'}
                         </p>
                         <p className="text-zinc-500 text-sm mt-1">
-                          {isAdmin 
-                            ? selectedPhase 
-                              ? `Add teams to ${selectedPhase} using the controls above` 
+                          {isAdmin
+                            ? selectedPhase
+                              ? `Add teams to ${selectedPhase} using the controls above`
                               : "Select a phase to add teams"
-                            : selectedPhase 
-                              ? `Invite teams to ${selectedPhase} using the selector above` 
+                            : selectedPhase
+                              ? `Invite teams to ${selectedPhase} using the selector above`
                               : "Select a phase to invite teams"
                           }
                         </p>
@@ -842,157 +875,15 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
           {activeTab === 'prizepool' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-white">Prize Pool</h3>
-                {isAdmin && !isEditingPrizePool && (
-                  <button
-                    onClick={() => setIsEditingPrizePool(true)}
-                    className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2"
-                  >
-                    <Edit className="w-4 h-4" />
-                    Edit Prize Pool
-                  </button>
-                )}
+                <h3 className="text-xl font-semibold text-white">Prize Pool Management</h3>
+                <button
+                  onClick={() => setIsPrizeFormOpen(true)}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  Advanced Distribution
+                </button>
               </div>
-
-              {isEditingPrizePool ? (
-                <div className="space-y-6">
-                  <div className="bg-zinc-800/50 rounded-lg p-6 border border-zinc-700">
-                    <h4 className="text-white font-semibold mb-4">Total Prize Pool</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-zinc-300 mb-2">Amount</label>
-                        <input
-                          type="number"
-                          value={prizePoolData.total}
-                          onChange={(e) => setPrizePoolData(prev => ({ ...prev, total: parseFloat(e.target.value) || 0 }))}
-                          className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-zinc-300 mb-2">Currency</label>
-                        <select
-                          value={prizePoolData.currency}
-                          onChange={(e) => setPrizePoolData(prev => ({ ...prev, currency: e.target.value }))}
-                          className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        >
-                          <option value="INR">INR (₹)</option>
-                          <option value="USD">USD ($)</option>
-                          <option value="EUR">EUR (€)</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-zinc-800/50 rounded-lg p-6 border border-zinc-700">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-white font-semibold">Prize Distribution</h4>
-                      <button
-                        onClick={addPrizeDistribution}
-                        className="px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2 text-sm"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Add Position
-                      </button>
-                    </div>
-
-                    <div className="space-y-3">
-                      {prizePoolData.distribution.map((item, index) => (
-                        <div key={index} className="flex items-center gap-3">
-                          <input
-                            type="number"
-                            value={item.position}
-                            onChange={(e) => updatePrizeDistribution(index, 'position', parseInt(e.target.value) || 1)}
-                            className="w-20 bg-zinc-700 border border-zinc-600 rounded-lg px-3 py-2 text-white text-center focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            placeholder="#"
-                          />
-                          <input
-                            type="number"
-                            value={item.amount}
-                            onChange={(e) => updatePrizeDistribution(index, 'amount', parseFloat(e.target.value) || 0)}
-                            className="flex-1 bg-zinc-700 border border-zinc-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            placeholder="Amount"
-                          />
-                          <button
-                            onClick={() => removePrizeDistribution(index)}
-                            className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handleSavePrizePool}
-                      className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-                    >
-                      <Check className="w-4 h-4" />
-                      Save Prize Pool
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsEditingPrizePool(false);
-                        setPrizePoolData({
-                          total: tournament.prizePool?.total || 0,
-                          currency: tournament.prizePool?.currency || 'INR',
-                          distribution: tournament.prizePool?.distribution || []
-                        });
-                      }}
-                      className="px-6 py-2 bg-zinc-600 text-white rounded-lg hover:bg-zinc-700 transition-colors flex items-center gap-2"
-                    >
-                      <XIcon className="w-4 h-4" />
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <div className="bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-lg p-8 border border-orange-500/30">
-                    <div className="text-center">
-                      <p className="text-zinc-400 text-sm mb-2">Total Prize Pool</p>
-                      <p className="text-5xl font-bold text-white mb-2">
-                        ₹{tournament.prizePool?.total?.toLocaleString() || '0'}
-                      </p>
-                      <p className="text-zinc-400 text-sm">{tournament.prizePool?.currency || 'INR'}</p>
-                    </div>
-                  </div>
-
-                  {tournament.prizePool?.distribution?.length > 0 && (
-                    <div className="bg-zinc-800/50 rounded-lg border border-zinc-700 overflow-hidden">
-                      <div className="p-6">
-                        <h4 className="text-white font-semibold mb-4">Prize Distribution</h4>
-                        <div className="space-y-2">
-                          {tournament.prizePool.distribution
-                            .sort((a, b) => a.position - b.position)
-                            .map((item, index) => (
-                              <div key={index} className="flex items-center justify-between py-3 px-4 bg-zinc-700/50 rounded-lg">
-                                <div className="flex items-center gap-3">
-                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                                    item.position === 1 ? 'bg-yellow-500/20 text-yellow-400' :
-                                    item.position === 2 ? 'bg-gray-400/20 text-gray-400' :
-                                    item.position === 3 ? 'bg-orange-500/20 text-orange-400' :
-                                    'bg-zinc-600/50 text-zinc-400'
-                                  }`}>
-                                    {item.position}
-                                  </div>
-                                  <span className="text-white font-medium">
-                                    {item.position === 1 ? '1st Place' :
-                                     item.position === 2 ? '2nd Place' :
-                                     item.position === 3 ? '3rd Place' :
-                                     `${item.position}th Place`}
-                                  </span>
-                                </div>
-                                <span className="text-white text-lg font-bold">₹{item.amount?.toLocaleString()}</span>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
@@ -1019,6 +910,18 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
           )}
         </div>
       </div>
+
+      {/* Prize Distribution Form Modal */}
+      {isPrizeFormOpen && (
+        <PrizeDistributionForm
+          isOpen={isPrizeFormOpen}
+          onClose={() => setIsPrizeFormOpen(false)}
+          onSave={handleSavePrizeDistribution}
+          initialDistribution={prizePoolData.distribution}
+          initialIndividualAwards={prizePoolData.individualAwards}
+          totalPrizePool={prizePoolData.total || 0}
+        />
+      )}
     </div>
   );
 };

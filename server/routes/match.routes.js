@@ -19,11 +19,11 @@ router.get('/tournament/:tournamentId', async (req, res) => {
   try {
     const { tournamentId } = req.params;
     const { status, phase, limit = 50 } = req.query;
-    
+
     const filter = { tournament: tournamentId };
     if (status) filter.status = status;
     if (phase) filter.tournamentPhase = phase;
-    
+
     const matches = await Match.find(filter)
       .populate({
         path: 'participatingTeams.team',
@@ -34,31 +34,7 @@ router.get('/tournament/:tournamentId', async (req, res) => {
       .limit(parseInt(limit))
       .lean();
 
-    const formattedMatches = matches.map(match => ({
-      _id: match._id,
-      matchNumber: match.matchNumber,
-      matchType: match.matchType,
-      phase: match.tournamentPhase,
-      scheduledStartTime: match.scheduledStartTime,
-      status: match.status,
-      map: match.map,
-      teams: match.participatingTeams?.map(pt => ({
-        _id: pt.team?._id,
-        name: pt.team?.teamName || pt.teamName || 'Unknown Team',
-        tag: pt.team?.teamTag || pt.teamTag,
-        logo: pt.team?.logo,
-        position: pt.finalPosition,
-        kills: pt.kills?.total || 0,
-        points: pt.points?.totalPoints || 0,
-        chickenDinner: pt.chickenDinner || false
-      })) || [],
-      stats: {
-        totalKills: match.matchStats?.totalKills || 0,
-        mostKillsPlayer: match.matchStats?.mostKillsPlayer,
-      }
-    }));
-
-    res.json({ matches: formattedMatches });
+    res.json({ matches });
   } catch (error) {
     console.error('Error fetching matches:', error);
     res.status(500).json({ error: 'Failed to fetch matches' });
@@ -70,13 +46,13 @@ router.get('/tournament/:tournamentId/results', async (req, res) => {
   try {
     const { tournamentId } = req.params;
     const { phase } = req.query;
-    
-    const filter = { 
+
+    const filter = {
       tournament: tournamentId,
       status: 'completed'
     };
     if (phase) filter.tournamentPhase = phase;
-    
+
     const matches = await Match.find(filter)
       .populate({
         path: 'participatingTeams.team',
@@ -87,11 +63,11 @@ router.get('/tournament/:tournamentId/results', async (req, res) => {
 
     // Aggregate team performance across matches
     const teamStats = {};
-    
+
     matches.forEach(match => {
       match.participatingTeams?.forEach(pt => {
         if (!pt.team) return;
-        
+
         const teamId = pt.team._id.toString();
         if (!teamStats[teamId]) {
           teamStats[teamId] = {
@@ -110,14 +86,14 @@ router.get('/tournament/:tournamentId/results', async (req, res) => {
             bestPlacement: 16
           };
         }
-        
+
         const stats = teamStats[teamId];
         stats.matchesPlayed += 1;
         stats.totalPoints += pt.points?.totalPoints || 0;
         stats.totalKills += pt.kills?.total || 0;
         stats.totalDamage += pt.totalDamage || 0;
         if (pt.chickenDinner) stats.chickenDinners += 1;
-        
+
         const placement = pt.finalPosition || 16;
         stats.totalPlacement += placement;
         if (placement < stats.bestPlacement) {
@@ -130,9 +106,9 @@ router.get('/tournament/:tournamentId/results', async (req, res) => {
     const leaderboard = Object.values(teamStats)
       .map(stats => ({
         ...stats,
-        averagePlacement: stats.matchesPlayed > 0 ? 
+        averagePlacement: stats.matchesPlayed > 0 ?
           (stats.totalPlacement / stats.matchesPlayed).toFixed(1) : 16,
-        averagePoints: stats.matchesPlayed > 0 ? 
+        averagePoints: stats.matchesPlayed > 0 ?
           (stats.totalPoints / stats.matchesPlayed).toFixed(1) : 0
       }))
       .sort((a, b) => b.totalPoints - a.totalPoints);
@@ -152,17 +128,17 @@ router.get('/tournament/:tournamentId/results', async (req, res) => {
 router.get('/tournament/:tournamentId/live', async (req, res) => {
   try {
     const { tournamentId } = req.params;
-    
+
     const liveMatch = await Match.findOne({
       tournament: tournamentId,
       status: 'in_progress'
     })
-    .populate({
-      path: 'participatingTeams.team',
-      select: 'teamName teamTag logo'
-    })
-    .populate('tournament', 'tournamentName currentCompetitionPhase')
-    .lean();
+      .populate({
+        path: 'participatingTeams.team',
+        select: 'teamName teamTag logo'
+      })
+      .populate('tournament', 'tournamentName currentCompetitionPhase')
+      .lean();
 
     if (!liveMatch) {
       return res.json({ liveMatch: null });
@@ -174,7 +150,7 @@ router.get('/tournament/:tournamentId/live', async (req, res) => {
       phase: liveMatch.tournamentPhase,
       map: liveMatch.map,
       startTime: liveMatch.actualStartTime || liveMatch.scheduledStartTime,
-              teams: liveMatch.participatingTeams?.slice(0, 4).map(pt => ({
+      teams: liveMatch.participatingTeams?.slice(0, 4).map(pt => ({
         _id: pt.team?._id,
         name: pt.team?.teamName || pt.teamName || 'Unknown Team',
         tag: pt.team?.teamTag || pt.teamTag,
@@ -335,11 +311,8 @@ router.put('/:matchId/results', async (req, res) => {
       }
     }
 
-    // Update match status to completed
-    match.status = 'completed';
-    if (!match.actualEndTime) {
-      match.actualEndTime = new Date();
-    }
+    // Keep match status as in_progress to allow further editing
+    match.status = 'in_progress';
 
     await match.save();
     await match.populate('participatingTeams.team', 'teamName teamTag logo');
@@ -356,7 +329,7 @@ router.put('/:matchId/results', async (req, res) => {
 router.get('/tournament/:tournamentId/stats', async (req, res) => {
   try {
     const { tournamentId } = req.params;
-    
+
     const stats = await Match.aggregate([
       { $match: { tournament: new mongoose.Types.ObjectId(tournamentId) } },
       {
@@ -393,7 +366,7 @@ router.get('/tournament/:tournamentId/stats', async (req, res) => {
       percentage: ((count / result.totalMatches) * 100).toFixed(1)
     }));
 
-    result.averageKills = result.completedMatches > 0 ? 
+    result.averageKills = result.completedMatches > 0 ?
       Math.round(result.totalKills / result.completedMatches) : 0;
 
     delete result.maps;
@@ -427,7 +400,7 @@ router.get('/player/:playerId/recent', async (req, res) => {
   try {
     const { playerId } = req.params;
     const { limit = 10 } = req.query;
-    
+
     const matches = await Match.find({
       'participatingTeams.players.player': playerId,
       status: 'completed'
@@ -439,7 +412,7 @@ router.get('/player/:playerId/recent', async (req, res) => {
 
     const formattedMatches = matches.map(match => {
       // Find the team this player was on
-      const playerTeam = match.participatingTeams.find(team => 
+      const playerTeam = match.participatingTeams.find(team =>
         team.players?.some(p => p.player.toString() === playerId)
       );
 
