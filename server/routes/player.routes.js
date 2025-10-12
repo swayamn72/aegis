@@ -169,6 +169,32 @@ router.get("/all", async (req, res) => {
   }
 });
 
+router.get("/username/:username", async (req, res) => {
+  try {
+    const username = req.params.username;
+
+    if (!username || username.trim() === '') {
+      return res.status(400).json({ message: "Invalid username" });
+    }
+
+    // Case-insensitive search for username
+    const player = await Player.findOne({
+      username: { $regex: new RegExp(`^${username}$`, "i") },
+    }).select("-password");
+
+    if (!player) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ player });
+  } catch (error) {
+    console.error("Get player by username error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+
 // --- Get Player by ID Route ---
 router.get("/:id", async (req, res) => {
   try {

@@ -22,6 +22,8 @@ const AegisMyProfile = () => {
   const [loading, setLoading] = useState(true);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   const [team, setTeam] = useState(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+const [copied, setCopied] = useState(false);
 
   const isLoading = !user || !user.username;
 
@@ -198,6 +200,57 @@ const AegisMyProfile = () => {
       {showCreatePostModal && (
         <CreatePost onClose={() => setShowCreatePostModal(false)} />
       )}
+{/* Share Profile Modal */}
+{showShareModal && (
+  <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 max-w-sm w-full relative">
+      <button
+        onClick={() => setShowShareModal(false)}
+        className="absolute top-3 right-3 text-zinc-400 hover:text-white"
+      >
+        <X className="w-5 h-5" />
+      </button>
+
+      <h2 className="text-xl font-bold mb-4 text-white">Share Your Profile</h2>
+
+      <div className="bg-zinc-800 rounded-lg p-3 flex items-center justify-between mb-4">
+        <input
+          type="text"
+          value={`${window.location.origin}/player/${user.username}`}
+          readOnly
+          className="bg-transparent text-zinc-300 text-sm w-full outline-none"
+        />
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(`${window.location.origin}/player/${user.username}`);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }}
+          className="ml-3 px-3 py-1 bg-cyan-600 hover:bg-cyan-700 rounded text-sm"
+        >
+          {copied ? "Copied!" : "Copy"}
+        </button>
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={() => {
+            window.open(`/player/${user.username}`, "_blank");
+          }}
+          className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm transition-colors"
+        >
+          Open Profile
+        </button>
+        <button
+          onClick={() => setShowShareModal(false)}
+          className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-sm transition-colors"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       <div className="max-w-7xl mx-auto px-4">
 
@@ -256,9 +309,13 @@ const AegisMyProfile = () => {
                   <Plus className="w-4 h-4" />
                   <span className="hidden sm:inline">Create Post</span>
                 </button>
-                <button className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors">
-                  <Share2 className="w-4 h-4" />
-                </button>
+              <button
+                onClick={() => setShowShareModal(true)}
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+
                 <button className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors">
                   <Settings className="w-4 h-4" />
                 </button>

@@ -43,6 +43,10 @@ import DetailedMatchInfoBGMI from './components/DetailedMatchInfoBGMI';
 import OrgDashboard from './pages/OrgDashboard';
 import MyApplications from './pages/MyApplications';
 import ResetPassword from './pages/ResetPassword';
+import ShareCard from './pages/ShareCard';
+
+
+
 
 function App() {
   return (
@@ -74,6 +78,7 @@ function App() {
               <Route path='/create-community' element={<CreateCommunityPage />} />
               <Route path='/complete-profile' element={<ProtectedRoute><CompleteProfilePage/></ProtectedRoute>} />
               <Route path='/my-profile' element={<ProtectedRoute><MyProfilePage/></ProtectedRoute>} />
+              <Route path="/player/:username" element={<ShareCard />} />
               <Route path='/settings' element={<ProtectedRoute><SettingsPage/></ProtectedRoute>} />
               <Route path="/reset-password/:token" element={<ResetPassword />} />
               <Route path='/tournaments' element={<Tournaments2Page />} />
