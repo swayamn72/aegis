@@ -694,14 +694,19 @@ router.post('/available', auth, async (req, res) => {
       });
     }
 
+    // Get teams already in the selected phase
+    const teamsInPhase = tournament.participatingTeams
+      .filter(pt => pt.currentStage === phase)
+      .map(pt => pt.team._id.toString());
+
     // Get teams that have pending invites for this phase
     const teamsWithPendingInvites = tournament.participatingTeams
       .filter(pt => pt.invites?.some(inv => inv.phase === phase && inv.status === 'pending'))
       .map(pt => pt.team._id.toString());
 
-    // Find all active teams except those with pending invites
+    // Find all active teams except those in phase or with pending invites
     const availableTeams = await Team.find({
-      _id: { $nin: teamsWithPendingInvites },
+      _id: { $nin: [...new Set([...teamsInPhase, ...teamsWithPendingInvites])] },
       status: 'active',
       profileVisibility: 'public'
     })

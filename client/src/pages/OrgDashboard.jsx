@@ -508,7 +508,7 @@ const CreateTournamentModal = ({ organization, onClose, onSuccess }) => {
   const addPhase = () => {
     const newPhase = {
       name: `Phase ${formData.phases.length + 1}`,
-      type: 'qualifier',
+      type: 'qualifiers',
       startDate: '',
       endDate: '',
       status: 'upcoming',
@@ -673,7 +673,7 @@ const CreateTournamentModal = ({ organization, onClose, onSuccess }) => {
                 <div>
                   <label className="block text-sm font-medium mb-2">Start Date *</label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     value={formData.startDate}
                     onChange={(e) => handleInputChange('startDate', e.target.value)}
                     className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
@@ -683,7 +683,7 @@ const CreateTournamentModal = ({ organization, onClose, onSuccess }) => {
                 <div>
                   <label className="block text-sm font-medium mb-2">End Date *</label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     value={formData.endDate}
                     onChange={(e) => handleInputChange('endDate', e.target.value)}
                     className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
@@ -711,7 +711,7 @@ const CreateTournamentModal = ({ organization, onClose, onSuccess }) => {
                   <div>
                     <label className="block text-sm font-medium mb-2">Registration Start Date</label>
                     <input
-                      type="datetime-local"
+                      type="date"
                       value={formData.registrationStartDate}
                       onChange={(e) => handleInputChange('registrationStartDate', e.target.value)}
                       className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
@@ -721,7 +721,7 @@ const CreateTournamentModal = ({ organization, onClose, onSuccess }) => {
                   <div>
                     <label className="block text-sm font-medium mb-2">Registration End Date</label>
                     <input
-                      type="datetime-local"
+                      type="date"
                       value={formData.registrationEndDate}
                       onChange={(e) => handleInputChange('registrationEndDate', e.target.value)}
                       className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
@@ -802,17 +802,15 @@ const CreateTournamentModal = ({ organization, onClose, onSuccess }) => {
                             onChange={(e) => updatePhase(index, 'type', e.target.value)}
                             className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm"
                           >
-                            <option value="qualifier">Qualifier</option>
-                            <option value="group_stage">Group Stage</option>
-                            <option value="elimination_stage">Elimination Stage</option>
-                            <option value="final_stage">Finals</option>
+                            <option value="qualifiers">Qualifiers</option>
+                            <option value="final_stage">Final Stage</option>
                           </select>
                         </div>
 
                         <div>
                           <label className="block text-sm mb-1">Start Date</label>
                           <input
-                            type="datetime-local"
+                            type="date"
                             value={phase.startDate}
                             onChange={(e) => updatePhase(index, 'startDate', e.target.value)}
                             className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm"
@@ -822,7 +820,7 @@ const CreateTournamentModal = ({ organization, onClose, onSuccess }) => {
                         <div>
                           <label className="block text-sm mb-1">End Date</label>
                           <input
-                            type="datetime-local"
+                            type="date"
                             value={phase.endDate}
                             onChange={(e) => updatePhase(index, 'endDate', e.target.value)}
                             className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm"

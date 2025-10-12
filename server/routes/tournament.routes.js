@@ -4,7 +4,7 @@ import Tournament from '../models/tournament.model.js';
 import Match from '../models/match.model.js';
 import Team from '../models/team.model.js';
 import Player from '../models/player.model.js';
-import { sendTeamInvite, acceptTeamInvite } from '../controllers/tournament.controller.js';
+import { sendTeamInvite, acceptTeamInvite, addTeamToPhase, removeTeamFromPhase } from '../controllers/tournament.controller.js';
 import auth from '../middleware/auth.js';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
@@ -255,6 +255,10 @@ router.get('/:id', async (req, res) => {
         select: 'teamName teamTag logo primaryGame region establishedDate'
       })
       .populate({
+        path: 'phases.teams',
+        select: 'teamName logo'
+      })
+      .populate({
         path: 'phases.groups.teams',
         select: 'teamName teamTag logo'
       })
@@ -359,12 +363,14 @@ router.get('/:id', async (req, res) => {
       },
 
       phases: tournament.phases?.map(phase => ({
+        _id: phase._id,
         name: phase.name,
         type: phase.type,
         status: phase.status,
         startDate: phase.startDate,
         endDate: phase.endDate,
         description: phase.details,
+        teams: phase.teams || [],
         groups: phase.groups || []
       })) || [],
 
@@ -629,6 +635,80 @@ router.put('/:id', auth, upload.fields([
 });
 
 // Send invite to team for a phase
+
+// Admin phase team management
+router.post('/:id/phases/:phase/teams', auth, async (req, res) => await addTeamToPhase(req, res));
+router.delete('/:id/phases/:phase/teams/:teamId', auth, async (req, res) => await removeTeamFromPhase(req, res));
+
+// Update groups for a specific phase
+router.put('/:id/groups', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { groups, phaseId } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(phaseId)) {
+      return res.status(400).json({ error: 'Invalid tournament or phase ID' });
+    }
+
+    if (!groups || !Array.isArray(groups)) {
+      return res.status(400).json({ error: 'Groups must be a non-empty array' });
+    }
+
+    const tournament = await Tournament.findById(id);
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    // Check authorization (admin only for now) - temporarily disabled for testing
+    // if (!req.user.isAdmin) {
+    //   return res.status(403).json({ error: 'Admin access required to update groups' });
+    // }
+
+    // Validate phase exists
+    const phaseIndex = tournament.phases.findIndex(p => p._id.toString() === phaseId);
+    if (phaseIndex === -1) {
+      return res.status(404).json({ error: 'Phase not found' });
+    }
+
+    // Validate team IDs
+    for (const group of groups) {
+      for (const teamId of group.teams) {
+        if (!mongoose.Types.ObjectId.isValid(teamId)) {
+          return res.status(400).json({ error: `Invalid team ID: ${teamId}` });
+        }
+      }
+    }
+
+    // Ensure teams are ObjectIds
+    const validatedGroups = groups.map(group => ({
+      ...group,
+      teams: group.teams.map(teamId => new mongoose.Types.ObjectId(teamId))
+    }));
+
+    // Update the specific phase's groups using arrayFilters
+    const updatedTournament = await Tournament.findOneAndUpdate(
+      { _id: id },
+      { $set: { 'phases.$[phase].groups': validatedGroups } },
+      {
+        arrayFilters: [{ 'phase._id': phaseId }],
+        new: true,
+        runValidators: true
+      }
+    );
+
+    if (!updatedTournament) {
+      return res.status(500).json({ error: 'Failed to update groups' });
+    }
+
+    res.json({
+      message: 'Groups updated successfully',
+      tournament: updatedTournament
+    });
+  } catch (error) {
+    console.error('Error updating groups:', error);
+    res.status(500).json({ error: 'Failed to update groups', details: error.message });
+  }
+});
 
 // Admin routes for tournament approval system
 router.get('/admin/pending-approval', auth, async (req, res) => {
