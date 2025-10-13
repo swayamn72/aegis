@@ -69,12 +69,44 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
   useEffect(() => {
     if (tournament) {
       setFormData({
-        ...tournament,
+        tournamentName: tournament.tournamentName || '',
+        shortName: tournament.shortName || '',
+        gameTitle: tournament.gameTitle || 'BGMI',
+        description: tournament.description || '',
+        region: tournament.region || 'India',
+        tier: tournament.tier || 'Community',
+        status: tournament.status || 'announced',
+        visibility: tournament.visibility || 'public',
         startDate: tournament.startDate ? tournament.startDate.split('T')[0] : '',
         endDate: tournament.endDate ? tournament.endDate.split('T')[0] : '',
         isOpenForAll: tournament.isOpenForAll || false,
         registrationStartDate: tournament.registrationStartDate ? tournament.registrationStartDate.split('T')[0] : '',
-        registrationEndDate: tournament.registrationEndDate ? tournament.registrationEndDate.split('T')[0] : ''
+        registrationEndDate: tournament.registrationEndDate ? tournament.registrationEndDate.split('T')[0] : '',
+        slots: tournament.slots || {
+          total: 16,
+          registered: 0
+        },
+        prizePool: tournament.prizePool || {
+          total: 0,
+          currency: 'INR',
+          distribution: [],
+          individualAwards: []
+        },
+        media: tournament.media || {
+          logo: '',
+          coverImage: '',
+          screenshots: []
+        },
+        organizer: tournament.organizer || {
+          name: 'Aegis Esports',
+          organizationRef: null,
+          contactEmail: ''
+        },
+        format: tournament.format || 'Battle Royale Points System',
+        participatingTeams: tournament.participatingTeams || [],
+        tags: tournament.tags || [],
+        featured: tournament.featured || false,
+        phases: tournament.phases || []
       });
       // Set previews for editing
       setLogoPreview(tournament.media?.logo || '');
@@ -118,7 +150,8 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
         format: 'Battle Royale Points System',
         participatingTeams: [],
         tags: [],
-        featured: false
+        featured: false,
+        phases: []
       });
       // Clear file states for new form
       setLogoFile(null);
@@ -353,9 +386,8 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
                 name="tournamentName"
                 value={formData.tournamentName}
                 onChange={handleChange}
-                className={`w-full bg-zinc-800/50 border rounded-lg px-4 py-2 text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-                  errors.tournamentName ? 'border-red-500' : 'border-zinc-700'
-                }`}
+                className={`w-full bg-zinc-800/50 border rounded-lg px-4 py-2 text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-orange-500 ${errors.tournamentName ? 'border-red-500' : 'border-zinc-700'
+                  }`}
                 placeholder="Enter tournament name"
               />
               {errors.tournamentName && (
@@ -387,9 +419,8 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
                 name="gameTitle"
                 value={formData.gameTitle}
                 onChange={handleChange}
-                className={`w-full bg-zinc-800/50 border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-                  errors.gameTitle ? 'border-red-500' : 'border-zinc-700'
-                }`}
+                className={`w-full bg-zinc-800/50 border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 ${errors.gameTitle ? 'border-red-500' : 'border-zinc-700'
+                  }`}
               >
                 <option value="">Select Game</option>
                 {gameOptions.map(game => (
@@ -446,9 +477,8 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
                 name="startDate"
                 value={formData.startDate}
                 onChange={handleChange}
-                className={`w-full bg-zinc-800/50 border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-                  errors.startDate ? 'border-red-500' : 'border-zinc-700'
-                }`}
+                className={`w-full bg-zinc-800/50 border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 ${errors.startDate ? 'border-red-500' : 'border-zinc-700'
+                  }`}
               />
               {errors.startDate && (
                 <p className="text-red-400 text-sm mt-1">{errors.startDate}</p>
@@ -464,9 +494,8 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
                 name="endDate"
                 value={formData.endDate}
                 onChange={handleChange}
-                className={`w-full bg-zinc-800/50 border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-                  errors.endDate ? 'border-red-500' : 'border-zinc-700'
-                }`}
+                className={`w-full bg-zinc-800/50 border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 ${errors.endDate ? 'border-red-500' : 'border-zinc-700'
+                  }`}
               />
               {errors.endDate && (
                 <p className="text-red-400 text-sm mt-1">{errors.endDate}</p>
@@ -773,11 +802,10 @@ const TournamentForm = ({ tournament, onSubmit, onCancel, isEditing = false }) =
                                 {phase.startDate && new Date(phase.startDate).toLocaleDateString()} - {phase.endDate && new Date(phase.endDate).toLocaleDateString()}
                               </p>
                             </div>
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              phase.status === 'upcoming' ? 'bg-blue-500/20 text-blue-400' :
-                              phase.status === 'in_progress' ? 'bg-green-500/20 text-green-400' :
-                              'bg-gray-500/20 text-gray-400'
-                            }`}>
+                            <span className={`px-2 py-1 rounded-full text-xs ${phase.status === 'upcoming' ? 'bg-blue-500/20 text-blue-400' :
+                                phase.status === 'in_progress' ? 'bg-green-500/20 text-green-400' :
+                                  'bg-gray-500/20 text-gray-400'
+                              }`}>
                               {phase.status}
                             </span>
                           </div>

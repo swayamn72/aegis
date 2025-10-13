@@ -44,7 +44,7 @@ import OrgDashboard from './pages/OrgDashboard';
 import MyApplications from './pages/MyApplications';
 import ResetPassword from './pages/ResetPassword';
 import ShareCard from './pages/ShareCard';
-
+import TournamentManagementPage from './pages/TournamentManagementPage';
 
 
 
@@ -89,12 +89,14 @@ function App() {
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/tournaments" element={<AdminTournaments />} />
+              <Route path="/admin/tournaments/:id" element={<TournamentManagementPage />} />
               <Route path="/admin/matches" element={<AdminMatches />} />
               <Route path="/admin/organizations" element={<AdminOrganizations />} />
               <Route path="/admin/bug-reports" element={<AdminBugReports />} />
               <Route path="/my-teams" element={<ProtectedRoute><MyTeamsPage /></ProtectedRoute>} />
               <Route path="/org-dashboard" element={<ProtectedRoute><OrgDashboard /></ProtectedRoute>} />
               <Route path="/my-applications" element={<ProtectedRoute><MyApplications /></ProtectedRoute>} />
+              
             </Routes>
             <ToastContainer
               position="bottom-right"

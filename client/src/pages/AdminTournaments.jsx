@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext';
 import AdminLayout from '../components/AdminLayout';
-import TournamentEntryModal from '../components/TournamentEntryModal';
 import TournamentForm from '../components/TournamentForm';
-import TournamentWindow from '../components/TournamentWindow';
 import { toast } from 'react-toastify';
 import {
   Plus,
@@ -12,7 +11,6 @@ import {
   Trash2,
   Eye,
   Trophy,
-  UserPlus,
   Bell,
   CheckCircle,
   XCircle
@@ -32,7 +30,6 @@ const fetchTournaments = async (params = {}, token) => {
     }
     const data = await response.json();
     
-    // Filter out pending org tournaments (they're shown separately)
     const filteredTournaments = data.tournaments.filter(
       t => t._approvalStatus !== 'pending'
     );
@@ -63,25 +60,6 @@ const deleteTournament = async (tournamentId, token) => {
   }
 };
 
-const enterTournament = async (tournamentId, entryData) => {
-  try {
-    const response = await fetch(`/api/admin/tournaments/${tournamentId}/enter`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(entryData)
-    });
-    if (!response.ok) {
-      throw new Error('Failed to enter tournament');
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('Error entering tournament:', error);
-    throw error;
-  }
-};
-
 const createTournament = async (tournamentData, token) => {
   try {
     const response = await fetch('/api/admin/tournaments', {
@@ -102,27 +80,7 @@ const createTournament = async (tournamentData, token) => {
   }
 };
 
-const editTournament = async (tournamentData, tournamentId, token) => {
-  try {
-    const response = await fetch(`/api/admin/tournaments/${tournamentId}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
-      body: tournamentData
-    });
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to update tournament');
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('Error updating tournament:', error);
-    throw error;
-  }
-};
-
-const TournamentTable = ({ tournaments, onEdit, onDelete, onView, onEnter }) => {
+const TournamentTable = ({ tournaments, onEdit, onDelete, onView }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'in_progress':
@@ -265,21 +223,14 @@ const TournamentTable = ({ tournaments, onEdit, onDelete, onView, onEnter }) => 
                     <button
                       onClick={() => onView(tournament)}
                       className="text-zinc-400 hover:text-white p-1"
-                      title="View Details"
+                      title="View & Manage"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => onEnter(tournament)}
-                      className="text-zinc-400 hover:text-green-400 p-1"
-                      title="Enter Tournament"
-                    >
-                      <UserPlus className="w-4 h-4" />
-                    </button>
-                    <button
                       onClick={() => onEdit(tournament)}
                       className="text-zinc-400 hover:text-blue-400 p-1"
-                      title="Edit Tournament"
+                      title="Quick Edit"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
@@ -302,6 +253,7 @@ const TournamentTable = ({ tournaments, onEdit, onDelete, onView, onEnter }) => 
 };
 
 const AdminTournaments = () => {
+  const navigate = useNavigate();
   const { admin, token } = useAdmin();
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -310,8 +262,6 @@ const AdminTournaments = () => {
   const [gameFilter, setGameFilter] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showEnterModal, setShowEnterModal] = useState(false);
-  const [showTournamentWindow, setShowTournamentWindow] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [pendingOrgTournaments, setPendingOrgTournaments] = useState([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -411,7 +361,6 @@ const AdminTournaments = () => {
       if (response.ok) {
         toast.success('Tournament approved successfully!');
         fetchPendingOrgTournaments();
-        // Refresh main tournament list
         const params = {};
         if (searchTerm) params.search = searchTerm;
         if (statusFilter) params.status = statusFilter;
@@ -517,8 +466,8 @@ const AdminTournaments = () => {
   };
 
   const handleView = (tournament) => {
-    setSelectedTournament(tournament);
-    setShowTournamentWindow(true);
+    // Navigate to the dedicated tournament management page
+    navigate(`/admin/tournaments/${tournament._id}`);
   };
 
   const handleCreate = () => {
@@ -527,7 +476,7 @@ const AdminTournaments = () => {
 
   const handleCreateSubmit = async (tournamentData) => {
     try {
-      await createTournament(tournamentData, token);
+      const result = await createTournament(tournamentData, token);
       const params = {};
       if (searchTerm) params.search = searchTerm;
       if (statusFilter) params.status = statusFilter;
@@ -536,9 +485,13 @@ const AdminTournaments = () => {
       setTournaments(data.tournaments || []);
       setShowCreateModal(false);
       toast.success('Tournament created successfully!');
+      
+      // Navigate to the new tournament's management page
+      if (result.tournament?._id) {
+        navigate(`/admin/tournaments/${result.tournament._id}`);
+      }
     } catch (error) {
       console.error('Error creating tournament:', error);
-      setShowCreateModal(false);
       toast.error('Error creating tournament');
     }
   };
@@ -546,27 +499,31 @@ const AdminTournaments = () => {
   const handleEditSubmit = async (tournamentData) => {
     if (!selectedTournament) return;
     try {
-      await editTournament(tournamentData, selectedTournament._id, token);
-      const params = {};
-      if (searchTerm) params.search = searchTerm;
-      if (statusFilter) params.status = statusFilter;
-      if (gameFilter) params.gameTitle = gameFilter;
-      const data = await fetchTournaments(params, token);
-      setTournaments(data.tournaments || []);
-      setShowEditModal(false);
-      setSelectedTournament(null);
-      toast.success('Tournament updated successfully!');
+      const response = await fetch(`/api/admin/tournaments/${selectedTournament._id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: tournamentData
+      });
+      
+      if (response.ok) {
+        const params = {};
+        if (searchTerm) params.search = searchTerm;
+        if (statusFilter) params.status = statusFilter;
+        if (gameFilter) params.gameTitle = gameFilter;
+        const data = await fetchTournaments(params, token);
+        setTournaments(data.tournaments || []);
+        setShowEditModal(false);
+        setSelectedTournament(null);
+        toast.success('Tournament updated successfully!');
+      } else {
+        toast.error('Failed to update tournament');
+      }
     } catch (error) {
       console.error('Error updating tournament:', error);
-      setShowEditModal(false);
-      setSelectedTournament(null);
       toast.error('Error updating tournament');
     }
-  };
-
-  const handleEnter = (tournament) => {
-    setSelectedTournament(tournament);
-    setShowEnterModal(true);
   };
 
   if (loading) {
@@ -637,7 +594,6 @@ const AdminTournaments = () => {
           </div>
         </div>
 
-        {/* PENDING ORG TOURNAMENTS SECTION */}
         {pendingOrgTournaments.length > 0 && (
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-white">
@@ -664,14 +620,11 @@ const AdminTournaments = () => {
                       <p className="text-xs text-yellow-100 mt-1">
                         By <span className="font-semibold">{tournament.organizer?.organizationRef?.orgName || 'Unknown'}</span> • Submitted {new Date(tournament._submittedAt).toLocaleDateString()}
                       </p>
-                      {tournament.description && (
-                        <p className="text-xs text-yellow-200 mt-2 line-clamp-2">{tournament.description}</p>
-                      )}
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 flex-shrink-0 items-end">
                     <button
-                      onClick={() => handleView(tournament)}
+                      onClick={() => navigate(`/admin/tournaments/${tournament._id}`)}
                       className="px-4 py-1 bg-zinc-700 hover:bg-zinc-600 rounded text-sm text-white transition mb-1"
                     >
                       View
@@ -700,7 +653,6 @@ const AdminTournaments = () => {
           onEdit={handleEdit}
           onDelete={handleDeleteClick}
           onView={handleView}
-          onEnter={handleEnter}
         />
 
         <div className="flex items-center justify-between">
@@ -723,16 +675,6 @@ const AdminTournaments = () => {
           </div>
         </div>
       </div>
-
-      <TournamentEntryModal
-        tournament={selectedTournament}
-        isOpen={showEnterModal}
-        onClose={() => {
-          setShowEnterModal(false);
-          setSelectedTournament(null);
-        }}
-        onSubmit={enterTournament}
-      />
 
       {showCreateModal && (
         <TournamentForm
@@ -768,23 +710,6 @@ const AdminTournaments = () => {
         onClose={() => { setShowRejectModal(false); setRejectingTournamentId(null); }}
         onSubmit={handleSubmitRejectReason}
       />
-
-      {showTournamentWindow && selectedTournament && (
-        <TournamentWindow
-          tournament={selectedTournament}
-          isOpen={showTournamentWindow}
-          onClose={() => {
-            setShowTournamentWindow(false);
-            setSelectedTournament(null);
-          }}
-          onSave={async (updatedTournament) => {
-            console.log('Saving tournament:', updatedTournament);
-            setShowTournamentWindow(false);
-            setSelectedTournament(null);
-          }}
-          isAdmin={true}
-        />
-      )}
     </AdminLayout>
   );
 };
