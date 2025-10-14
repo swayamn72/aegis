@@ -45,6 +45,7 @@ import MyApplications from './pages/MyApplications';
 import ResetPassword from './pages/ResetPassword';
 import ShareCard from './pages/ShareCard';
 import TournamentManagementPage from './pages/TournamentManagementPage';
+import RewardsPage from './pages/RewardsPage';
 
 
 
@@ -96,6 +97,7 @@ function App() {
               <Route path="/my-teams" element={<ProtectedRoute><MyTeamsPage /></ProtectedRoute>} />
               <Route path="/org-dashboard" element={<ProtectedRoute><OrgDashboard /></ProtectedRoute>} />
               <Route path="/my-applications" element={<ProtectedRoute><MyApplications /></ProtectedRoute>} />
+              <Route path="/rewards" element={<RewardsPage/>}/>
               
             </Routes>
             <ToastContainer
