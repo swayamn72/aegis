@@ -14,22 +14,28 @@ router.get("/users/with-chats", auth, async (req, res) => {
     const sentMessages = await ChatMessage.find({ senderId: userId }).distinct('receiverId');
     const receivedMessages = await ChatMessage.find({ receiverId: userId }).distinct('senderId');
 
+    // Include 'system' if there are system messages
     const chatUserIds = [...new Set([...sentMessages, ...receivedMessages])];
+
+    // Separate system from actual user IDs
+    const actualUserIds = chatUserIds.filter(id => id !== 'system');
 
     // Fetch user details for these IDs from Player and Organization
     const Player = (await import('../models/player.model.js')).default;
     const Organization = (await import('../models/organization.model.js')).default;
 
-    const players = await Player.find({ _id: { $in: chatUserIds } })
+    const players = await Player.find({ _id: { $in: actualUserIds } })
       .select('username profilePicture realName primaryGame aegisRating')
-      .sort({ username: 1 });
+      .sort({ username: 1 })
+      .lean();
 
-    const organizations = await Organization.find({ _id: { $in: chatUserIds } })
+    const organizations = await Organization.find({ _id: { $in: actualUserIds } })
       .select('orgName logo ownerName')
-      .sort({ orgName: 1 });
+      .sort({ orgName: 1 })
+      .lean();
 
     // Combine and format
-    const chatUsers = [
+    let chatUsers = [
       ...players.map(p => ({
         _id: p._id,
         username: p.username,
@@ -46,10 +52,25 @@ router.get("/users/with-chats", auth, async (req, res) => {
         profilePicture: o.logo,
         isOrganization: true
       }))
-    ].sort((a, b) => a.username.localeCompare(b.username));
+    ];
+
+    // Add system user if there are system messages
+    if (chatUserIds.includes('system')) {
+      chatUsers.push({
+        _id: 'system',
+        username: 'System',
+        realName: 'System Notifications',
+        profilePicture: null,
+        isOrganization: false,
+        isSystem: true
+      });
+    }
+
+    chatUsers.sort((a, b) => a.username.localeCompare(b.username));
 
     res.json({ users: chatUsers });
   } catch (err) {
+    console.error('Error in users/with-chats:', err);
     res.status(500).json({ message: err.message });
   }
 });
@@ -67,10 +88,12 @@ router.get("/:receiverId", auth, async (req, res) => {
       ],
     })
       .sort({ timestamp: 1 })
-      .limit(50); // Limit to last 50 messages for performance
+      .limit(50)
+      .lean();
 
     res.json(messages);
   } catch (err) {
+    console.error('Error fetching messages:', err);
     res.status(500).json({ message: err.message });
   }
 });
@@ -86,7 +109,7 @@ router.get("/invitations/for-chat", auth, async (req, res) => {
       .populate('team', 'teamName teamTag logo primaryGame region players')
       .populate('fromPlayer', 'username profilePicture')
       .sort({ createdAt: -1 })
-      .limit(10); // Show last 10 invitations
+      .limit(10);
 
     res.json({ invitations });
   } catch (error) {
@@ -105,7 +128,7 @@ router.post("/invitations/:id/accept", auth, async (req, res) => {
       return res.status(404).json({ message: 'Invitation not found' });
     }
 
-    if (invitation.toPlayer.toString() !== req.user.id.toString()) {
+    if (invitation.toPlayer.toString() !== req.user.id) {
       return res.status(403).json({ message: 'This invitation is not for you' });
     }
 
@@ -118,7 +141,6 @@ router.post("/invitations/:id/accept", auth, async (req, res) => {
       await invitation.save();
       return res.status(400).json({ message: 'Invitation has expired' });
     }
-
 
     const Player = (await import('../models/player.model.js')).default;
     const Team = (await import('../models/team.model.js')).default;
@@ -166,7 +188,7 @@ router.post("/invitations/:id/decline", auth, async (req, res) => {
       return res.status(404).json({ message: 'Invitation not found' });
     }
 
-    if (invitation.toPlayer.toString() !== req.user.id.toString()) {
+    if (invitation.toPlayer.toString() !== req.user.id) {
       return res.status(403).json({ message: 'This invitation is not for you' });
     }
 
@@ -212,6 +234,65 @@ router.post("/tournament-reference/:tournamentId", auth, async (req, res) => {
   } catch (error) {
     console.error('Error sending tournament reference:', error);
     res.status(500).json({ message: 'Server error sending tournament reference' });
+  }
+});
+
+// Send notification message
+router.post("/send-notification", auth, async (req, res) => {
+  try {
+    const { message, messageType, tournamentId, matchId, receiverId } = req.body;
+
+    if (!receiverId) {
+      return res.status(400).json({ message: 'Receiver ID is required' });
+    }
+
+    // Create notification message
+    const notificationMessage = new ChatMessage({
+      senderId: req.user.id,
+      receiverId: receiverId,
+      message: message,
+      messageType: messageType || 'text',
+      tournamentId: tournamentId,
+      timestamp: new Date()
+    });
+
+    await notificationMessage.save();
+
+    // Emit to receiver
+    if (global.io) {
+      global.io.to(receiverId).emit('receiveMessage', {
+        _id: notificationMessage._id,
+        senderId: req.user.id,
+        receiverId: receiverId,
+        message: message,
+        messageType: messageType || 'text',
+        tournamentId: tournamentId,
+        matchId: matchId,
+        timestamp: new Date()
+      });
+    }
+
+    res.json({ message: 'Notification sent successfully', chatMessage: notificationMessage });
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    res.status(500).json({ message: 'Server error sending notification' });
+  }
+});
+
+// Get all messages received by the current user
+router.get('/messages/received', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const messages = await ChatMessage.find({ receiverId: userId })
+      .populate('senderId', 'username realName profilePicture')
+      .sort({ timestamp: -1 })
+      .lean();
+
+    res.json({ messages });
+  } catch (error) {
+    console.error('Error fetching received messages:', error);
+    res.status(500).json({ error: 'Failed to fetch received messages' });
   }
 });
 

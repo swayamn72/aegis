@@ -4,12 +4,13 @@ import { useAdmin } from '../context/AdminContext';
 import AdminLayout from '../components/AdminLayout';
 import {
   Trophy, Users, Calendar, DollarSign, Settings, Target,
-  BarChart3, Grid3x3, ArrowLeft, Save, Edit, Eye, Award, Star
+  BarChart3, Grid3x3, ArrowLeft, Save, Edit, Eye, Award, Star, Clock
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import TournamentForm from '../components/TournamentForm';
 import PhaseManager from '../components/PhaseManager';
 import MatchManagement from '../components/MatchManagement';
+import MatchScheduler from '../components/MatchScheduler';
 import PointsTable from '../components/PointsTable';
 import TeamGrouping from '../components/TeamGrouping';
 import TeamSelector from '../components/TeamSelector';
@@ -32,6 +33,7 @@ const TournamentManagementPage = () => {
     { id: 'edit', name: 'Edit Details', icon: Edit },
     { id: 'phases', name: 'Phases', icon: Target },
     { id: 'matches', name: 'Matches', icon: Calendar },
+    { id: 'schedule', name: 'Schedule Matches', icon: Clock },
     { id: 'teams', name: 'Teams', icon: Users },
     { id: 'prizepool', name: 'Prize Pool', icon: DollarSign },
     { id: 'groups', name: 'Groups', icon: Grid3x3 },
@@ -543,6 +545,16 @@ const TournamentManagementPage = () => {
 
             {activeTab === 'matches' && (
               <MatchManagement
+                tournament={tournament}
+                onUpdate={(updatedTournament) => {
+                  setTournament(updatedTournament);
+                  fetchTournament();
+                }}
+              />
+            )}
+
+            {activeTab === 'schedule' && (
+              <MatchScheduler
                 tournament={tournament}
                 onUpdate={(updatedTournament) => {
                   setTournament(updatedTournament);

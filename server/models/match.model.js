@@ -8,7 +8,7 @@ const matchSchema = new mongoose.Schema(
       required: true,
       min: 1,
     },
-    
+
     // --- Tournament Reference ---
     tournament: {
       type: mongoose.Schema.Types.ObjectId,
@@ -21,14 +21,14 @@ const matchSchema = new mongoose.Schema(
       trim: true,
       required: true, // e.g., "Group Stage Day 1", "Grand Finals"
     },
-    
+
     // --- Match Timing ---
     scheduledStartTime: {
       type: Date,
       required: true,
       index: true,
     },
-    
+
     // --- Match Status ---
     status: {
       type: String,
@@ -41,14 +41,18 @@ const matchSchema = new mongoose.Schema(
       default: 'scheduled',
       index: true,
     },
-    
+
     // --- Map ---
     map: {
       type: String,
       enum: ['Erangel', 'Miramar', 'Sanhok', 'Vikendi', 'Rondo'],
       required: true,
     },
-    
+
+    // Persist selected groups for scheduled/display
+    participatingGroups: [{ type: String }],
+
+
     // --- Participating Teams (up to 25 teams) ---
     participatingTeams: [
       {
@@ -57,22 +61,7 @@ const matchSchema = new mongoose.Schema(
           ref: 'Team',
           required: true,
         },
-        teamName: String,
-        teamTag: String,
-        players: [ // 4 players per team
-          {
-            player: {
-              type: mongoose.Schema.Types.ObjectId,
-              ref: 'Player',
-              required: true,
-            },
-            playerName: String, 
-            role: {
-              type: String,
-              enum: ['IGL', 'assaulter', 'support', 'sniper', 'fragger'],
-            },
-          }
-        ],
+
         // Team's overall performance in this match
         finalPosition: { // 1st, 2nd, 3rd, etc. - null for unplayed matches
           type: Number,
@@ -100,7 +89,7 @@ const matchSchema = new mongoose.Schema(
         },
       }
     ],
-    
+
     // --- Match Statistics ---
     matchStats: {
       totalKills: { type: Number, default: 0 },
@@ -109,7 +98,7 @@ const matchSchema = new mongoose.Schema(
         kills: Number,
       },
     },
-    
+
     // --- Streaming ---
     streamUrls: [
       {
@@ -122,7 +111,7 @@ const matchSchema = new mongoose.Schema(
         isMain: Boolean,
       }
     ],
-    
+
     // --- Points System Reference ---
     pointsSystem: {
       placementPoints: {
@@ -156,53 +145,53 @@ const matchSchema = new mongoose.Schema(
 matchSchema.index({ tournament: 1, matchNumber: 1 });
 matchSchema.index({ status: 1, scheduledStartTime: 1 });
 matchSchema.index({ map: 1, status: 1 });
-matchSchema.index({ matchType: 1, scheduledStartTime: -1 });
+matchSchema.index({ matchType: 1, scheduledStartTime: -1 }); // restored
 matchSchema.index({ 'participatingTeams.team': 1 });
 matchSchema.index({ createdAt: -1 });
 
 // --- Virtuals ---
 
 // Virtual for winner team
-matchSchema.virtual('winner').get(function() {
+matchSchema.virtual('winner').get(function () {
   return this.participatingTeams.find(team => team.finalPosition === 1);
 });
 
 // Virtual for chicken dinner team
-matchSchema.virtual('chickenDinnerTeam').get(function() {
+matchSchema.virtual('chickenDinnerTeam').get(function () {
   return this.participatingTeams.find(team => team.chickenDinner === true);
 });
 
 // Virtual for teams count
-matchSchema.virtual('teamsCount').get(function() {
+matchSchema.virtual('teamsCount').get(function () {
   return this.participatingTeams.length;
 });
 
 // Virtual to check if match is live
-matchSchema.virtual('isLive').get(function() {
+matchSchema.virtual('isLive').get(function () {
   return this.status === 'in_progress';
 });
 
 // --- Pre-save middleware ---
-matchSchema.pre('save', function(next) {
-  
+matchSchema.pre('save', function (next) {
+
   // Calculate total match stats from participating teams
   if (this.participatingTeams && this.participatingTeams.length > 0) {
     this.matchStats.totalKills = this.participatingTeams.reduce((total, team) => total + team.kills.total, 0);
-    
+
   }
-  
+
   next();
 });
 
 // --- Instance Methods ---
 
 // Method to get team by position
-matchSchema.methods.getTeamByPosition = function(position) {
+matchSchema.methods.getTeamByPosition = function (position) {
   return this.participatingTeams.find(team => team.finalPosition === position);
 };
 
 // Method to get top N teams
-matchSchema.methods.getTopTeams = function(n = 3) {
+matchSchema.methods.getTopTeams = function (n = 3) {
   return this.participatingTeams
     .filter(team => team.finalPosition)
     .sort((a, b) => a.finalPosition - b.finalPosition)
@@ -210,18 +199,18 @@ matchSchema.methods.getTopTeams = function(n = 3) {
 };
 
 // Method to calculate team's total points
-matchSchema.methods.calculateTeamPoints = function(teamId) {
+matchSchema.methods.calculateTeamPoints = function (teamId) {
   const team = this.participatingTeams.find(t => t.team.toString() === teamId.toString());
   if (!team) return 0;
-  
+
   const placementPoints = this.pointsSystem.placementPoints[team.finalPosition] || 0;
   const killPoints = team.kills.total * this.pointsSystem.killPoints;
-  
+
   return placementPoints + killPoints;
 };
 
 // Method to get match leaderboard
-matchSchema.methods.getLeaderboard = function() {
+matchSchema.methods.getLeaderboard = function () {
   return this.participatingTeams
     .map(team => ({
       team: team.team,
@@ -238,7 +227,7 @@ matchSchema.methods.getLeaderboard = function() {
 // --- Static Methods ---
 
 // Find matches by tournament
-matchSchema.statics.findByTournament = function(tournamentId, limit = 20) {
+matchSchema.statics.findByTournament = function (tournamentId, limit = 20) {
   return this.find({ tournament: tournamentId })
     .sort({ scheduledStartTime: -1 })
     .limit(limit)
@@ -247,37 +236,37 @@ matchSchema.statics.findByTournament = function(tournamentId, limit = 20) {
 };
 
 // Find live matches
-matchSchema.statics.findLive = function() {
-  return this.find({ 
+matchSchema.statics.findLive = function () {
+  return this.find({
     status: 'in_progress',
     visibility: 'public'
   })
-  .populate('participatingTeams.team', 'teamName teamTag logo')
-  .populate('tournament', 'tournamentName shortName')
-  .sort({ scheduledStartTime: 1 });
+    .populate('participatingTeams.team', 'teamName teamTag logo')
+    .populate('tournament', 'tournamentName shortName')
+    .sort({ scheduledStartTime: 1 });
 };
 
 // Find recent completed matches
-matchSchema.statics.findRecentCompleted = function(limit = 10) {
-  return this.find({ 
+matchSchema.statics.findRecentCompleted = function (limit = 10) {
+  return this.find({
     status: 'completed',
     visibility: 'public'
   })
-  .sort({ actualEndTime: -1 })
-  .limit(limit)
-  .populate('participatingTeams.team', 'teamName teamTag logo')
-  .populate('tournament', 'tournamentName shortName');
+    .sort({ actualEndTime: -1 })
+    .limit(limit)
+    .populate('participatingTeams.team', 'teamName teamTag logo')
+    .populate('tournament', 'tournamentName shortName');
 };
 
 // Find matches by map
-matchSchema.statics.findByMap = function(map, limit = 10) {
-  return this.find({ 
+matchSchema.statics.findByMap = function (map, limit = 10) {
+  return this.find({
     map: map,
     status: 'completed',
     visibility: 'public'
   })
-  .sort({ actualEndTime: -1 })
-  .limit(limit);
+    .sort({ actualEndTime: -1 })
+    .limit(limit);
 };
 
 const Match = mongoose.model('Match', matchSchema);

@@ -181,6 +181,11 @@ router.get('/team/:teamId', auth, async (req, res) => {
   try {
     const { teamId } = req.params;
 
+    // Handle undefined teamId
+    if (!teamId || teamId === 'undefined') {
+      return res.json({ applications: [] });
+    }
+
     // Verify user is team captain
     const team = await Team.findById(teamId);
     if (!team) {

@@ -98,7 +98,7 @@ const MatchManagement = ({ tournament, onUpdate }) => {
       const matchData = {
         ...newMatch,
         tournament: tournament._id,
-        matchType: 'group_stage',
+        matchType: 'group_stage', // restored
         participatingTeams: allParticipatingTeamIds.map(teamId => {
           const participatingTeamData = teams.find(t => t.team._id.toString() === teamId);
           console.log('Team ID:', teamId, 'Participating Team Data:', participatingTeamData);
@@ -389,6 +389,7 @@ const MatchManagement = ({ tournament, onUpdate }) => {
       });
 
       if (response.ok) {
+        // fixed syntax
         setMatches(matches.filter(match => match._id !== matchId));
         setDeleteConfirm({ show: false, matchId: null, matchNumber: null });
         console.log('Match deleted successfully');

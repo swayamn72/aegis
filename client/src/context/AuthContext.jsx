@@ -204,6 +204,11 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async (profileData) => {
     try {
+      // Organizations don't have profile updates in the current system
+      if (userType === 'organization') {
+        return { success: false, message: 'Organization profiles cannot be updated through this method' };
+      }
+
       const response = await fetch('/api/players/update-profile', {
         method: 'PUT',
         headers: {
@@ -229,11 +234,14 @@ export const AuthProvider = ({ children }) => {
 
   const refreshUser = async () => {
     try {
-      const response = await fetch('/api/players/me', {
+      const endpoint = userType === 'organization' ? '/api/organizations/profile' : '/api/players/me';
+      const response = await fetch(endpoint, {
         credentials: 'include',
       });
       if (response.ok) {
-        const userData = await response.json();
+        const data = await response.json();
+        // Handle different response structures
+        const userData = userType === 'organization' ? data.organization : data;
         setUser(userData);
       }
     } catch (error) {

@@ -64,32 +64,20 @@ const Navbar = () => {
         {/* Right Section */}
         <div className="hidden md:flex items-center gap-5">
 
-          {/* Notifications */}
-          <NavLink
-            to="/notifications"
-            className={({ isActive }) =>
-              `relative p-2 rounded-xl transition-all duration-300 ${
-                isActive
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-400 hover:text-white hover:bg-gray-800"
-              }`
-            }
-            title="Notifications"
-          >
-            <NotificationBar size={22} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-          </NavLink>
-
-          {/* Chat */}
+          <div className="hidden md:flex items-center gap-4">
+          <NotificationBar />
           {isAuthenticated && (
-            <NavLink
-              to="/chat"
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-all duration-300"
+            <button
+              onClick={() => navigate('/chat')}
+              className="text-gray-300 hover:text-white transition-colors duration-300"
+              aria-label="Chat"
               title="Chat"
             >
-              <MessageCircle size={22} />
-            </NavLink>
+              <MessageCircle size={24} />
+            </button>
           )}
+          
+        </div>
 
           {/* 💰 Coin Display */}
           {isAuthenticated && (

@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import Organization from '../models/organization.model.js';
 import { verifyAdminToken } from '../middleware/adminAuth.js'; // Use your existing admin auth
+import { verifyOrgToken, generateOrgToken } from '../middleware/orgAuth.js';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 
@@ -167,20 +168,10 @@ router.post('/login', async (req, res) => {
 });
 
 // Route to upload organization logo
-router.post('/upload-logo', upload.single('logo'), async (req, res) => {
+router.post('/upload-logo', verifyOrgToken, upload.single('logo'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
-    }
-
-    // Verify organization from token
-    const token = req.cookies.token;
-    if (!token) {
-      return res.status(401).json({ message: 'Not authenticated' });
-    }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    if (decoded.type !== 'organization') {
-      return res.status(403).json({ message: 'Not authorized' });
     }
 
     // Upload to Cloudinary
@@ -196,11 +187,7 @@ router.post('/upload-logo', upload.single('logo'), async (req, res) => {
     });
 
     // Update organization logo URL in DB
-    const organization = await Organization.findById(decoded.id);
-    if (!organization) {
-      return res.status(404).json({ message: 'Organization not found' });
-    }
-
+    const organization = req.organization;
     organization.logo = uploadResult.secure_url;
     await organization.save();
 
@@ -323,30 +310,10 @@ router.patch('/:id/reject', verifyAdminToken, async (req, res) => {
 });
 
 // Get organization profile
-router.get('/profile', async (req, res) => {
+router.get('/profile', verifyOrgToken, async (req, res) => {
   try {
-    // This would typically use auth middleware to get current org
-    // For now, implementing basic version
-    const token = req.cookies.token;
-
-    if (!token) {
-      return res.status(401).json({ message: 'Not authenticated' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-
-    if (decoded.type !== 'organization') {
-      return res.status(403).json({ message: 'Not authorized' });
-    }
-
-    const organization = await Organization.findById(decoded.id)
+    const organization = await Organization.findById(req.organization._id)
       .populate('teams', 'teamName logo');
-
-    if (!organization) {
-      return res.status(404).json({ message: 'Organization not found' });
-    }
-
-
 
     res.json({ organization });
 

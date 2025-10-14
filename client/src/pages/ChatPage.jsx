@@ -74,6 +74,17 @@ export default function ChatPage() {
     }
   };
 
+  // Fetch system messages
+  const fetchSystemMessages = async () => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/chat/system`, { credentials: 'include' });
+      const msgs = await res.json();
+      setMessages(msgs);
+    } catch (error) {
+      console.error('Error fetching system messages:', error);
+    }
+  };
+
   // Fetch messages for tryout chat
   const fetchTryoutMessages = async (chatId) => {
     try {
@@ -711,7 +722,11 @@ export default function ChatPage() {
                   onClick={() => {
                     setSelectedChat(conn);
                     setChatType('direct');
-                    fetchMessages(conn._id);
+                    if (conn._id === 'system') {
+                      fetchSystemMessages();
+                    } else {
+                      fetchMessages(conn._id);
+                    }
                   }}
                   className={`p-3 rounded-xl cursor-pointer transition-all duration-200 mb-2 group hover:bg-zinc-800/50 ${selectedChat?._id === conn._id && chatType === 'direct'
                       ? "bg-gradient-to-r from-orange-500/20 to-red-600/20 border border-orange-500/30"
@@ -725,7 +740,9 @@ export default function ChatPage() {
                         alt={conn.username}
                         className="w-12 h-12 rounded-xl object-cover border-2 border-zinc-700 group-hover:border-orange-400/50 transition-colors"
                       />
-                      <div className={`absolute -bottom-1 -right-1 w-4 h-4 ${getStatusColor(getUserStatus(conn._id))} rounded-full border-2 border-zinc-900`} />
+                      {conn._id !== 'system' && (
+                        <div className={`absolute -bottom-1 -right-1 w-4 h-4 ${getStatusColor(getUserStatus(conn._id))} rounded-full border-2 border-zinc-900`} />
+                      )}
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -733,7 +750,7 @@ export default function ChatPage() {
                         <span className="font-semibold text-white truncate">
                           {conn.realName || conn.username}
                         </span>
-                        {getRankIcon(conn.aegisRating)}
+                        {conn._id !== 'system' && getRankIcon(conn.aegisRating)}
                       </div>
 
                       <div className="flex items-center gap-2 text-sm">
@@ -955,6 +972,20 @@ export default function ChatPage() {
                       <div key={msg._id || idx} className="flex justify-center">
                         <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-sm text-zinc-300">
                           {msg.message}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (msg.messageType === 'match_scheduled') {
+                    return (
+                      <div key={msg._id || idx} className="flex justify-center">
+                        <div className="bg-blue-900/50 border border-blue-700 rounded-lg px-4 py-3 text-sm text-blue-300 max-w-md">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Bell className="w-4 h-4 text-blue-400" />
+                            <span className="font-semibold">Match Scheduled</span>
+                          </div>
+                          <p>{msg.message}</p>
                         </div>
                       </div>
                     );
