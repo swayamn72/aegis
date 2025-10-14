@@ -76,6 +76,16 @@ const TournamentRegistration = () => {
       const data = await response.json();
 
       if (response.ok) {
+        // Award tournament join bonus
+        try {
+          await fetch('/api/reward/tournament-join', {
+            method: 'POST',
+            credentials: 'include'
+          });
+        } catch (rewardError) {
+          console.error('Failed to award tournament join bonus:', rewardError);
+        }
+
         alert('Successfully registered for tournament!');
         setShowConfirmModal(false);
         fetchData(); // Refresh data

@@ -58,6 +58,27 @@ export const AuthProvider = ({ children }) => {
           setUser(userData);
           setUserType('player');
           setIsAuthenticated(true);
+
+          // Check for daily check-in reward availability
+          try {
+            const rewardResponse = await fetch('/api/reward/daily-checkin-status', {
+              credentials: 'include',
+            });
+            if (rewardResponse.ok) {
+              const rewardData = await rewardResponse.json();
+              if (rewardData.available) {
+                // Show notification for available daily check-in
+                setTimeout(() => {
+                  if (window.confirm('🎁 Daily check-in reward available! Click OK to claim your coins.')) {
+                    window.location.href = '/rewards';
+                  }
+                }, 1000);
+              }
+            }
+          } catch (rewardError) {
+            console.error('Failed to check daily reward status:', rewardError);
+          }
+
           setLoading(false);
           return;
         } else if (response.status !== 401) {

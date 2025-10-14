@@ -47,6 +47,7 @@ import ShareCard from './pages/ShareCard';
 import TournamentManagementPage from './pages/TournamentManagementPage';
 import OrgTournaments from './pages/OrgTournaments';
 import TournamentManagementPageOrg from './pages/TournamentManagementPageOrg';
+import RewardsPage from './pages/RewardsPage';
 
 
 
@@ -100,6 +101,7 @@ function App() {
               <Route path="/org/tournaments" element={<ProtectedRoute><OrgTournaments /></ProtectedRoute>} />
               <Route path="/org/tournaments/:id" element={<ProtectedRoute><TournamentManagementPageOrg /></ProtectedRoute>} />
               <Route path="/my-applications" element={<ProtectedRoute><MyApplications /></ProtectedRoute>} />
+              <Route path="/rewards" element={<RewardsPage/>}/>
               
             </Routes>
             <ToastContainer

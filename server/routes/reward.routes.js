@@ -81,13 +81,34 @@ router.post("/tournament-join", auth, async (req, res) => {
 });
 
 //fetch coins
-router.get("/coins/:id", async (req, res) => {
+router.get("/coins", auth, async (req, res) => {
   try {
-    const player = await Player.findById(req.params.id);
+    const player = await Player.findById(req.user.id);
     if (!player) return res.status(404).json({ message: "Player not found" });
     res.json({ coins: player.coins });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+//check daily checkin status
+router.get("/daily-checkin-status", auth, async (req, res) => {
+  try {
+    const player = await Player.findById(req.user.id);
+    if (!player) return res.status(404).json({ message: "Player not found" });
+
+    const today = new Date();
+    const lastCheck = player.lastCheckIn ? new Date(player.lastCheckIn) : null;
+    const oneDay = 24 * 60 * 60 * 1000;
+
+    if (lastCheck && today - lastCheck < oneDay) {
+      return res.json({ available: false, message: "Already checked in today" });
+    }
+
+    res.json({ available: true, message: "Daily check-in reward available!" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error checking status", error: error.message });
   }
 });
 

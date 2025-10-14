@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, MessageCircle, Coins } from 'lucide-react'; // 👈 Import Coins icon
+import { Menu, X, MessageCircle, Coins } from 'lucide-react';
 import logo from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
 import ProfileDropdown from './ProfileDropdown';
@@ -80,15 +80,22 @@ const Navbar = () => {
         </div>
 
           {/* 💰 Coin Display */}
-          {isAuthenticated && (
-            <div
-              className="flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-400/30 text-yellow-300 font-semibold text-sm"
-              title="Your Coins"
-            >
-              <Coins size={18} className="text-yellow-400" />
-              <span>{coins}</span>
-            </div>
-          )}
+{isAuthenticated && (
+  <div
+    className="flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-400/30 
+    text-yellow-300 font-semibold text-sm cursor-pointer transition-all duration-300 
+    hover:scale-110 hover:bg-yellow-500/20 hover:shadow-[0_0_12px_rgba(255,215,0,0.5)] group"
+    title="Your Coins"
+    onClick={() => navigate("/rewards")}
+  >
+    <Coins
+      size={18}
+      className="text-yellow-400 transition-transform duration-300 group-hover:rotate-12"
+    />
+    <span className="transition-all duration-300 group-hover:text-yellow-200">{coins}</span>
+  </div>
+)}
+
 
           {/* Auth Buttons or Profile */}
           {!isAuthenticated ? (
