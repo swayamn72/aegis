@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, Save, Calendar, Users, Trophy, Target, AlertCircle, Trash2, MoreVertical, Edit, Eye, Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, X, Save, Calendar, Users, Trophy, Target, AlertCircle, Trash2, MoreVertical, Edit, Eye, Settings, ChevronDown, ChevronUp, Share2, Key, Send } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const MatchManagement = ({ tournament, onUpdate }) => {
   const [matches, setMatches] = useState([]);
@@ -23,6 +24,12 @@ const MatchManagement = ({ tournament, onUpdate }) => {
   const [matchesPerPage, setMatchesPerPage] = useState(5);
   const [dropdownOpen, setDropdownOpen] = useState(null);
   const [expandedMatches, setExpandedMatches] = useState(new Set());
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [selectedMatchForCredentials, setSelectedMatchForCredentials] = useState(null);
+  const [credentialsForm, setCredentialsForm] = useState({
+    roomId: '',
+    roomPassword: ''
+  });
 
   const phases = tournament.phases || [];
   const allGroups = phases.flatMap(phase => phase.groups || []);
@@ -379,6 +386,44 @@ const MatchManagement = ({ tournament, onUpdate }) => {
     }
   };
 
+  const handleShareCredentials = async () => {
+    if (!credentialsForm.roomId.trim() || !credentialsForm.roomPassword.trim()) {
+      toast.error('Please fill in both room ID and password');
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/matches/${selectedMatchForCredentials._id}/share-credentials`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          roomId: credentialsForm.roomId,
+          password: credentialsForm.roomPassword
+        })
+      });
+
+      if (response.ok) {
+        const updatedMatch = await response.json();
+        setMatches(matches.map(match =>
+          match._id === selectedMatchForCredentials._id ? updatedMatch : match
+        ));
+        toast.success('Room credentials shared successfully');
+        setShowCredentialsModal(false);
+        setSelectedMatchForCredentials(null);
+        setCredentialsForm({ roomId: '', roomPassword: '' });
+      } else {
+        const error = await response.json();
+        toast.error(error.message || 'Failed to share credentials');
+      }
+    } catch (error) {
+      console.error('Error sharing credentials:', error);
+      toast.error('Failed to share credentials');
+    }
+  };
+
   const handleDeleteMatch = async (matchId) => {
     try {
       setDeletingMatch(matchId);
@@ -436,22 +481,19 @@ const MatchManagement = ({ tournament, onUpdate }) => {
 
   const handleDropdownAction = (action, match) => {
     setDropdownOpen(null);
-    // Handle different actions here
-    switch (action) {
-      case 'edit':
-        // Handle edit action
-        console.log('Edit match:', match._id);
-        break;
-      case 'view':
-        // Handle view action
-        console.log('View match:', match._id);
-        break;
-      case 'settings':
-        // Handle settings action
-        console.log('Settings for match:', match._id);
-        break;
-      default:
-        break;
+    if (action === 'share-credentials') {
+      setSelectedMatchForCredentials(match);
+      setCredentialsForm({ roomId: '', roomPassword: '' });
+      setShowCredentialsModal(true);
+    } else if (action === 'edit') {
+      // Handle edit action
+      console.log('Edit match:', match._id);
+    } else if (action === 'view') {
+      // Handle view action
+      console.log('View match:', match._id);
+    } else if (action === 'settings') {
+      // Handle settings action
+      console.log('Settings for match:', match._id);
     }
   };
 
@@ -675,8 +717,15 @@ const MatchManagement = ({ tournament, onUpdate }) => {
                   {dropdownOpen === match._id && (
                     <div className="absolute right-0 top-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg z-10 min-w-32">
                       <button
-                        onClick={() => handleDropdownAction('edit', match)}
+                        onClick={() => handleDropdownAction('share-credentials', match)}
                         className="w-full px-3 py-2 text-left text-zinc-300 hover:bg-zinc-700 hover:text-white flex items-center gap-2 rounded-t-lg"
+                      >
+                        <Share2 className="w-4 h-4" />
+                        Share Room Credentials
+                      </button>
+                      <button
+                        onClick={() => handleDropdownAction('edit', match)}
+                        className="w-full px-3 py-2 text-left text-zinc-300 hover:bg-zinc-700 hover:text-white flex items-center gap-2"
                       >
                         <Edit className="w-4 h-4" />
                         Edit Match
@@ -708,6 +757,26 @@ const MatchManagement = ({ tournament, onUpdate }) => {
                 </button>
               </div>
             </div>
+
+            {/* Room Credentials Display */}
+            {match.roomCredentials && (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Key className="w-4 h-4 text-blue-400" />
+                  <span className="text-blue-400 font-medium">Room Credentials</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-zinc-400">Room ID:</span>
+                    <span className="text-white ml-2 font-mono">{match.roomCredentials.roomId}</span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-400">Password:</span>
+                    <span className="text-white ml-2 font-mono">{match.roomCredentials.password}</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Match Details - Only show when expanded */}
             {expandedMatches.has(match._id) && (
@@ -877,59 +946,79 @@ const MatchManagement = ({ tournament, onUpdate }) => {
         </div>
       )}
 
-      {matches.length === 0 && (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Target className="w-8 h-8 text-zinc-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-white mb-2">No Matches Created</h3>
-          <p className="text-zinc-400">Create your first match to start tracking tournament progress.</p>
-        </div>
-      )}
-
       {/* Delete Confirmation Modal */}
       {deleteConfirm.show && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-zinc-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-red-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-white">Delete Match</h3>
-                <p className="text-zinc-400 text-sm">This action cannot be undone</p>
-              </div>
-            </div>
-
-            <p className="text-zinc-300 mb-6">
-              Are you sure you want to delete Match #{deleteConfirm.matchNumber}?
-              All match results and data will be permanently removed.
+            <h3 className="text-lg font-medium text-white mb-4">Confirm Delete</h3>
+            <p className="text-zinc-400 mb-6">
+              Are you sure you want to delete Match #{deleteConfirm.matchNumber}? This action cannot be undone.
             </p>
-
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-3">
               <button
                 onClick={cancelDelete}
-                disabled={deletingMatch === deleteConfirm.matchId}
-                className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDeleteMatch(deleteConfirm.matchId)}
                 disabled={deletingMatch === deleteConfirm.matchId}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {deletingMatch === deleteConfirm.matchId ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-4 h-4" />
-                    Delete Match
-                  </>
-                )}
+                {deletingMatch === deleteConfirm.matchId ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Credentials Modal */}
+      {showCredentialsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-zinc-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-medium text-white mb-4">Share Room Credentials</h3>
+            <p className="text-zinc-400 mb-4">
+              Enter the room credentials for Match #{selectedMatchForCredentials?.matchNumber}
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-zinc-400 mb-2">Room ID</label>
+                <input
+                  type="text"
+                  value={credentialsForm.roomId}
+                  onChange={(e) => setCredentialsForm({ ...credentialsForm, roomId: e.target.value })}
+                  className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white"
+                  placeholder="Enter room ID"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-zinc-400 mb-2">Room Password</label>
+                <input
+                  type="text"
+                  value={credentialsForm.roomPassword}
+                  onChange={(e) => setCredentialsForm({ ...credentialsForm, roomPassword: e.target.value })}
+                  className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white"
+                  placeholder="Enter room password"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowCredentialsModal(false);
+                  setSelectedMatchForCredentials(null);
+                  setCredentialsForm({ roomId: '', roomPassword: '' });
+                }}
+                className="flex-1 px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleShareCredentials}
+                className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+              >
+                Share Credentials
               </button>
             </div>
           </div>

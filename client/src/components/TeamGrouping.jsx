@@ -31,7 +31,12 @@ const TeamGrouping = ({ tournament, onUpdate }) => {
     const initialPhaseGroups = {};
     tournament.phases?.forEach(phase => {
       initialTeamsPerGroup[phase.name] = 16; // default
-      initialPhaseGroups[phase.name] = phase.groups || [];
+      initialPhaseGroups[phase.name] = phase.groups?.map(group => ({
+        ...group,
+        teams: group.teams?.map(team =>
+          typeof team === 'object' && team._id ? team._id.toString() : team.toString()
+        ) || []
+      })) || [];
     });
     setTeamsPerGroup(initialTeamsPerGroup);
     setPhaseGroups(initialPhaseGroups);

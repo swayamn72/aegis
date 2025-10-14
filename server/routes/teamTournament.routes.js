@@ -285,10 +285,17 @@ router.post('/register/:tournamentId', verifyTeamCaptain, async (req, res) => {
       return res.status(400).json({ error: 'Team already registered for this tournament' });
     }
 
+    // Check team has minimum required members (4 players)
+    if (req.team.players.length < 4) {
+      return res.status(400).json({
+        error: 'Team must have at least 4 members to register for tournaments'
+      });
+    }
+
     // Check game compatibility
     if (tournament.gameTitle !== req.team.primaryGame) {
-      return res.status(400).json({ 
-        error: `Team primary game (${req.team.primaryGame}) does not match tournament game (${tournament.gameTitle})` 
+      return res.status(400).json({
+        error: `Team primary game (${req.team.primaryGame}) does not match tournament game (${tournament.gameTitle})`
       });
     }
 

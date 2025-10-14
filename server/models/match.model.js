@@ -112,6 +112,25 @@ const matchSchema = new mongoose.Schema(
       }
     ],
 
+    // --- Room Credentials ---
+    roomCredentials: {
+      roomId: {
+        type: String,
+        trim: true,
+      },
+      password: {
+        type: String,
+        trim: true,
+      },
+      sharedAt: {
+        type: Date,
+      },
+      sharedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Organization',
+      },
+    },
+
     // --- Points System Reference ---
     pointsSystem: {
       placementPoints: {

@@ -12,7 +12,7 @@ await mongoose.connect(process.env.MONGO_URI);
 console.log('✅ Connected to MongoDB for test data generation');
 
 const generateTestData = async () => {
-  const tournamentId = '68ea0e64d2d97b750a22d188';
+  const tournamentId = '68edfa7db717fa01732c7389';
 
   try {
     // Find the tournament and populate phases

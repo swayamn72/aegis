@@ -92,7 +92,7 @@ const AegisLogin = () => {
       // Check if it's an organization login
       if (result.userType === 'organization') {
         // For organizations, redirect to organization dashboard or profile
-        navigate('/org-dashboard'); 
+        navigate('/org/dashboard');
       } else {
         // Player login - check if profile is complete and redirect accordingly
         const userDataResponse = await fetch('/api/players/me', {

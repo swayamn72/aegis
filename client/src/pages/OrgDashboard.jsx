@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { Plus, Trophy, Users, Calendar, Settings, Upload, Bell, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { toast } from 'react-toastify';
 import ToastConfig from '../components/ToastConfig';
-import TournamentWindow from '../components/TournamentWindow';
 
 const OrgDashboard = () => {
   const [organization, setOrganization] = useState(null);
@@ -14,8 +13,6 @@ const OrgDashboard = () => {
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showTournamentWindow, setShowTournamentWindow] = useState(false);
-  const [selectedTournament, setSelectedTournament] = useState(null);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -105,10 +102,10 @@ const OrgDashboard = () => {
       approved: { color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: CheckCircle, text: 'Approved' },
       rejected: { color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: XCircle, text: 'Rejected' }
     };
-    
+
     const badge = badges[status] || badges.pending;
     const Icon = badge.icon;
-    
+
     return (
       <span className={`inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-full border ${badge.color}`}>
         <Icon className="w-3 h-3" />
@@ -124,7 +121,7 @@ const OrgDashboard = () => {
       in_progress: 'bg-red-500/20 text-red-400',
       completed: 'bg-gray-500/20 text-gray-400'
     };
-    
+
     return (
       <span className={`px-2 py-1 text-xs rounded-full ${colors[status] || colors.announced}`}>
         {status?.replace('_', ' ').toUpperCase()}
@@ -171,11 +168,10 @@ const OrgDashboard = () => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-4 px-2 border-b-2 transition ${
-                  activeTab === tab
+                className={`py-4 px-2 border-b-2 transition ${activeTab === tab
                     ? 'border-orange-500 text-orange-500'
                     : 'border-transparent text-gray-400 hover:text-white'
-                }`}
+                  }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
@@ -367,11 +363,8 @@ const OrgDashboard = () => {
                           </span>
                           {isApproved && (
                             <button
+                              onClick={() => navigate('/org/tournaments')}
                               className="text-orange-500 hover:text-orange-400"
-                              onClick={() => {
-                                setSelectedTournament(tournament);
-                                setShowTournamentWindow(true);
-                              }}
                             >
                               Manage →
                             </button>
@@ -438,24 +431,7 @@ const OrgDashboard = () => {
         />
       )}
 
-      {/* Tournament Management Window */}
-      {showTournamentWindow && (
-        <TournamentWindow
-          tournament={selectedTournament}
-          isOpen={showTournamentWindow}
-          onClose={() => {
-            setShowTournamentWindow(false);
-            setSelectedTournament(null);
-          }}
-          onSave={(updatedTournament) => {
-            // Optionally update tournaments list after save
-            setShowTournamentWindow(false);
-            setSelectedTournament(null);
-            fetchTournaments();
-          }}
-          isAdmin={false}
-        />
-      )}
+
     </div>
   );
 };
@@ -580,9 +556,8 @@ const CreateTournamentModal = ({ organization, onClose, onSuccess }) => {
           <div className="flex items-center justify-center gap-4 mb-6">
             {[1, 2, 3].map(s => (
               <div key={s} className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  step >= s ? 'bg-orange-500 text-white' : 'bg-gray-700 text-gray-400'
-                }`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= s ? 'bg-orange-500 text-white' : 'bg-gray-700 text-gray-400'
+                  }`}>
                   {s}
                 </div>
                 {s < 3 && <div className={`w-12 h-1 ${step > s ? 'bg-orange-500' : 'bg-gray-700'}`} />}
@@ -594,7 +569,7 @@ const CreateTournamentModal = ({ organization, onClose, onSuccess }) => {
           {step === 1 && (
             <div className="space-y-4">
               <h3 className="text-xl font-semibold mb-4">Basic Information</h3>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 {/* Only one set of Tournament Name and Short Name inputs should be present */}
                 <div>
@@ -849,7 +824,7 @@ const CreateTournamentModal = ({ organization, onClose, onSuccess }) => {
           {step === 3 && (
             <div className="space-y-4">
               <h3 className="text-xl font-semibold mb-4">Media & Final Review</h3>
-              
+
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium mb-2">Tournament Logo</label>

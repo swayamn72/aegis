@@ -117,6 +117,7 @@ router.post('/schedule', async (req, res) => {
         message: `Match scheduled: ${matchData.matchName} in ${tournament.tournamentName} - ${matchData.tournamentPhase} at ${new Date(matchData.scheduledStartTime).toLocaleString()}`,
         messageType: 'match_scheduled',
         tournamentId: matchData.tournament,
+        matchId: scheduledMatch._id,
         timestamp: new Date()
       });
 
@@ -131,6 +132,7 @@ router.post('/schedule', async (req, res) => {
           message: notificationMessage.message,
           messageType: 'match_scheduled',
           tournamentId: matchData.tournament,
+          matchId: scheduledMatch._id,
           timestamp: new Date()
         });
       }
@@ -589,6 +591,77 @@ router.get('/player/:playerId/recent', async (req, res) => {
   } catch (error) {
     console.error('Error fetching player matches:', error);
     res.status(500).json({ error: 'Failed to fetch player matches' });
+  }
+});
+
+// Share room credentials for a match
+router.post('/:matchId/share-credentials', async (req, res) => {
+  try {
+    const { matchId } = req.params;
+    const { roomId, password } = req.body;
+
+    if (!roomId || !password) {
+      return res.status(400).json({ error: 'Room ID and password are required' });
+    }
+
+    const match = await Match.findById(matchId);
+    if (!match) {
+      return res.status(404).json({ error: 'Match not found' });
+    }
+
+    // Update room credentials
+    match.roomCredentials = {
+      roomId: roomId.trim(),
+      password: password.trim(),
+      sharedAt: new Date(),
+      sharedBy: req.user?.id || null
+    };
+
+    await match.save();
+
+    // Send notifications to all participating teams' players
+    const teams = await Team.find({ _id: { $in: match.participatingTeams.map(pt => pt.team) } })
+      .populate('players', 'username');
+    const allPlayers = teams.flatMap(team => team.players);
+
+    const notificationPromises = allPlayers.map(async (player) => {
+      const ChatMessage = (await import('../models/chat.model.js')).default;
+      const notificationMessage = new ChatMessage({
+        senderId: 'system',
+        receiverId: player._id.toString(),
+        message: `Room credentials for "${match.matchName}": Room ID: ${roomId}, Password: ${password}`,
+        messageType: 'room_credentials',
+        tournamentId: match.tournament,
+        matchId: match._id,
+        timestamp: new Date()
+      });
+
+      await notificationMessage.save();
+
+      // Emit to player via socket
+      if (global.io) {
+        global.io.to(player._id.toString()).emit('receiveMessage', {
+          _id: notificationMessage._id,
+          senderId: 'system',
+          receiverId: player._id.toString(),
+          message: notificationMessage.message,
+          messageType: 'room_credentials',
+          tournamentId: match.tournament,
+          matchId: match._id,
+          timestamp: new Date()
+        });
+      }
+    });
+
+    await Promise.all(notificationPromises);
+
+    res.json({
+      message: 'Room credentials shared successfully',
+      roomCredentials: match.roomCredentials
+    });
+  } catch (error) {
+    console.error('Error sharing room credentials:', error);
+    res.status(500).json({ error: 'Failed to share room credentials' });
   }
 });
 

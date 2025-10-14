@@ -44,6 +44,7 @@ const DetailedTournamentInfo = () => {
   const [showNonCaptainModal, setShowNonCaptainModal] = useState(false);
   const [sendingReference, setSendingReference] = useState(false);
   const [referenceSentSuccess, setReferenceSentSuccess] = useState(false);
+  const [isTeamRegistered, setIsTeamRegistered] = useState(false);
 
   // Function to send tournament reference message to captain
   const sendTournamentReferenceToCaptain = async () => {
@@ -124,12 +125,16 @@ const DetailedTournamentInfo = () => {
 
       const response = await fetch(`http://localhost:5000/api/team-tournaments/register/${id}`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         credentials: 'include',
+        body: JSON.stringify(registrationData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Registration failed');
+        throw new Error(errorData.error || 'Registration failed');
       }
 
       const result = await response.json();
@@ -247,6 +252,16 @@ const DetailedTournamentInfo = () => {
       }
     }
   }, [selectedPhase, groupsData, selectedGroup]);
+
+  // Check registration status when tournament and user team data are loaded
+  useEffect(() => {
+    if (userTeam && tournamentData?.participatingTeams) {
+      const isRegistered = tournamentData.participatingTeams.some(participatingTeam =>
+        participatingTeam.team._id.toString() === userTeam._id.toString()
+      );
+      setIsTeamRegistered(isRegistered);
+    }
+  }, [userTeam, tournamentData]);
 
   // Organize matches by phase
   const matchesByPhase = useMemo(() => {
@@ -860,22 +875,29 @@ const DetailedTournamentInfo = () => {
             </div>
           ) : (
             userTeam ? (
-              isCaptain ? (
-                <button
-                  onClick={() => setShowRegistrationModal(true)}
-                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  Register Team
-                </button>
+              isTeamRegistered ? (
+                <div className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-medium px-4 py-3 rounded-lg text-center flex items-center justify-center gap-2">
+                  <CheckCircle className="w-4 h-4" />
+                  Team Already Registered
+                </div>
               ) : (
-                <button
-                  onClick={() => setShowNonCaptainModal(true)}
-                  className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
-                >
-                  <Shield className="w-4 h-4" />
-                  Register Team
-                </button>
+                isCaptain ? (
+                  <button
+                    onClick={() => setShowRegistrationModal(true)}
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Register Team
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowNonCaptainModal(true)}
+                    className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-medium px-4 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
+                  >
+                    <Shield className="w-4 h-4" />
+                    Register Team
+                  </button>
+                )
               )
             ) : (
               <button

@@ -54,12 +54,12 @@ const verifyOrgAuth = async (req, res, next) => {
 router.get('/my-tournaments', verifyOrgAuth, async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
-    
+
     const filter = { 'organizer.organizationRef': req.organization._id };
     if (status) filter.status = status;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    
+
     const tournaments = await Tournament.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -80,6 +80,45 @@ router.get('/my-tournaments', verifyOrgAuth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching org tournaments:', error);
     res.status(500).json({ error: 'Failed to fetch tournaments' });
+  }
+});
+
+// Get specific tournament details for organization
+router.get('/:tournamentId', verifyOrgAuth, async (req, res) => {
+  try {
+    const { tournamentId } = req.params;
+
+    const tournament = await Tournament.findById(tournamentId)
+      .populate({
+        path: 'participatingTeams.team',
+        select: 'teamName teamTag logo primaryGame region establishedDate'
+      })
+      .populate({
+        path: 'phases.teams',
+        select: 'teamName logo'
+      })
+      .populate({
+        path: 'phases.groups.teams',
+        select: 'teamName teamTag logo'
+      })
+      .populate({
+        path: 'phases.groups.standings.team',
+        select: 'teamName teamTag logo'
+      });
+
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    // Check if organization owns this tournament
+    if (tournament.organizer.organizationRef?.toString() !== req.organization._id.toString()) {
+      return res.status(403).json({ error: 'Not authorized to view this tournament' });
+    }
+
+    res.json({ tournament });
+  } catch (error) {
+    console.error('Error fetching tournament:', error);
+    res.status(500).json({ error: 'Failed to fetch tournament details' });
   }
 });
 
