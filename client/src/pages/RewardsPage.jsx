@@ -53,20 +53,33 @@ export default function RewardsPage() {
     }
   };
 
-  const rewards = [
-    { id: 1, name: "Exclusive Avatar", cost: 50 },
-    { id: 2, name: "1-Day Premium Access", cost: 100 },
-    { id: 3, name: "Mystery Box", cost: 75 },
-    { id: 4, name: "Golden Frame Badge", cost: 150 },
-  ];
+  const [rewards, setRewards] = useState([]);
+
+  useEffect(() => {
+    const fetchRewards = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const res = await axios.get(`http://localhost:5000/api/reward/rewards`, {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        });
+        setRewards(res.data.rewards);
+      } catch (err) {
+        console.error("Error fetching rewards:", err);
+      }
+    };
+    fetchRewards();
+  }, []);
 
   const handleRedeem = (reward) => {
-    if (coins < reward.cost) {
+    if (coins < reward.points) {
       toast.error("Not enough coins 💸");
       return;
     }
-    setCoins((prev) => prev - reward.cost);
-    setRedeemed((prev) => [...prev, reward.id]);
+    setCoins((prev) => prev - reward.points);
+    setRedeemed((prev) => [...prev, reward._id]);
     toast.success(`Redeemed ${reward.name}! 🎉`);
   };
 
@@ -124,23 +137,23 @@ export default function RewardsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {rewards.map((reward) => (
               <div
-                key={reward.id}
+                key={reward._id}
                 className="flex flex-col justify-between p-4 bg-gray-900/80 rounded-xl border border-purple-400 hover:scale-105 transform transition-transform duration-200 shadow-md shadow-purple-500/30"
               >
                 <div>
                   <h3 className="font-semibold text-purple-200">{reward.name}</h3>
-                  <p className="text-sm text-gray-400">Cost: {reward.cost} 🪙</p>
+                  <p className="text-sm text-gray-400">Cost: {reward.points} 🪙</p>
                 </div>
                 <button
                   onClick={() => handleRedeem(reward)}
-                  disabled={redeemed.includes(reward.id)}
+                  disabled={redeemed.includes(reward._id)}
                   className={`px-4 py-2 rounded-lg font-bold transition-all duration-200 mt-2 ${
-                    redeemed.includes(reward.id)
+                    redeemed.includes(reward._id)
                       ? "bg-green-600 text-white shadow-md shadow-green-500/50"
                       : "bg-purple-500 hover:bg-purple-600 text-black shadow-md shadow-purple-500/40"
                   }`}
                 >
-                  {redeemed.includes(reward.id) ? "Claimed ✅" : "Redeem"}
+                  {redeemed.includes(reward._id) ? "Claimed ✅" : "Redeem"}
                 </button>
               </div>
             ))}

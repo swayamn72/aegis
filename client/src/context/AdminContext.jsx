@@ -75,7 +75,7 @@ export const AdminProvider = ({ children }) => {
       const token = localStorage.getItem('adminToken');
       if (token) {
         try {
-          const response = await fetch('/api/admin/verify', {
+          const response = await fetch('http://localhost:5000/api/admin/verify', {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -109,7 +109,7 @@ export const AdminProvider = ({ children }) => {
     dispatch({ type: 'LOGIN_START' });
 
     try {
-      const response = await fetch('/api/admin/login', {
+      const response = await fetch('http://localhost:5000/api/admin/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

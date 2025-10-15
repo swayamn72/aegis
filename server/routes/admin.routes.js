@@ -5,6 +5,7 @@ import Tournament from '../models/tournament.model.js';
 import Match from '../models/match.model.js';
 import Team from '../models/team.model.js';
 import Admin from '../models/admin.model.js';
+import Reward from '../models/reward.model.js';
 import { verifyAdminToken, requirePermission, generateAdminToken } from '../middleware/adminAuth.js';
 import { getAllBugReports, updateBugReportStatus } from '../controllers/support.controller.js';
 
@@ -629,6 +630,100 @@ router.get('/bug-reports', verifyAdminToken, getAllBugReports);
 
 // Update bug report status
 router.put('/bug-reports/:id/status', verifyAdminToken, updateBugReportStatus);
+
+// REWARD CRUD OPERATIONS
+
+// Get all rewards
+router.get('/rewards', verifyAdminToken, async (req, res) => {
+  try {
+    const rewards = await Reward.find({ isActive: true }).sort({ createdAt: -1 });
+    res.json({ rewards });
+  } catch (error) {
+    console.error('Error fetching rewards:', error);
+    res.status(500).json({ error: 'Failed to fetch rewards' });
+  }
+});
+
+// Create reward
+router.post('/rewards', verifyAdminToken, requirePermission('canCreateTournament'), async (req, res) => {
+  try {
+    const { name, points, description, image } = req.body;
+
+    if (!name || !points) {
+      return res.status(400).json({
+        error: 'Name and points are required'
+      });
+    }
+
+    const reward = new Reward({
+      name,
+      points: parseInt(points),
+      description,
+      image
+    });
+
+    await reward.save();
+
+    res.status(201).json({
+      message: 'Reward created successfully',
+      reward
+    });
+  } catch (error) {
+    console.error('Error creating reward:', error);
+    res.status(500).json({ error: 'Failed to create reward' });
+  }
+});
+
+// Update reward
+router.put('/rewards/:id', verifyAdminToken, requirePermission('canEditTournament'), async (req, res) => {
+  try {
+    const { name, points, description, image, isActive } = req.body;
+
+    const reward = await Reward.findByIdAndUpdate(
+      req.params.id,
+      {
+        name,
+        points: parseInt(points),
+        description,
+        image,
+        isActive
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!reward) {
+      return res.status(404).json({ error: 'Reward not found' });
+    }
+
+    res.json({
+      message: 'Reward updated successfully',
+      reward
+    });
+  } catch (error) {
+    console.error('Error updating reward:', error);
+    res.status(500).json({ error: 'Failed to update reward' });
+  }
+});
+
+// Delete reward
+router.delete('/rewards/:id', verifyAdminToken, requirePermission('canDeleteTournament'), async (req, res) => {
+  try {
+    const reward = await Reward.findByIdAndUpdate(
+      req.params.id,
+      { isActive: false },
+      { new: true }
+    );
+
+    if (!reward) {
+      return res.status(404).json({ error: 'Reward not found' });
+    }
+
+    res.json({ message: 'Reward deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting reward:', error);
+    res.status(500).json({ error: 'Failed to delete reward' });
+  }
+});
 
 // Get admin profile
 router.get('/profile', verifyAdminToken, (req, res) => {

@@ -48,12 +48,14 @@ import TournamentManagementPage from './pages/TournamentManagementPage';
 import OrgTournaments from './pages/OrgTournaments';
 import TournamentManagementPageOrg from './pages/TournamentManagementPageOrg';
 import RewardsPage from './pages/RewardsPage';
+import AdminRewards from './pages/AdminRewards';
 
 
 
 function App() {
   return (
     <div>
+      
     <AuthProvider>
       <AdminProvider>
         <GoogleOAuthProvider clientId="383828387467-q2b8rvh1m7g03dqp9ah218stoh7k187a.apps.googleusercontent.com">
@@ -96,6 +98,7 @@ function App() {
               <Route path="/admin/matches" element={<AdminMatches />} />
               <Route path="/admin/organizations" element={<AdminOrganizations />} />
               <Route path="/admin/bug-reports" element={<AdminBugReports />} />
+              <Route path="/admin/rewards" element={<AdminRewards/>} />
               <Route path="/my-teams" element={<ProtectedRoute><MyTeamsPage /></ProtectedRoute>} />
               <Route path="/org/dashboard" element={<ProtectedRoute><OrgDashboard /></ProtectedRoute>} />
               <Route path="/org/tournaments" element={<ProtectedRoute><OrgTournaments /></ProtectedRoute>} />

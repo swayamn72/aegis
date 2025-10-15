@@ -56,6 +56,13 @@ const AdminLayout = ({ children }) => {
       href: '/admin/settings',
       icon: Settings,
       current: location.pathname === '/admin/settings'
+    },
+    {
+      name:'Rewards',
+      href:'/admin/rewards',
+      icon: Trophy,
+      current: location.pathname === '/admin/rewards'
+
     }
   ];
 

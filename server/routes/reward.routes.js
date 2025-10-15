@@ -91,6 +91,18 @@ router.get("/coins", auth, async (req, res) => {
   }
 });
 
+// Get all rewards for players
+router.get("/rewards", auth, async (req, res) => {
+  try {
+    const Reward = (await import('../models/reward.model.js')).default;
+    const rewards = await Reward.find({ isActive: true }).sort({ createdAt: -1 });
+    res.json({ rewards });
+  } catch (error) {
+    console.error('Error fetching rewards:', error);
+    res.status(500).json({ message: "Error fetching rewards", error: error.message });
+  }
+});
+
 //check daily checkin status
 router.get("/daily-checkin-status", auth, async (req, res) => {
   try {

@@ -1,22 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'; // Imported useRef
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { useAuth } from '../context/AuthContext';
 import {
   Trophy, Users, Target, TrendingUp, Calendar, MessageSquare,
   Sparkles, Zap, Award, Activity, Gamepad2, ArrowRight, X, Coins
 } from 'lucide-react';
-
-// Mocked Auth Context for standalone display (KEPT FOR CANVAS RUNNABILITY)
-const useAuth = () => ({
-    user: { 
-        username: 'ProPlayerX', 
-        aegisRating: 2475, 
-        statistics: { tournamentsPlayed: 8, winRate: 62 },
-        profilePicture: 'placeholder.png', // Mock data
-        bio: 'Competitive VALORANT IGL', // Mock data
-        primaryGame: 'VALO' // Mock data
-    }
-});
 // Mock data for API responses (KEPT FOR CANVAS RUNNABILITY)
 const mockData = {
     tournaments: [
@@ -237,7 +226,7 @@ const LoggedInHomepage = () => {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
             <div className="mb-6 md:mb-0">
               <h1 className="text-7xl font-black mb-2 tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-400 drop-shadow-xl shadow-white/10">
-                STATUS: <span className="text-[#FF4500] transition-colors hover:text-white">{user?.username}</span>
+                Welcome <span className="text-[#FF4500] transition-colors hover:text-white">{user?.username}</span>
               </h1>
               <p className="text-zinc-500 text-lg font-mono tracking-widest uppercase">
                 Ready to dominate the competitive matrix.
@@ -323,13 +312,13 @@ const LoggedInHomepage = () => {
             <Trophy className="w-5 h-5" />
             COMPETE NOW
           </button>
-          <button
-            onClick={() => navigate('/chat')}
-            className="flex items-center gap-2 bg-black/50 px-5 py-2.5 rounded-lg border border-zinc-600/50 text-zinc-400 hover:bg-zinc-700/80 transition-all font-semibold uppercase text-sm tracking-widest shadow-lg shadow-black/30"
-          >
-            <MessageSquare className="w-5 h-5" />
-            MESSAGES
-          </button>
+    <button
+      onClick={() => navigate("/chat")}
+      className="flex items-center gap-2 bg-black/50 px-5 py-2.5 rounded-lg border border-zinc-600/50 text-zinc-400 hover:bg-zinc-700/80 transition-all font-semibold uppercase text-sm tracking-widest shadow-lg shadow-black/30"
+    >
+      <MessageSquare className="w-5 h-5" />
+      MESSAGES
+    </button>
         </div>
 
 
