@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Medal, Award, Download, AlertCircle, ChevronDown } from 'lucide-react';
+import { Trophy, Medal, Award, Download, AlertCircle, ChevronDown, Image as ImageIcon } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 const PointsTable = ({ tournament, onUpdate }) => {
   const [pointsTable, setPointsTable] = useState([]);
@@ -67,6 +68,7 @@ const PointsTable = ({ tournament, onUpdate }) => {
           return tournament.finalStandings.map(standing => ({
             teamId: standing.team._id,
             teamName: standing.team.teamName,
+            teamLogo: standing.team.logo,
             position: standing.position,
             points: standing.tournamentPointsAwarded || 0,
             kills: 0,
@@ -93,6 +95,7 @@ const PointsTable = ({ tournament, onUpdate }) => {
                 aggregated.push({
                   teamId: standing.team._id,
                   teamName: standing.team.teamName,
+                  teamLogo: standing.team.logo,
                   position: 0,
                   points: standing.points,
                   kills: standing.kills,
@@ -121,6 +124,7 @@ const PointsTable = ({ tournament, onUpdate }) => {
             return group.standings.map(standing => ({
               teamId: standing.team._id,
               teamName: standing.team.teamName,
+              teamLogo: standing.team.logo,
               position: standing.position,
               points: standing.points,
               kills: standing.kills,
@@ -138,6 +142,7 @@ const PointsTable = ({ tournament, onUpdate }) => {
         return phase.teams?.map(team => ({
           teamId: team._id,
           teamName: team.teamName,
+          teamLogo: team.logo,
           position: 0,
           points: 0,
           kills: 0,
@@ -204,9 +209,17 @@ const PointsTable = ({ tournament, onUpdate }) => {
       const teamName = team.teamName || team.name || participatingTeam.teamName || 'Unknown Team';
 
       if (teamId) {
+        // Find logo from tournament participating teams
+        const participatingTeamData = tournament.participatingTeams?.find(pt => {
+          const ptTeamId = pt.team?._id || pt.team || pt._id;
+          return ptTeamId?.toString() === teamId.toString();
+        });
+        const teamLogo = team.logo || participatingTeamData?.team?.logo || participatingTeamData?.logo;
+
         teamPoints[teamId.toString()] = {
           teamId: teamId.toString(),
           teamName: teamName,
+          teamLogo: teamLogo,
           totalPositionPoints: 0,
           totalKillPoints: 0,
           totalPoints: 0,
@@ -326,6 +339,247 @@ const PointsTable = ({ tournament, onUpdate }) => {
     window.URL.revokeObjectURL(url);
   };
 
+  const downloadImage = async () => {
+    try {
+      // Helper function to load image and return img element
+      const loadImage = (src) => {
+        return new Promise((resolve, reject) => {
+          const img = document.createElement('img');
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
+        });
+      };
+
+      // Create a new container with inline styles that html2canvas can handle
+      const container = document.createElement('div');
+      container.style.cssText = `
+        background-color: #1f2937;
+        padding: 16px;
+        border-radius: 8px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #ffffff;
+        width: fit-content;
+        min-width: 800px;
+      `;
+
+      // Create header with tournament title and phase
+      const header = document.createElement('div');
+      header.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #374151;
+      `;
+
+      // Add tournament logo if available
+      if (tournament.media?.logo) {
+        console.log('Tournament logo:', tournament.media.logo);
+        try {
+          const logoSrc = tournament.media.logo.startsWith('/') ? `http://localhost:5000${tournament.media.logo}` : tournament.media.logo;
+          console.log('Logo src:', logoSrc);
+          const logoImg = await loadImage(logoSrc);
+          logoImg.alt = tournament.tournamentName;
+          logoImg.style.cssText = 'width: 48px; height: 48px; border-radius: 8px; object-fit: cover; flex-shrink: 0;';
+          header.appendChild(logoImg);
+          console.log('Logo loaded successfully');
+        } catch (error) {
+          console.warn('Failed to load tournament logo:', error);
+          // Continue without logo
+        }
+      } else {
+        console.log('No tournament logo available');
+      }
+
+      const textDiv = document.createElement('div');
+      textDiv.style.cssText = 'text-align: center;';
+
+      const title = document.createElement('h1');
+      title.style.cssText = `
+        font-size: 24px;
+        font-weight: bold;
+        color: #ffffff;
+        margin: 0 0 8px 0;
+      `;
+      title.textContent = tournament.tournamentName;
+
+      const phaseInfo = document.createElement('p');
+      phaseInfo.style.cssText = `
+        font-size: 16px;
+        color: #a1a1aa;
+        margin: 0;
+      `;
+      phaseInfo.textContent = selectedPhase ? `Phase: ${selectedPhase}${selectedGroup !== 'overall' ? ` - Group: ${selectedGroup}` : ''}` : 'All Phases';
+
+      textDiv.appendChild(title);
+      textDiv.appendChild(phaseInfo);
+      header.appendChild(textDiv);
+      container.appendChild(header);
+
+      // Create table
+      const table = document.createElement('table');
+      table.style.cssText = `
+        width: 100%;
+        border-collapse: collapse;
+        background-color: #1f2937;
+        color: #ffffff;
+      `;
+
+      // Create thead
+      const thead = document.createElement('thead');
+      thead.style.cssText = 'background-color: #27272a;';
+
+      const headerRow = document.createElement('tr');
+      const headers = ['Position', 'Team', 'Matches', '🏆 WD', 'Position Pts', 'Kill Pts', 'Total Pts'];
+
+      headers.forEach(headerText => {
+        const th = document.createElement('th');
+        th.style.cssText = `
+          padding: 12px 24px;
+          text-align: left;
+          font-size: 12px;
+          font-weight: 500;
+          color: #a1a1aa;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          border-bottom: 1px solid #374151;
+        `;
+        th.textContent = headerText;
+        headerRow.appendChild(th);
+      });
+
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      // Create tbody
+      const tbody = document.createElement('tbody');
+
+      pointsTable.forEach((team, index) => {
+        const row = document.createElement('tr');
+        row.style.cssText = 'border-bottom: 1px solid #374151; height: 56px;';
+
+        // Position
+        const posCell = document.createElement('td');
+        posCell.style.cssText = 'padding: 16px 24px; white-space: nowrap; display: table-cell; vertical-align: middle;';
+        const posDiv = document.createElement('div');
+        posDiv.style.cssText = 'display: flex; align-items: center; justify-content: center; gap: 8px; height: 24px;';
+        const posText = document.createElement('span');
+        posText.style.cssText = 'display: inline-block; width: 20px; height: 20px; line-height: 20px; text-align: center; color: #a1a1aa; font-size: 14px; font-weight: bold; vertical-align: middle;';
+        posText.textContent = team.position || index + 1;
+        posDiv.appendChild(posText);
+        posCell.appendChild(posDiv);
+        row.appendChild(posCell);
+
+        // Team Name
+        const teamCell = document.createElement('td');
+        teamCell.style.cssText = 'padding: 16px 24px; white-space: nowrap; display: table-cell; vertical-align: middle;';
+        const teamDiv = document.createElement('div');
+        teamDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; color: #ffffff; height: 24px;';
+
+        // Add logo if available
+        if (team.teamLogo) {
+          const logoImg = document.createElement('img');
+          logoImg.src = team.teamLogo;
+          logoImg.alt = team.teamName;
+          logoImg.style.cssText = 'width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex-shrink: 0; margin-top: 2px;';
+          teamDiv.appendChild(logoImg);
+        } else {
+          // Fallback to initial
+          const logoDiv = document.createElement('div');
+          logoDiv.style.cssText = 'width: 24px; height: 24px; border-radius: 50%; background-color: #52525b; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #d4d4d8; flex-shrink: 0;';
+          logoDiv.textContent = team.teamName.charAt(0).toUpperCase();
+          teamDiv.appendChild(logoDiv);
+        }
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = team.teamName;
+        teamDiv.appendChild(nameSpan);
+
+        teamCell.appendChild(teamDiv);
+        row.appendChild(teamCell);
+
+        // Matches
+        const matchesCell = document.createElement('td');
+        matchesCell.style.cssText = 'padding: 16px 24px; white-space: nowrap; display: table-cell; vertical-align: middle;';
+        const matchesDiv = document.createElement('div');
+        matchesDiv.style.cssText = 'font-size: 14px; color: #ffffff; display: flex; align-items: center; height: 24px;';
+        matchesDiv.textContent = team.matchesPlayed;
+        matchesCell.appendChild(matchesDiv);
+        row.appendChild(matchesCell);
+
+        // Chicken Dinners
+        const wdCell = document.createElement('td');
+        wdCell.style.cssText = 'padding: 16px 24px; white-space: nowrap; display: table-cell; vertical-align: middle;';
+        const wdDiv = document.createElement('div');
+        wdDiv.style.cssText = 'font-size: 14px; color: #fbbf24; font-weight: bold; display: flex; align-items: center; height: 24px;';
+        wdDiv.textContent = team.chickenDinners;
+        wdCell.appendChild(wdDiv);
+        row.appendChild(wdCell);
+
+        // Position Points
+        const posPtsCell = document.createElement('td');
+        posPtsCell.style.cssText = 'padding: 16px 24px; white-space: nowrap; display: table-cell; vertical-align: middle;';
+        const posPtsDiv = document.createElement('div');
+        posPtsDiv.style.cssText = 'font-size: 14px; color: #22c55e; font-weight: bold; display: flex; align-items: center; height: 24px;';
+        posPtsDiv.textContent = team.totalPositionPoints || 0;
+        posPtsCell.appendChild(posPtsDiv);
+        row.appendChild(posPtsCell);
+
+        // Kill Points
+        const killPtsCell = document.createElement('td');
+        killPtsCell.style.cssText = 'padding: 16px 24px; white-space: nowrap; display: table-cell; vertical-align: middle;';
+        const killPtsDiv = document.createElement('div');
+        killPtsDiv.style.cssText = 'font-size: 14px; color: #3b82f6; font-weight: bold; display: flex; align-items: center; height: 24px;';
+        killPtsDiv.textContent = team.totalKillPoints || 0;
+        killPtsCell.appendChild(killPtsDiv);
+        row.appendChild(killPtsCell);
+
+        // Total Points
+        const totalPtsCell = document.createElement('td');
+        totalPtsCell.style.cssText = 'padding: 16px 24px; white-space: nowrap; display: table-cell; vertical-align: middle;';
+        const totalPtsDiv = document.createElement('div');
+        totalPtsDiv.style.cssText = 'font-size: 14px; color: #ffffff; font-weight: bold; display: flex; align-items: center; height: 24px;';
+        totalPtsDiv.textContent = team.totalPoints;
+        totalPtsCell.appendChild(totalPtsDiv);
+        row.appendChild(totalPtsCell);
+
+        tbody.appendChild(row);
+      });
+
+      table.appendChild(tbody);
+      container.appendChild(table);
+
+      // Temporarily add to DOM
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '-9999px';
+      document.body.appendChild(container);
+
+      const canvas = await html2canvas(container, {
+        backgroundColor: '#1f2937',
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        logging: false
+      });
+
+      // Remove from DOM
+      document.body.removeChild(container);
+
+      const link = document.createElement('a');
+      link.download = `${tournament.tournamentName}_points_table${selectedPhase ? `_${selectedPhase.replace(/\s+/g, '_')}` : ''}${selectedGroup !== 'overall' ? `_${selectedGroup.replace(/\s+/g, '_')}` : ''}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (error) {
+      console.error('Error generating image:', error);
+      setError('Failed to generate image. Please try again.');
+    }
+  };
+
   // Get available phases
   const availablePhases = tournament.phases ? tournament.phases.map(phase => phase.name) : [];
 
@@ -363,6 +617,14 @@ const PointsTable = ({ tournament, onUpdate }) => {
           >
             <Download className="w-4 h-4" />
             Export CSV
+          </button>
+          <button
+            onClick={downloadImage}
+            disabled={pointsTable.length === 0}
+            className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <ImageIcon className="w-4 h-4" />
+            Download Image
           </button>
         </div>
       </div>
@@ -454,7 +716,7 @@ const PointsTable = ({ tournament, onUpdate }) => {
         </div>
       )}
 
-      <div className="bg-zinc-800/50 rounded-lg overflow-hidden">
+      <div className="bg-zinc-800/50 rounded-lg overflow-hidden points-table-container">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-zinc-800">
@@ -491,8 +753,23 @@ const PointsTable = ({ tournament, onUpdate }) => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-white">
-                      {team.teamName}
+                    <div className="flex items-center gap-3">
+                      {team.teamLogo ? (
+                        <img
+                          src={team.teamLogo.startsWith('/') ? `http://localhost:5000${team.teamLogo}` : team.teamLogo}
+                          alt={team.teamName}
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 bg-zinc-600 rounded-full flex items-center justify-center">
+                          <span className="text-xs text-zinc-300 font-bold">
+                            {team.teamName.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <div className="text-sm font-medium text-white">
+                        {team.teamName}
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

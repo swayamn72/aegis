@@ -16,6 +16,7 @@
     "cloudinary": "^2.7.0",
     "firebase": "^12.4.0",
     "framer-motion": "^12.23.24",
+    "html2canvas": "^1.4.1",
     "lucide-react": "^0.540.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
