@@ -604,7 +604,7 @@ router.post('/:matchId/share-credentials', async (req, res) => {
       return res.status(400).json({ error: 'Room ID and password are required' });
     }
 
-    const match = await Match.findById(matchId);
+    const match = await Match.findById(matchId).populate('tournament', 'tournamentName logo');
     if (!match) {
       return res.status(404).json({ error: 'Match not found' });
     }
@@ -626,14 +626,19 @@ router.post('/:matchId/share-credentials', async (req, res) => {
 
     const notificationPromises = allPlayers.map(async (player) => {
       const ChatMessage = (await import('../models/chat.model.js')).default;
+      const tournamentName = match.tournament?.tournamentName || 'Unknown Tournament';
+      const tournamentPhase = match.tournamentPhase || 'Unknown Phase';
+      const matchNumber = match.matchNumber || 'Unknown';
+
       const notificationMessage = new ChatMessage({
         senderId: 'system',
         receiverId: player._id.toString(),
-        message: `Room credentials for "${match.matchName}": Room ID: ${roomId}, Password: ${password}`,
-        messageType: 'room_credentials',
-        tournamentId: match.tournament,
+        message: `Room credentials for Match #${matchNumber} (${tournamentPhase}) in ${tournamentName}: Room ID: ${roomId}, Password: ${password}`,
+        messageType: 'system',
+        tournamentId: match.tournament?._id || match.tournament,
         matchId: match._id,
-        timestamp: new Date()
+        timestamp: new Date(),
+        tournamentLogo: match.tournament?.logo
       });
 
       await notificationMessage.save();
@@ -645,7 +650,7 @@ router.post('/:matchId/share-credentials', async (req, res) => {
           senderId: 'system',
           receiverId: player._id.toString(),
           message: notificationMessage.message,
-          messageType: 'room_credentials',
+          messageType: 'system',
           tournamentId: match.tournament,
           matchId: match._id,
           timestamp: new Date()

@@ -3,6 +3,11 @@ import { Bell } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { io } from 'socket.io-client';
+
+const socket = io("http://localhost:5000", {
+  withCredentials: true,
+});
 
 function timeAgo(date) {
   const now = new Date();
@@ -27,7 +32,7 @@ function timeAgo(date) {
 }
 
 const NotificationBar = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -65,10 +70,25 @@ const NotificationBar = () => {
           }));
         }
 
+        // Fetch system messages
+        const systemMessagesResponse = await fetch('http://localhost:5000/api/chat/system', {
+          credentials: 'include',
+        });
+        let systemMessages = [];
+        if (systemMessagesResponse.ok) {
+          const data = await systemMessagesResponse.json();
+          systemMessages = data.map(msg => ({
+            ...msg,
+            type: 'system_message',
+            createdAt: msg.timestamp || new Date()
+          }));
+        }
+
         // Combine and sort notifications
         const allNotifications = [
           ...teamInvitations.map(inv => ({ ...inv, type: 'team_invitation' })),
-          ...connectionRequests
+          ...connectionRequests,
+          ...systemMessages
         ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         setNotifications(allNotifications);
@@ -100,6 +120,36 @@ const NotificationBar = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
+
+  // Socket listeners for real-time notifications
+  useEffect(() => {
+    if (!user) return;
+
+    socket.on('new_team_invitation', (invitation) => {
+      setNotifications(prev => [{ ...invitation, type: 'team_invitation' }, ...prev]);
+    });
+
+    socket.on('new_connection_request', (request) => {
+      setNotifications(prev => [{ ...request, type: 'connection_request' }, ...prev]);
+    });
+
+    socket.on('new_tournament_invite', (invite) => {
+      setNotifications(prev => [{ ...invite, type: 'tournament_invite' }, ...prev]);
+    });
+
+    socket.on('new_team_application', (application) => {
+      if (user.team && user.team._id === application.team._id) {
+        setNotifications(prev => [{ ...application, type: 'team_application' }, ...prev]);
+      }
+    });
+
+    return () => {
+      socket.off('new_team_invitation');
+      socket.off('new_connection_request');
+      socket.off('new_tournament_invite');
+      socket.off('new_team_application');
+    };
+  }, [user]);
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -133,6 +183,12 @@ const NotificationBar = () => {
                     navigate('/chat', { state: { selectedUserId: notification.fromPlayer._id } });
                   } else if (notification.type === 'connection_request') {
                     navigate('/connections');
+                  } else if (notification.type === 'tournament_invite') {
+                    navigate('/tournaments');
+                  } else if (notification.type === 'team_application') {
+                    navigate('/team-management');
+                  } else if (notification.type === 'system_message') {
+                    navigate('/chat');
                   }
                   setIsOpen(false);
                 }}
@@ -174,6 +230,66 @@ const NotificationBar = () => {
                       <div className="font-semibold text-white">{notification.fromPlayer?.username}</div>
                       <div className="text-sm text-zinc-400">
                         Sent you a connection request
+                      </div>
+                    </div>
+                  </>
+                ) : notification.type === 'tournament_invite' ? (
+                  <>
+                    {notification.tournamentLogo ? (
+                      <img
+                        src={notification.tournamentLogo}
+                        alt="Tournament logo"
+                        className="w-10 h-10 rounded-lg object-cover border border-zinc-700"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-zinc-700 rounded-lg flex items-center justify-center text-zinc-400 font-bold text-sm border border-zinc-600">
+                        T
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">{notification.tournamentName || 'Tournament'}</div>
+                      <div className="text-sm text-zinc-400">
+                        Team invited to participate
+                      </div>
+                    </div>
+                  </>
+                ) : notification.type === 'team_application' ? (
+                  <>
+                    {notification.player?.profilePicture ? (
+                      <img
+                        src={notification.player.profilePicture}
+                        alt={`${notification.player.username} profile`}
+                        className="w-10 h-10 rounded-full object-cover border border-zinc-700"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-zinc-700 rounded-full flex items-center justify-center text-zinc-400 font-bold text-sm border border-zinc-600">
+                        {notification.player?.username ? notification.player.username.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">{notification.player?.username}</div>
+                      <div className="text-sm text-zinc-400">
+                        Applied to join your team
+                      </div>
+                    </div>
+                  </>
+                ) : notification.type === 'system_message' ? (
+                  <>
+                    {notification.tournamentLogo ? (
+                      <img
+                        src={notification.tournamentLogo}
+                        alt="Tournament logo"
+                        className="w-10 h-10 rounded-lg object-cover border border-zinc-700"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-zinc-700 rounded-lg flex items-center justify-center text-zinc-400 font-bold text-sm border border-zinc-600">
+                        S
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">Tournament Update</div>
+                      <div className="text-sm text-zinc-400">
+                        {notification.message}
                       </div>
                     </div>
                   </>

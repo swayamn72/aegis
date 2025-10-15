@@ -7,10 +7,10 @@ const ChatSchema = new Schema(
     senderId: { type: String, required: true },
     receiverId: { type: String, required: true },
     message: { type: String, required: true },
-    messageType: { 
-      type: String, 
-      enum: ['text', 'invitation', 'tournament_reference', 'tournament_invite', 'match_scheduled', 'system'], 
-      default: 'text' 
+    messageType: {
+      type: String,
+      enum: ['text', 'invitation', 'tournament_reference', 'tournament_invite', 'match_scheduled', 'system'],
+      default: 'text'
     },
     invitationId: { type: Schema.Types.ObjectId, ref: 'TeamInvitation', required: false },
     invitationStatus: { type: String, enum: ['pending', 'accepted', 'declined'], default: 'pending' },

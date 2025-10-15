@@ -30,6 +30,7 @@ const MatchManagement = ({ tournament, onUpdate }) => {
     roomId: '',
     roomPassword: ''
   });
+  const [isCreateSectionExpanded, setIsCreateSectionExpanded] = useState(false);
 
   const phases = tournament.phases || [];
   const allGroups = phases.flatMap(phase => phase.groups || []);
@@ -387,6 +388,11 @@ const MatchManagement = ({ tournament, onUpdate }) => {
   };
 
   const handleShareCredentials = async () => {
+    if (!selectedMatchForCredentials || !selectedMatchForCredentials._id) {
+      toast.error('Invalid match selected');
+      return;
+    }
+
     if (!credentialsForm.roomId.trim() || !credentialsForm.roomPassword.trim()) {
       toast.error('Please fill in both room ID and password');
       return;
@@ -482,6 +488,10 @@ const MatchManagement = ({ tournament, onUpdate }) => {
   const handleDropdownAction = (action, match) => {
     setDropdownOpen(null);
     if (action === 'share-credentials') {
+      if (!match || !match._id) {
+        toast.error('Invalid match selected');
+        return;
+      }
       setSelectedMatchForCredentials(match);
       setCredentialsForm({ roomId: '', roomPassword: '' });
       setShowCredentialsModal(true);
@@ -521,124 +531,6 @@ const MatchManagement = ({ tournament, onUpdate }) => {
         </div>
       )}
 
-      {/* Add New Match */}
-      <div className="bg-zinc-800/50 rounded-lg p-6">
-        <h4 className="text-lg font-medium text-white mb-4">Create New Match</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm text-zinc-400 mb-2">Match Number *</label>
-            <input
-              type="number"
-              min="1"
-              value={newMatch.matchNumber}
-              onChange={(e) => setNewMatch({ ...newMatch, matchNumber: e.target.value })}
-              className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white"
-              placeholder="1"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-zinc-400 mb-2">Phase *</label>
-            <select
-              value={newMatch.tournamentPhase}
-              onChange={(e) => setNewMatch({ ...newMatch, tournamentPhase: e.target.value })}
-              className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white"
-            >
-              <option value="">Select Phase</option>
-              {phases.map(phase => (
-                <option key={phase._id || phase.id} value={phase.name}>{phase.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm text-zinc-400 mb-2">Map</label>
-            <select
-              value={newMatch.map}
-              onChange={(e) => setNewMatch({ ...newMatch, map: e.target.value })}
-              className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white"
-            >
-              {maps.map(map => (
-                <option key={map} value={map}>{map}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm text-zinc-400 mb-2">Start Time *</label>
-            <input
-              type="datetime-local"
-              value={newMatch.scheduledStartTime}
-              onChange={(e) => setNewMatch({ ...newMatch, scheduledStartTime: e.target.value })}
-              className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white"
-            />
-          </div>
-        </div>
-
-        {/* Group Selection */}
-        <div className="mt-4">
-          <label className="block text-sm text-zinc-400 mb-2">Participating Groups</label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-40 overflow-y-auto">
-            {groups.map((group) => {
-              const isSelected = newMatch.participatingGroups.includes(group.id);
-
-              return (
-                <button
-                  key={group.id}
-                  onClick={() => handleGroupToggle(group.id)}
-                  className={`p-2 rounded text-sm transition-colors ${isSelected
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
-                    }`}
-                >
-                  {group.name}
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-xs text-zinc-500 mt-1">
-            Selected: {newMatch.participatingGroups.length} groups
-          </p>
-        </div>
-
-        {/* Team Selection */}
-        <div className="mt-4">
-          <label className="block text-sm text-zinc-400 mb-2">Participating Teams</label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-40 overflow-y-auto">
-            {teams.map((teamData) => {
-              const team = teamData.team || teamData;
-              const teamId = team._id || team.id;
-              const teamName = team.teamName || team.name || 'Unknown Team';
-              const isSelected = newMatch.participatingTeams.includes(teamId);
-
-              return (
-                <button
-                  key={teamId}
-                  onClick={() => handleTeamToggle(teamId)}
-                  className={`p-2 rounded text-sm transition-colors ${isSelected
-                    ? 'bg-green-500 text-white'
-                    : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
-                    }`}
-                >
-                  {teamName}
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-xs text-zinc-500 mt-1">
-            Selected: {newMatch.participatingTeams.length} teams
-          </p>
-        </div>
-
-        <button
-          onClick={handleAddMatch}
-          className="mt-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Create Match
-        </button>
-      </div>
-
       {/* Save Button */}
       {hasUnsavedChanges && (
         <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 flex items-center justify-between">
@@ -670,7 +562,7 @@ const MatchManagement = ({ tournament, onUpdate }) => {
       {/* Existing Matches */}
       <div className="space-y-4">
         {currentMatches.map(match => (
-          <div key={match._id} className="bg-zinc-800/50 rounded-lg p-6">
+          <div key={`match-${match._id}`} className="bg-zinc-800/50 rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <button
@@ -783,7 +675,7 @@ const MatchManagement = ({ tournament, onUpdate }) => {
               <>
                 {/* Match Results Input */}
                 <div className="space-y-3">
-                  {match.participatingTeams?.map(team => {
+                  {match.participatingTeams?.map((team, index) => {
                     const teamData = team.team || team;
                     const teamId = teamData._id || teamData.id;
                     const teamName = teamData.teamName || teamData.name || 'Unknown Team';
@@ -797,7 +689,7 @@ const MatchManagement = ({ tournament, onUpdate }) => {
                     const currentPoints = team.points?.totalPoints || 0;
 
                     return (
-                      <div key={teamId} className="flex items-center gap-4 p-3 bg-zinc-700/50 rounded">
+                      <div key={`${match._id}-team-${index}`} className="flex items-center gap-4 p-3 bg-zinc-700/50 rounded">
                         <div className="flex-1">
                           <span className="text-white font-medium">{teamName}</span>
                           <span className="text-zinc-400 text-sm ml-2">({teamId})</span>
@@ -859,7 +751,7 @@ const MatchManagement = ({ tournament, onUpdate }) => {
                             }
                             return (b.kills?.total || 0) - (a.kills?.total || 0); // Tiebreaker by kills
                           })
-                          .map((team) => {
+                          .map((team, index) => {
                             const teamData = team.team || team;
                             const teamName = teamData.teamName || teamData.name || 'Unknown Team';
                             const position = team.finalPosition;
@@ -867,7 +759,7 @@ const MatchManagement = ({ tournament, onUpdate }) => {
                             const points = team.points?.totalPoints || 0;
 
                             return (
-                              <div key={teamData._id || teamData.id} className={`flex items-center gap-4 p-2 rounded ${position === 1 ? 'bg-yellow-500/20 border border-yellow-500/30' :
+                              <div key={`${match._id}-leaderboard-${index}`} className={`flex items-center gap-4 p-2 rounded ${position === 1 ? 'bg-yellow-500/20 border border-yellow-500/30' :
                                 position === 2 ? 'bg-gray-400/20 border border-gray-400/30' :
                                   position === 3 ? 'bg-orange-500/20 border border-orange-500/30' :
                                     'bg-zinc-600/30'
@@ -904,6 +796,142 @@ const MatchManagement = ({ tournament, onUpdate }) => {
             )}
           </div>
         ))}
+      </div>
+
+      {/* Add New Match */}
+      <div className="bg-zinc-800/50 rounded-lg p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <button
+            onClick={() => setIsCreateSectionExpanded(!isCreateSectionExpanded)}
+            className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded transition-colors"
+            title={isCreateSectionExpanded ? "Collapse create section" : "Expand create section"}
+          >
+            {isCreateSectionExpanded ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
+          <h4 className="text-lg font-medium text-white">Create New Match</h4>
+        </div>
+
+        {isCreateSectionExpanded && (
+        <div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm text-zinc-400 mb-2">Match Number *</label>
+              <input
+                type="number"
+                min="1"
+                value={newMatch.matchNumber}
+                onChange={(e) => setNewMatch({ ...newMatch, matchNumber: e.target.value })}
+                className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white"
+                placeholder="1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-zinc-400 mb-2">Phase *</label>
+              <select
+                value={newMatch.tournamentPhase}
+                onChange={(e) => setNewMatch({ ...newMatch, tournamentPhase: e.target.value })}
+                className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white"
+              >
+                <option value="">Select Phase</option>
+                {phases.map(phase => (
+                  <option key={phase._id || phase.id} value={phase.name}>{phase.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm text-zinc-400 mb-2">Map</label>
+              <select
+                value={newMatch.map}
+                onChange={(e) => setNewMatch({ ...newMatch, map: e.target.value })}
+                className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white"
+              >
+                {maps.map(map => (
+                  <option key={map} value={map}>{map}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm text-zinc-400 mb-2">Start Time *</label>
+              <input
+                type="datetime-local"
+                value={newMatch.scheduledStartTime}
+                onChange={(e) => setNewMatch({ ...newMatch, scheduledStartTime: e.target.value })}
+                className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white"
+              />
+            </div>
+          </div>
+
+          {/* Group Selection */}
+          <div className="mt-4">
+            <label className="block text-sm text-zinc-400 mb-2">Participating Groups</label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-40 overflow-y-auto">
+              {groups.map((group) => {
+                const isSelected = newMatch.participatingGroups.includes(group.id);
+
+                return (
+                  <button
+                    key={group.id}
+                    onClick={() => handleGroupToggle(group.id)}
+                    className={`p-2 rounded text-sm transition-colors ${isSelected
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+                      }`}
+                  >
+                    {group.name}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-zinc-500 mt-1">
+              Selected: {newMatch.participatingGroups.length} groups
+            </p>
+          </div>
+
+          {/* Team Selection */}
+          <div className="mt-4">
+            <label className="block text-sm text-zinc-400 mb-2">Participating Teams</label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-40 overflow-y-auto">
+              {teams.map((teamData) => {
+                const team = teamData.team || teamData;
+                const teamId = team._id || team.id;
+                const teamName = team.teamName || team.name || 'Unknown Team';
+                const isSelected = newMatch.participatingTeams.includes(teamId);
+
+                return (
+                  <button
+                    key={teamId}
+                    onClick={() => handleTeamToggle(teamId)}
+                    className={`p-2 rounded text-sm transition-colors ${isSelected
+                      ? 'bg-green-500 text-white'
+                      : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+                      }`}
+                  >
+                    {teamName}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-zinc-500 mt-1">
+              Selected: {newMatch.participatingTeams.length} teams
+            </p>
+          </div>
+
+          <button
+            onClick={handleAddMatch}
+            className="mt-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Create Match
+          </button>
+        </div>
+        )}
       </div>
 
       {/* Pagination Controls */}

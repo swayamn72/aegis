@@ -45,7 +45,7 @@ export default function RewardsPage() {
 
       setRewardData(res.data);
       setCoins(res.data.newCoinBalance);
-      toast.success(res.data.message);
+      // toast.success(res.data.message);
     } catch (err) {
       toast.error(err.response?.data?.message || "Error claiming reward");
     } finally {

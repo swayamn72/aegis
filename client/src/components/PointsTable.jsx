@@ -305,17 +305,15 @@ const PointsTable = ({ tournament, onUpdate }) => {
     const phaseSuffix = selectedPhase ? `_${selectedPhase.replace(/\s+/g, '_')}` : '';
     const groupSuffix = selectedGroup !== 'overall' ? `_${selectedGroup.replace(/\s+/g, '_')}` : '';
     const csvContent = [
-      ['Position', 'Team Name', 'Position Points', 'Kill Points', 'Total Points', 'Chicken Dinners', 'Total Kills', 'Matches Played', 'Average Placement'],
+      ['Position', 'Team Name', 'Matches', 'WD', 'Position Points', 'Kill Points', 'Total Points'],
       ...pointsTable.map((team, index) => [
         team.position || index + 1,
         team.teamName,
+        team.matchesPlayed || 0,
+        team.chickenDinners || 0,
         team.totalPositionPoints || 0,
         team.totalKillPoints || 0,
-        team.totalPoints,
-        team.chickenDinners || 0,
-        team.kills || 0,
-        team.matchesPlayed || 0,
-        team.averagePlacement > 0 ? team.averagePlacement.toFixed(2) : 'N/A'
+        team.totalPoints
       ])
     ].map(row => row.join(',')).join('\n');
 
@@ -468,6 +466,12 @@ const PointsTable = ({ tournament, onUpdate }) => {
                   Team
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">
+                  Matches
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">
+                  🏆 WD
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">
                   Position Pts
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">
@@ -475,18 +479,6 @@ const PointsTable = ({ tournament, onUpdate }) => {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">
                   Total Pts
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                  🏆 WD
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                  Kills
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                  Matches
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                  Avg Place
                 </th>
               </tr>
             </thead>
@@ -504,6 +496,16 @@ const PointsTable = ({ tournament, onUpdate }) => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-white">
+                      {team.matchesPlayed}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-amber-400 font-bold">
+                      {team.chickenDinners}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-green-400 font-bold">
                       {team.totalPositionPoints || 0}
                     </div>
@@ -516,26 +518,6 @@ const PointsTable = ({ tournament, onUpdate }) => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-white font-bold">
                       {team.totalPoints}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-amber-400 font-bold">
-                      {team.chickenDinners}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-red-400">
-                      {team.kills}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-white">
-                      {team.matchesPlayed}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-white">
-                      {team.averagePlacement > 0 ? team.averagePlacement.toFixed(1) : 'N/A'}
                     </div>
                   </td>
                 </tr>

@@ -970,8 +970,25 @@ export default function ChatPage() {
                   if (msg.messageType === 'system') {
                     return (
                       <div key={msg._id || idx} className="flex justify-center">
-                        <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-sm text-zinc-300">
-                          {msg.message}
+                        <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-sm text-zinc-300 max-w-md">
+                          <div className="flex items-center gap-3 mb-2">
+                            {msg.tournamentLogo ? (
+                              <img
+                                src={msg.tournamentLogo}
+                                alt="Tournament Logo"
+                                className="w-8 h-8 rounded-lg object-cover border border-zinc-600"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-8 h-8 bg-zinc-700 rounded-lg flex items-center justify-center text-zinc-400 font-bold text-sm border border-zinc-600">
+                                T
+                              </div>
+                            )}
+                            <span className="text-xs text-zinc-400 font-medium">Tournament Update</span>
+                          </div>
+                          <p>{msg.message}</p>
                         </div>
                       </div>
                     );
