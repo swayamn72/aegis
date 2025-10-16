@@ -176,6 +176,11 @@ const MatchScheduler = ({ tournament, onUpdate }) => {
         // Send chat notifications
         await sendChatNotifications(savedMatch);
 
+        // Refresh tournament data to show updated phases
+        if (onUpdate) {
+          onUpdate();
+        }
+
         // Reset form
         setFormData({
           matchName: '',

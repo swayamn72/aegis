@@ -211,6 +211,14 @@ const tournamentSchema = new mongoose.Schema(
             ],
           },
         ],
+        // --- Qualification Rules for this phase ---
+        qualificationRules: [
+          {
+            numberOfTeams: { type: Number },
+            source: { type: String, enum: ['overall', 'from_each_group'] },
+            nextPhase: { type: String }, // Changed to String to store phase name
+          },
+        ],
       },
     ],
     // --- Overall Tournament Results ---

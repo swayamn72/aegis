@@ -70,7 +70,7 @@ const TournamentManagementPageOrg = () => {
 
   const handleSave = async (formData) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/tournaments/${id}`, {
+      const response = await fetch(`http://localhost:5000/api/org-tournaments/${id}`, {
         method: 'PUT',
         credentials: 'include',
         body: formData
@@ -94,7 +94,7 @@ const TournamentManagementPageOrg = () => {
   const handleOrgAddTeamToPhase = async (team, phase) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/tournaments/${id}/phases/${phase}/teams`,
+        `http://localhost:5000/api/org-tournaments/${id}/phases/${phase}/teams`,
         {
           method: 'POST',
           headers: {
@@ -122,7 +122,7 @@ const TournamentManagementPageOrg = () => {
   const handleOrgRemoveTeamFromPhase = async (team, phase) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/tournaments/${id}/phases/${phase}/teams/${team._id}`,
+        `http://localhost:5000/api/org-tournaments/${id}/phases/${phase}/teams/${team._id}`,
         {
           method: 'DELETE',
           credentials: 'include'
@@ -867,7 +867,7 @@ const TournamentManagementPageOrg = () => {
               };
 
               const response = await fetch(
-                `http://localhost:5000/api/tournaments/${id}`,
+                `http://localhost:5000/api/org-tournaments/${id}`,
                 {
                   method: 'PUT',
                   headers: {
@@ -898,10 +898,10 @@ const TournamentManagementPageOrg = () => {
             onClose={() => setIsPhaseManagerOpen(false)}
             onSave={async (phases) => {
               const formData = new FormData();
-              formData.append('phases', JSON.stringify(phases));
+              formData.append('tournamentData', JSON.stringify({ phases }));
 
               const response = await fetch(
-                `http://localhost:5000/api/tournaments/${id}`,
+                `http://localhost:5000/api/org-tournaments/${id}`,
                 {
                   method: 'PUT',
                   credentials: 'include',

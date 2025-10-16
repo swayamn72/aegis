@@ -101,6 +101,15 @@ router.post('/schedule', async (req, res) => {
 
     await scheduledMatch.save();
 
+    // Update the tournament's phase to include this match
+    if (tournament) {
+      const phase = tournament.phases?.find(p => p.name === matchData.tournamentPhase);
+      if (phase) {
+        phase.matches.push(scheduledMatch._id);
+        await tournament.save();
+      }
+    }
+
     // Populate the saved match for response
     await scheduledMatch.populate('participatingTeams.team', 'teamName teamTag logo');
     await scheduledMatch.populate('tournament', 'tournamentName');

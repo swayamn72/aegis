@@ -1,34 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Settings, Plus, X, Edit2, Trash2, AlertCircle, Trophy } from 'lucide-react';
+import { Calendar, Clock, Plus, X, Trash2, AlertCircle, Trophy, Target } from 'lucide-react';
 
 const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
   const [phases, setPhases] = useState([]);
   const [errors, setErrors] = useState({});
 
-  const phaseTypes = [
-    'qualifiers',
-    'final_stage'
-  ];
-
-  // Map UI-friendly phase types to schema enum values
-  const mapPhaseTypeToSchema = (uiType) => {
-    // Standardize to backend enum
-    if (uiType === 'qualifier') return 'qualifiers';
-    return uiType;
-  };
+  const phaseTypes = ['qualifiers', 'final_stage'];
 
   useEffect(() => {
     if (initialPhases.length > 0) {
-      // Format dates for datetime-local
-      setPhases(initialPhases.map(phase => ({ 
-        ...phase, 
+      setPhases(initialPhases.map(phase => ({
+        ...phase,
         startDate: phase.startDate ? new Date(phase.startDate).toISOString().slice(0, 16) : '',
         endDate: phase.endDate ? new Date(phase.endDate).toISOString().slice(0, 16) : '',
         rulesetSpecifics: phase.rulesetSpecifics || '',
-        details: phase.details || ''
+        details: phase.details || '',
+        qualificationRules: phase.qualificationRules || []
       })));
     } else {
-      // Initialize with default phases matching schema
       setPhases([
         {
           name: 'Qualifiers',
@@ -39,7 +28,14 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
           status: 'upcoming',
           rulesetSpecifics: '',
           teams: [],
-          groups: []
+          groups: [],
+          qualificationRules: [
+            {
+              numberOfTeams: 16,
+              source: 'overall',
+              nextPhase: ''
+            }
+          ]
         },
         {
           name: 'Final Stage',
@@ -50,7 +46,8 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
           status: 'upcoming',
           rulesetSpecifics: '',
           teams: [],
-          groups: []
+          groups: [],
+          qualificationRules: []
         }
       ]);
     }
@@ -73,16 +70,44 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
       status: 'upcoming',
       rulesetSpecifics: '',
       teams: [],
-      groups: []
+      groups: [],
+      qualificationRules: []
     };
     setPhases([...phases, newPhase]);
   };
 
   const removePhase = (index) => {
-    if (phases.length <= 1) return; // Keep at least one phase
+    if (phases.length <= 1) return;
     const newPhases = phases.filter((_, i) => i !== index);
     setPhases(newPhases);
     validatePhases(newPhases);
+  };
+
+  const addQualificationRule = (phaseIndex) => {
+    const newPhases = [...phases];
+    if (!newPhases[phaseIndex].qualificationRules) {
+      newPhases[phaseIndex].qualificationRules = [];
+    }
+    
+    newPhases[phaseIndex].qualificationRules.push({
+      numberOfTeams: 1,
+      source: 'overall',
+      nextPhase: phaseIndex + 1 < phases.length ? phases[phaseIndex + 1].name : ''
+    });
+    
+    setPhases(newPhases);
+  };
+
+  const removeQualificationRule = (phaseIndex, ruleIndex) => {
+    const newPhases = [...phases];
+    newPhases[phaseIndex].qualificationRules.splice(ruleIndex, 1);
+    setPhases(newPhases);
+  };
+
+  const handleQualificationRuleChange = (phaseIndex, ruleIndex, field, value) => {
+    const newPhases = [...phases];
+    newPhases[phaseIndex].qualificationRules[ruleIndex][field] = value;
+    setPhases(newPhases);
   };
 
   const validatePhases = (phaseList) => {
@@ -109,18 +134,15 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
         newErrors[`${index}_dates`] = 'End date must be after start date';
       }
 
-      // Check for overlapping phases
       phaseList.forEach((otherPhase, otherIndex) => {
-        if (index !== otherIndex &&
-            phase.startDate && phase.endDate &&
+        if (index !== otherIndex && phase.startDate && phase.endDate && 
             otherPhase.startDate && otherPhase.endDate) {
-
           const phaseStart = new Date(phase.startDate);
           const phaseEnd = new Date(phase.endDate);
           const otherStart = new Date(otherPhase.startDate);
           const otherEnd = new Date(otherPhase.endDate);
 
-          if ((phaseStart < otherEnd && phaseEnd > otherStart)) {
+          if (phaseStart < otherEnd && phaseEnd > otherStart) {
             newErrors[`${index}_overlap`] = 'Phase dates overlap with another phase';
           }
         }
@@ -135,12 +157,16 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
 
     const validPhases = phases.filter(phase => phase.name.trim()).map(phase => ({
       ...phase,
-      type: mapPhaseTypeToSchema(phase.type), // Map UI type to schema enum value
-      teams: [], // No UI input, default to empty array
-      groups: phase.groups || [], // Preserve existing groups from separate management
-      // Matches will be populated later via backend
-      matches: phase.matches || []
+      teams: phase.teams || [],
+      groups: phase.groups || [],
+      matches: phase.matches || [],
+      qualificationRules: (phase.qualificationRules || []).map(rule => ({
+        numberOfTeams: parseInt(rule.numberOfTeams) || 1,
+        source: rule.source || 'overall',
+        nextPhase: rule.nextPhase || ''
+      }))
     }));
+    
     onSave(validPhases);
     onClose();
   };
@@ -148,7 +174,7 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
   const getPhaseIcon = (type) => {
     switch (type) {
       case 'qualifiers':
-        return <Calendar className="w-5 h-5" />;
+        return <Target className="w-5 h-5" />;
       case 'final_stage':
         return <Trophy className="w-5 h-5" />;
       default:
@@ -161,35 +187,25 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-zinc-900 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-zinc-800">
           <div>
             <h2 className="text-xl font-semibold text-white">Tournament Phases</h2>
-            <p className="text-zinc-400 text-sm">Manage tournament phases and their schedules</p>
+            <p className="text-zinc-400 text-sm">Configure tournament structure and advancement rules</p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-zinc-400 hover:text-white transition-colors"
-          >
+          <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors">
             <X size={24} />
           </button>
         </div>
 
-        {/* Phases List */}
         <div className="p-6 max-h-[60vh] overflow-y-auto">
           <div className="space-y-6">
             {phases.map((phase, index) => (
               <div key={index} className="bg-zinc-800/50 rounded-lg p-6 border border-zinc-700">
-                {/* Phase Header */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="text-orange-500">
-                      {getPhaseIcon(phase.type)}
-                    </div>
+                    <div className="text-orange-500">{getPhaseIcon(phase.type)}</div>
                     <div>
-                      <h3 className="text-white font-medium">
-                        Phase {index + 1}: {phase.name || 'Untitled Phase'}
-                      </h3>
+                      <h3 className="text-white font-medium">Phase {index + 1}: {phase.name || 'Untitled'}</h3>
                       <p className="text-zinc-400 text-sm">{phase.details}</p>
                     </div>
                   </div>
@@ -203,10 +219,9 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
                   )}
                 </div>
 
-                {/* Phase Form */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-zinc-400 mb-2">Phase Name</label>
+                    <label className="block text-sm text-zinc-400 mb-2">Phase Name *</label>
                     <input
                       type="text"
                       value={phase.name}
@@ -220,19 +235,18 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm text-zinc-400 mb-2">Phase Type</label>
+                    <label className="block text-sm text-zinc-400 mb-2">Phase Type *</label>
                     <select
                       value={phase.type}
                       onChange={(e) => handlePhaseChange(index, 'type', e.target.value)}
                       className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                     >
                       {phaseTypes.map(type => (
-                        <option key={type} value={type}>{type.replace('_', ' ').toUpperCase()}</option>
+                        <option key={type} value={type}>
+                          {type.replace('_', ' ').toUpperCase()}
+                        </option>
                       ))}
                     </select>
-                    {errors[`${index}_type`] && (
-                      <p className="text-red-400 text-xs mt-1">{errors[`${index}_type`]}</p>
-                    )}
                   </div>
 
                   <div>
@@ -249,7 +263,7 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm text-zinc-400 mb-2">Start Date & Time</label>
+                    <label className="block text-sm text-zinc-400 mb-2">Start Date & Time *</label>
                     <input
                       type="datetime-local"
                       value={phase.startDate}
@@ -262,7 +276,7 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm text-zinc-400 mb-2">End Date & Time</label>
+                    <label className="block text-sm text-zinc-400 mb-2">End Date & Time *</label>
                     <input
                       type="datetime-local"
                       value={phase.endDate}
@@ -282,7 +296,7 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
                     onChange={(e) => handlePhaseChange(index, 'details', e.target.value)}
                     className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                     rows={2}
-                    placeholder="Enter phase details (e.g., advancement rules)"
+                    placeholder="Enter phase details"
                   />
                 </div>
 
@@ -292,9 +306,100 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
                     value={phase.rulesetSpecifics}
                     onChange={(e) => handlePhaseChange(index, 'rulesetSpecifics', e.target.value)}
                     className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    rows={3}
-                    placeholder="Enter phase-specific rules (e.g., scoring, map rotation)"
+                    rows={2}
+                    placeholder="Enter phase-specific rules"
                   />
+                </div>
+
+                {/* Qualification Rules */}
+                <div className="mt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="block text-sm text-zinc-400">Team Advancement Rules</label>
+                    <button
+                      onClick={() => addQualificationRule(index)}
+                      className="text-orange-400 hover:text-orange-300 text-sm flex items-center gap-1"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Rule
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {(phase.qualificationRules || []).map((rule, ruleIndex) => (
+                      <div key={ruleIndex} className="bg-zinc-700/50 rounded p-4 border border-zinc-600">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-1">Number of Teams</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={rule.numberOfTeams}
+                              onChange={(e) => handleQualificationRuleChange(index, ruleIndex, 'numberOfTeams', e.target.value)}
+                              className="w-full bg-zinc-600 border border-zinc-500 rounded px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-1">Source</label>
+                            <select
+                              value={rule.source}
+                              onChange={(e) => handleQualificationRuleChange(index, ruleIndex, 'source', e.target.value)}
+                              className="w-full bg-zinc-600 border border-zinc-500 rounded px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm"
+                            >
+                              <option value="overall">Overall Standings</option>
+                              <option value="from_each_group">From Each Group</option>
+                            </select>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-1">Next Phase</label>
+                            <select
+                              value={rule.nextPhase}
+                              onChange={(e) => handleQualificationRuleChange(index, ruleIndex, 'nextPhase', e.target.value)}
+                              className="w-full bg-zinc-600 border border-zinc-500 rounded px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm"
+                            >
+                              <option value="">Select Phase</option>
+                              {phases.map((p, pIndex) => {
+                                if (pIndex > index) {
+                                  return (
+                                    <option key={pIndex} value={p.name}>
+                                      {p.name || `Phase ${pIndex + 1}`}
+                                    </option>
+                                  );
+                                }
+                                return null;
+                              })}
+                            </select>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-zinc-400">
+                            Top <strong className="text-white">{rule.numberOfTeams}</strong> teams from{' '}
+                            <strong className="text-white">
+                              {rule.source === 'overall' ? 'overall standings' : 'each group'}
+                            </strong>{' '}
+                            advance to{' '}
+                            <strong className="text-orange-400">
+                              {rule.nextPhase || 'next phase'}
+                            </strong>
+                          </p>
+                          <button
+                            onClick={() => removeQualificationRule(index, ruleIndex)}
+                            className="text-red-400 hover:text-red-300 text-xs"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {(!phase.qualificationRules || phase.qualificationRules.length === 0) && (
+                      <div className="text-center py-4 text-zinc-500 text-sm">
+                        No advancement rules set. All teams will remain in this phase.
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {errors[`${index}_dates`] && (
@@ -314,7 +419,6 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
             ))}
           </div>
 
-          {/* Add Phase Button */}
           <button
             onClick={addPhase}
             className="w-full mt-6 py-3 border-2 border-dashed border-zinc-600 rounded-lg text-zinc-400 hover:border-orange-500 hover:text-orange-500 transition-colors flex items-center justify-center gap-2"
@@ -324,7 +428,6 @@ const PhaseManager = ({ isOpen, onClose, onSave, initialPhases = [] }) => {
           </button>
         </div>
 
-        {/* Footer */}
         <div className="p-6 border-t border-zinc-800 flex justify-end gap-4">
           <button
             onClick={onClose}
