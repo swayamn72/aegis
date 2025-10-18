@@ -152,16 +152,52 @@ const PointsTable = ({ tournament, onUpdate }) => {
     const teamPoints = {};
     let relevantTeams = tournament.participatingTeams || [];
 
-    if (selectedGroup !== 'overall' && selectedPhase) {
+    // Filter teams based on phase selection
+    if (selectedPhase) {
       const phase = tournament.phases?.find(p => p.name === selectedPhase);
-      const groupTeams = phase?.groups?.find(g => g.name === selectedGroup)?.teams || [];
-      relevantTeams = relevantTeams.filter(pt => {
-        const ptTeamId = pt.team?._id || pt.team || pt._id;
-        return groupTeams.some(gt => {
-          const gtTeamId = gt?._id || gt;
-          return ptTeamId?.toString() === gtTeamId?.toString();
+      
+      if (selectedGroup !== 'overall') {
+        // Show only teams from specific group
+        const groupTeams = phase?.groups?.find(g => g.name === selectedGroup)?.teams || [];
+        relevantTeams = relevantTeams.filter(pt => {
+          const ptTeamId = pt.team?._id || pt.team || pt._id;
+          return groupTeams.some(gt => {
+            const gtTeamId = gt?._id || gt;
+            return ptTeamId?.toString() === gtTeamId?.toString();
+          });
         });
-      });
+      } else {
+        // Show only teams that are part of this phase (from phase.teams or any group in this phase)
+        const phaseTeamIds = new Set();
+        
+        // Add teams directly assigned to phase
+        if (phase?.teams) {
+          phase.teams.forEach(t => {
+            const teamId = t?._id || t;
+            if (teamId) phaseTeamIds.add(teamId.toString());
+          });
+        }
+        
+        // Add teams from all groups in this phase
+        if (phase?.groups) {
+          phase.groups.forEach(group => {
+            if (group.teams) {
+              group.teams.forEach(t => {
+                const teamId = t?._id || t;
+                if (teamId) phaseTeamIds.add(teamId.toString());
+              });
+            }
+          });
+        }
+        
+        // Filter to only teams in this phase
+        if (phaseTeamIds.size > 0) {
+          relevantTeams = relevantTeams.filter(pt => {
+            const ptTeamId = pt.team?._id || pt.team || pt._id;
+            return ptTeamId && phaseTeamIds.has(ptTeamId.toString());
+          });
+        }
+      }
     }
 
     relevantTeams.forEach(participatingTeam => {
