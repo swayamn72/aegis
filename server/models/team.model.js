@@ -171,6 +171,7 @@ teamSchema.index({ 'statistics.tournamentsPlayed': -1 });
 teamSchema.index({ totalEarnings: -1 });
 teamSchema.index({ aegisRating: -1 });
 teamSchema.index({ status: 1, lookingForPlayers: 1 });
+teamSchema.index({ players: 1 });
 
 // Pre-save middleware to calculate win rate
 teamSchema.pre('save', function(next) {

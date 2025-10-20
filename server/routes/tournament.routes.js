@@ -239,6 +239,44 @@ router.get('/featured', async (req, res) => {
   }
 });
 
+// Get recent 3 tournaments open for all with open registrations
+router.get('/get-recent3-tourney', async (req, res) => {
+  try {
+    const { limit = 3 } = req.query;
+
+    const tournaments = await Tournament.find({
+      isOpenForAll: true,
+      visibility: 'public'
+    })
+      .sort({ startDate: 1 }) // Soonest first
+      .limit(parseInt(limit))
+      .select(`
+        tournamentName shortName gameTitle region subRegion tier status startDate endDate
+        prizePool media organizer participatingTeams statistics slots registrationStartDate registrationEndDate tags
+      `)
+      .populate({
+        path: 'participatingTeams.team',
+        select: 'teamName teamTag logo'
+      });
+
+    // Filter for tournaments with open registrations
+    const openTournaments = tournaments.filter(tournament => tournament.registrationDisplayStatus === 'Open');
+
+    const enrichedTournaments = openTournaments.map(tournament => ({
+      ...tournament.toObject(),
+      participantCount: tournament.participatingTeams?.length || 0,
+      totalSlots: tournament.slots?.total || null,
+      registrationStatus: tournament.registrationDisplayStatus,
+      _id: tournament._id
+    }));
+
+    res.json({ tournaments: enrichedTournaments });
+  } catch (error) {
+    console.error('Error fetching recent 3 tournaments:', error);
+    res.status(500).json({ error: 'Failed to fetch recent 3 tournaments' });
+  }
+});
+
 // Get single tournament by ID with comprehensive data
 router.get('/:id', async (req, res) => {
   try {

@@ -4,7 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { AdminProvider } from './context/AdminContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {GoogleOAuthProvider} from '@react-oauth/google'
+import { GoogleOAuthProvider } from '@react-oauth/google'
 import HomePage from './pages/HomePage';
 import TournamentsPage from './pages/TournamentsPage';
 import SignupPage from './pages/SignupPage'
@@ -35,7 +35,7 @@ import CreatePost from './components/CreatePost';
 import PostList from './components/PostList';
 import NotificationsPage from './components/NotificationsPage';
 import ConnectionsPage from './pages/ConnectionsPage';
-import DetailedTournamentInfo2 from './components/DetailedTournamentInfo2';
+import DetailedTournamentInfoPage from './pages/DetailedTournamentInfoPage';
 import ChatPage from './pages/ChatPage';
 import MyTeamsPage from './pages/MyTeamsPage';
 import DetailedTeamInfo from './components/DetailedTeamInfo';
@@ -55,75 +55,75 @@ import AdminRewards from './pages/AdminRewards';
 function App() {
   return (
     <div>
-      
-    <AuthProvider>
-      <AdminProvider>
-        <GoogleOAuthProvider clientId="383828387467-q2b8rvh1m7g03dqp9ah218stoh7k187a.apps.googleusercontent.com">
-          <div className="bg-slate-900 font-sans min-h-screen">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/createpost" element={<CreatePost/>} />
-              <Route path="/postlist" element={<PostList/>} />
-              <Route path="/tournaments2" element={<TournamentsPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path='/players' element={<PlayersPage />} />
-              <Route path='/opportunities' element={<OpportunitiesPage />} />
-              <Route path='/notifications' element={<NotificationsPage />} />
-              <Route path='/connections' element={<ConnectionsPage />} />
-              <Route path="/chat" element={<ChatPage  />} />
-              <Route path='/scrims' element={<ScrimsPage />} />
-              {/* <Route path='/profile' element={<ProfilePlayer/>} /> */}
-              <Route path='/detailed/:playerId' element={<DetailedPlayerProfileDN/>} />
-              <Route path='/match' element={<DetailedMatchInfoDN/>} />
-              <Route path='/org' element={<DetailedOrgInfoDN/>} />
-              <Route path="/myfeed" element={<MyFeed/>} />
-              <Route path='/community/:communityId' element={<ProtectedRoute><CommunityPage/></ProtectedRoute>}/>
-              <Route path='/communities' element={<CommunitiesPage />} />
-              <Route path='/create-community' element={<CreateCommunityPage />} />
-              <Route path='/complete-profile' element={<ProtectedRoute><CompleteProfilePage/></ProtectedRoute>} />
-              <Route path='/my-profile' element={<ProtectedRoute><MyProfilePage/></ProtectedRoute>} />
-              <Route path="/player/:username" element={<ShareCard />} />
-              <Route path='/settings' element={<ProtectedRoute><SettingsPage/></ProtectedRoute>} />
-              <Route path="/reset-password/:token" element={<ResetPassword />} />
-              <Route path='/tournaments' element={<Tournaments2Page />} />
-              <Route path="/tournament/:id" element={<DetailedTournamentInfo2 />} />
-              <Route path="/team/:id" element={<DetailedTeamInfo />} />
-              <Route path="/matches/:id" element={<DetailedMatchInfoBGMI />} />
-              {/* Admin Routes */}
-              <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/tournaments" element={<AdminTournaments />} />
-              <Route path="/admin/tournaments/:id" element={<TournamentManagementPage />} />
-              <Route path="/admin/matches" element={<AdminMatches />} />
-              <Route path="/admin/organizations" element={<AdminOrganizations />} />
-              <Route path="/admin/bug-reports" element={<AdminBugReports />} />
-              <Route path="/admin/rewards" element={<AdminRewards/>} />
-              <Route path="/my-teams" element={<ProtectedRoute><MyTeamsPage /></ProtectedRoute>} />
-              <Route path="/org/dashboard" element={<ProtectedRoute><OrgDashboard /></ProtectedRoute>} />
-              <Route path="/org/tournaments" element={<ProtectedRoute><OrgTournaments /></ProtectedRoute>} />
-              <Route path="/org/tournaments/:id" element={<ProtectedRoute><TournamentManagementPageOrg /></ProtectedRoute>} />
-              <Route path="/my-applications" element={<ProtectedRoute><MyApplications /></ProtectedRoute>} />
-              <Route path="/rewards" element={<RewardsPage/>}/>
-              
-            </Routes>
-            <ToastContainer
-              position="bottom-right"
-              autoClose={3000}
-              hideProgressBar={false}
-              newestOnTop={false}
-              closeOnClick
-              rtl={false}
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-              theme="dark"
-            />
-          </div>
-        </GoogleOAuthProvider>
-        
-      </AdminProvider>
-    </AuthProvider>
+
+      <AuthProvider>
+        <AdminProvider>
+          <GoogleOAuthProvider clientId="383828387467-q2b8rvh1m7g03dqp9ah218stoh7k187a.apps.googleusercontent.com">
+            <div className="bg-slate-900 font-sans min-h-screen">
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/createpost" element={<CreatePost />} />
+                <Route path="/postlist" element={<PostList />} />
+                <Route path="/tournaments2" element={<TournamentsPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path='/players' element={<PlayersPage />} />
+                <Route path='/opportunities' element={<OpportunitiesPage />} />
+                <Route path='/notifications' element={<NotificationsPage />} />
+                <Route path='/connections' element={<ConnectionsPage />} />
+                <Route path="/chat" element={<ChatPage />} />
+                <Route path='/scrims' element={<ScrimsPage />} />
+                {/* <Route path='/profile' element={<ProfilePlayer/>} /> */}
+                <Route path='/detailed/:playerId' element={<DetailedPlayerProfileDN />} />
+                <Route path='/match' element={<DetailedMatchInfoDN />} />
+                <Route path='/org' element={<DetailedOrgInfoDN />} />
+                <Route path="/myfeed" element={<MyFeed />} />
+                <Route path='/community/:communityId' element={<ProtectedRoute><CommunityPage /></ProtectedRoute>} />
+                <Route path='/communities' element={<CommunitiesPage />} />
+                <Route path='/create-community' element={<CreateCommunityPage />} />
+                <Route path='/complete-profile' element={<ProtectedRoute><CompleteProfilePage /></ProtectedRoute>} />
+                <Route path='/my-profile' element={<ProtectedRoute><MyProfilePage /></ProtectedRoute>} />
+                <Route path="/player/:username" element={<ShareCard />} />
+                <Route path='/settings' element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+                <Route path="/reset-password/:token" element={<ResetPassword />} />
+                <Route path='/tournaments' element={<Tournaments2Page />} />
+                <Route path="/tournament/:id" element={<DetailedTournamentInfoPage />} />
+                <Route path="/team/:id" element={<DetailedTeamInfo />} />
+                <Route path="/matches/:id" element={<DetailedMatchInfoBGMI />} />
+                {/* Admin Routes */}
+                <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/admin/tournaments" element={<AdminTournaments />} />
+                <Route path="/admin/tournaments/:id" element={<TournamentManagementPage />} />
+                <Route path="/admin/matches" element={<AdminMatches />} />
+                <Route path="/admin/organizations" element={<AdminOrganizations />} />
+                <Route path="/admin/bug-reports" element={<AdminBugReports />} />
+                <Route path="/admin/rewards" element={<AdminRewards />} />
+                <Route path="/my-teams" element={<ProtectedRoute><MyTeamsPage /></ProtectedRoute>} />
+                <Route path="/org/dashboard" element={<ProtectedRoute><OrgDashboard /></ProtectedRoute>} />
+                <Route path="/org/tournaments" element={<ProtectedRoute><OrgTournaments /></ProtectedRoute>} />
+                <Route path="/org/tournaments/:id" element={<ProtectedRoute><TournamentManagementPageOrg /></ProtectedRoute>} />
+                <Route path="/my-applications" element={<ProtectedRoute><MyApplications /></ProtectedRoute>} />
+                <Route path="/rewards" element={<RewardsPage />} />
+
+              </Routes>
+              <ToastContainer
+                position="bottom-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="dark"
+              />
+            </div>
+          </GoogleOAuthProvider>
+
+        </AdminProvider>
+      </AuthProvider>
     </div>
   );
 }

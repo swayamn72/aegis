@@ -1,4 +1,5 @@
 import express from 'express';
+import auth from '../middleware/auth.js';
 import Match from '../models/match.model.js';
 import Tournament from '../models/tournament.model.js';
 import Team from '../models/team.model.js';
@@ -676,6 +677,121 @@ router.post('/:matchId/share-credentials', async (req, res) => {
   } catch (error) {
     console.error('Error sharing room credentials:', error);
     res.status(500).json({ error: 'Failed to share room credentials' });
+  }
+});
+
+// Get recent 3 matches for the logged-in player
+router.get('/recent3matches', auth, async (req, res) => {
+  try {
+    console.log('🔍 Recent matches endpoint hit');
+    console.log('User from auth middleware:', req.user);
+    
+    // FIX: JWT payload uses 'id', not '_id'
+    if (!req.user || !req.user.id) {
+      console.log('❌ No user found in request');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const playerId = req.user.id; // Changed from req.user._id to req.user.id
+    console.log('✅ Player ID:', playerId);
+
+    // OPTIMIZATION 1: Use lean() and minimal field selection
+    const playerTeams = await Team.find({ players: playerId })
+      .select('_id teamName')
+      .lean();
+    
+    console.log('📋 Player teams found:', playerTeams.length);
+    console.log('Teams:', playerTeams);
+    
+    const teamIds = playerTeams.map(team => team._id);
+
+    // Early return if player has no teams
+    if (teamIds.length === 0) {
+      console.log('⚠️ Player has no teams - returning empty array');
+      return res.json({ matches: [] });
+    }
+    
+    console.log('🎯 Searching for matches with team IDs:', teamIds);
+
+    // OPTIMIZATION 2: Single optimized query with projection
+    const matches = await Match.find({
+      'participatingTeams.team': { $in: teamIds },
+      status: 'completed'
+    })
+      .select('participatingTeams map actualEndTime scheduledStartTime tournament')
+      .sort({ actualEndTime: -1 })
+      .limit(3)
+      .populate('participatingTeams.team', 'teamName')
+      .populate('tournament', 'tournamentName')
+      .lean()
+      .exec();
+
+    console.log('🎮 Matches found:', matches.length);
+    if (matches.length > 0) {
+      console.log('Match sample:', JSON.stringify(matches[0], null, 2));
+    }
+
+    // OPTIMIZATION 3: Efficient data transformation
+    const teamIdStrings = new Set(teamIds.map(id => id.toString()));
+    
+    const formattedMatches = matches.map(match => {
+      // Find player's team using Set for O(1) lookup
+      const playerTeam = match.participatingTeams.find(team =>
+        team.team && teamIdStrings.has(team.team._id.toString())
+      );
+      
+      if (!playerTeam) {
+        console.log('⚠️ Player team not found in match:', match._id);
+        return null; // Skip if player's team not found
+      }
+
+      const otherTeams = match.participatingTeams.filter(
+        team => team.team && !teamIdStrings.has(team.team._id.toString())
+      );
+
+      // Calculate score efficiently
+      let score;
+      if (playerTeam.finalPosition === 1) {
+        score = 'Won #1';
+      } else {
+        const playerKills = playerTeam.kills?.total || 0;
+        const otherKills = otherTeams.reduce((sum, t) => sum + (t.kills?.total || 0), 0);
+        score = `${playerKills} - ${otherKills}`;
+      }
+
+      // Format time once
+      const date = match.actualEndTime || match.scheduledStartTime;
+      const time = date 
+        ? new Date(date).toLocaleString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          })
+        : 'Recent';
+
+      return {
+        _id: match._id,
+        time,
+        map: match.map || 'Unknown',
+        team1: playerTeam.team?.teamName || 'Your Team',
+        score,
+        team2: otherTeams[0]?.team?.teamName || 'Others'
+      };
+    }).filter(Boolean); // Remove any null entries
+
+    console.log('✅ Returning formatted matches:', formattedMatches.length);
+    console.log('Formatted data:', JSON.stringify(formattedMatches, null, 2));
+    
+    res.json({ matches: formattedMatches });
+    
+  } catch (error) {
+    console.error('❌ Error fetching recent matches:', error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Failed to fetch recent matches',
+      details: error.message 
+    });
   }
 });
 
