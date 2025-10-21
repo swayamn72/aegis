@@ -5,6 +5,7 @@ import Player from "../models/player.model.js";
 import Post from "../models/post.model.js";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
+import auth from "../middleware/auth.js";
 const router = express.Router();
 
 // Configure Multer for memory storage
@@ -60,6 +61,7 @@ router.post("/signup", async (req, res) => {
 
     res.status(201).json({
       message: "Signup successful",
+      token: token,
       redirect: "/complete-profile",
       player: {
         id: newPlayer._id,
@@ -105,14 +107,17 @@ router.post("/login", async (req, res) => {
       expiresIn: "7d",
     });
 
+    // Still set cookie for web clients
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
+    // IMPORTANT: Also send token in response body for mobile clients
     res.status(200).json({
       message: "Login successful",
+      token: token,  // Make sure this is included!
       player: { id: user._id, email: user.email, username: user.username },
     });
   } catch (error) {
@@ -128,15 +133,10 @@ router.post("/logout", (req, res) => {
 });
 
 // --- Get Current User Route ---
-router.get("/me", async (req, res) => {
+router.get("/me", auth, async (req, res) => {
   try {
-    const token = req.cookies.token;
-    if (!token) {
-      return res.status(401).json({ message: "No token provided" });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.id;
+    // req.user.id is set by the auth middleware
+    const userId = req.user.id;
 
     const user = await Player.findById(userId).select("-password");
     if (!user) {
@@ -146,9 +146,6 @@ router.get("/me", async (req, res) => {
     res.status(200).json(user);
   } catch (error) {
     console.error("Get current user error:", error);
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ message: "Invalid token" });
-    }
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -214,16 +211,9 @@ router.get("/:id", async (req, res) => {
 });
 
 // --- Update Profile Route ---
-router.put("/update-profile", async (req, res) => {
+router.put("/update-profile", auth, async (req, res) => {
   try {
-    const token = req.cookies.token;
-    if (!token) {
-      return res.status(401).json({ message: "No token provided" });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.id;
-
+    const userId = req.user.id;
     const updateData = req.body;
 
     // Validate required fields if provided
@@ -256,15 +246,9 @@ router.put("/update-profile", async (req, res) => {
 });
 
 // --- Upload Profile Picture Route ---
-router.post("/upload-pfp", upload.single('profilePicture'), async (req, res) => {
+router.post("/upload-pfp", auth, upload.single('profilePicture'), async (req, res) => {
   try {
-    const token = req.cookies.token;
-    if (!token) {
-      return res.status(401).json({ message: "No token provided" });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.id;
+    const userId = req.user.id;
 
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
@@ -310,16 +294,6 @@ router.post("/upload-pfp", upload.single('profilePicture'), async (req, res) => 
     res.status(500).json({ message: "Server error" });
   }
 });
-
-
-
-
-
-
-
-
-
-
 
 // // Creation of Posts
 // router.post("/create-post", async (req, res) => {
