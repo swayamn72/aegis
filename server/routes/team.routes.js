@@ -223,6 +223,59 @@ router.get('/user/my-teams', auth, async (req, res) => {
   }
 });
 
+// NEW ROUTE: Check if user's team is registered for a tournament
+router.get('/registration-status/:tournamentId', auth, async (req, res) => {
+  try {
+    const { tournamentId } = req.params;
+
+    // Get user's teams
+    const teams = await Team.find({
+      $or: [
+        { captain: req.user.id },
+        { players: req.user.id }
+      ]
+    }).select('_id teamName captain');
+
+    if (!teams || teams.length === 0) {
+      return res.json({ 
+        hasTeam: false,
+        isRegistered: false,
+        isCaptain: false
+      });
+    }
+
+    // Check if any team is registered
+    const tournament = await Tournament.findById(tournamentId)
+      .select('participatingTeams')
+      .lean();
+
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    const userTeam = teams[0]; // Assuming first team
+    const isRegistered = tournament.participatingTeams?.some(
+      pt => pt.team.toString() === userTeam._id.toString()
+    );
+
+    const isCaptain = userTeam.captain.toString() === req.user.id;
+
+    res.json({
+      hasTeam: true,
+      isRegistered,
+      isCaptain,
+      team: {
+        _id: userTeam._id,
+        teamName: userTeam.teamName
+      }
+    });
+
+  } catch (error) {
+    console.error('Error checking registration status:', error);
+    res.status(500).json({ error: 'Failed to check registration status' });
+  }
+});
+
 // POST /api/teams - Create a new team
 router.post('/', auth, async (req, res) => {
   try {

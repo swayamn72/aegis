@@ -29,7 +29,6 @@ const router = express.Router();
 router.post('/:tournamentId/invites', auth, async (req, res) => await sendTeamInvite(req, res));
 router.post('/invites/:inviteId/accept', auth, async (req, res) => await acceptTeamInvite(req, res));
 
-// Get all tournaments (excluding featured/primary ones)
 router.get('/all', async (req, res) => {
   try {
     const { page = 1, limit = 50, game, region, status, tier, subRegion } = req.query;
@@ -47,13 +46,14 @@ router.get('/all', async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
+    // Fetch main tournaments
     const tournaments = await Tournament.find(filter)
       .sort({ startDate: -1, featured: -1, createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
       .select(`
         tournamentName shortName gameTitle region subRegion tier status startDate endDate
-        prizePool media organizer participatingTeams statistics slots featured verified tags
+        prizePool media.logo organizer participatingTeams slots featured verified tags
       `)
       .populate({
         path: 'participatingTeams.team',
@@ -61,7 +61,29 @@ router.get('/all', async (req, res) => {
         model: 'Team'
       });
 
-    // Calculate additional fields
+    // Fetch live tournaments
+    const liveTournaments = await Tournament.findLive(10)
+      .select(`
+        tournamentName shortName gameTitle region subRegion tier status startDate endDate
+        prizePool media.logo organizer participatingTeams streamLinks tags
+      `)
+      .populate({
+        path: 'participatingTeams.team',
+        select: 'teamName teamTag logo'
+      });
+
+    // Fetch upcoming tournaments
+    const upcomingTournaments = await Tournament.findUpcoming(20)
+      .select(`
+        tournamentName shortName gameTitle region subRegion tier status startDate endDate
+        prizePool media.logo organizer participatingTeams slots registrationStartDate registrationEndDate tags
+      `)
+      .populate({
+        path: 'participatingTeams.team',
+        select: 'teamName teamTag logo'
+      });
+
+    // Calculate additional fields for main tournaments
     const enrichedTournaments = tournaments.map(tournament => ({
       ...tournament.toObject(),
       // Ensure we have participant count
@@ -83,10 +105,31 @@ router.get('/all', async (req, res) => {
       registrationStatus: tournament.registrationDisplayStatus
     }));
 
+    // Enrich live tournaments
+    const enrichedLiveTournaments = liveTournaments.map(tournament => ({
+      ...tournament.toObject(),
+      participantCount: tournament.participatingTeams?.length || 0,
+      isLive: tournament.isLive(),
+      hasActiveStreams: tournament.streamLinks?.length > 0,
+      registrationStatus: tournament.registrationDisplayStatus
+    }));
+
+    // Enrich upcoming tournaments
+    const enrichedUpcomingTournaments = upcomingTournaments.map(tournament => ({
+      ...tournament.toObject(),
+      participantCount: tournament.participatingTeams?.length || 0,
+      totalSlots: tournament.slots?.total || null,
+      registrationStatus: tournament.registrationDisplayStatus,
+      daysUntilStart: tournament.startDate ? Math.ceil((new Date(tournament.startDate) - new Date()) / (1000 * 60 * 60 * 24)) : null
+    }));
+
     const total = await Tournament.countDocuments(filter);
 
     res.json({
+      success: true,
       tournaments: enrichedTournaments,
+      liveTournaments: enrichedLiveTournaments,
+      upcomingTournaments: enrichedUpcomingTournaments,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / parseInt(limit)),
@@ -97,7 +140,11 @@ router.get('/all', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching tournaments:', error);
-    res.status(500).json({ error: 'Failed to fetch tournaments' });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch tournaments',
+      message: error.message
+    });
   }
 });
 
@@ -167,10 +214,17 @@ router.get('/live', async (req, res) => {
       registrationStatus: tournament.registrationDisplayStatus
     }));
 
-    res.json({ tournaments: enrichedTournaments });
+    res.json({
+      success: true,
+      tournaments: enrichedTournaments
+    });
   } catch (error) {
     console.error('Error fetching live tournaments:', error);
-    res.status(500).json({ error: 'Failed to fetch live tournaments' });
+    res.status(500).json({
+      success: false,  // ADD THIS
+      error: 'Failed to fetch live tournaments',
+      message: error.message  // ADD THIS
+    });
   }
 });
 
@@ -198,10 +252,17 @@ router.get('/upcoming', async (req, res) => {
       daysUntilStart: tournament.startDate ? Math.ceil((new Date(tournament.startDate) - now) / (1000 * 60 * 60 * 24)) : null
     }));
 
-    res.json({ tournaments: enrichedTournaments });
+    res.json({
+      success: true,  // ADD THIS
+      tournaments: enrichedTournaments
+    });
   } catch (error) {
     console.error('Error fetching upcoming tournaments:', error);
-    res.status(500).json({ error: 'Failed to fetch upcoming tournaments' });
+    res.status(500).json({
+      success: false,  // ADD THIS
+      error: 'Failed to fetch upcoming tournaments',
+      message: error.message  // ADD THIS
+    });
   }
 });
 
@@ -281,63 +342,93 @@ router.get('/get-recent3-tourney', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const { mobile, includeMatches = 'true' } = req.query; // Add query params
 
-    // Validate MongoDB ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ error: 'Invalid tournament ID' });
     }
 
-    const tournament = await Tournament.findById(id)
-      .populate({
-        path: 'participatingTeams.team',
-        select: 'teamName teamTag logo primaryGame region establishedDate'
-      })
-      .populate({
-        path: 'phases.teams',
-        select: 'teamName logo'
-      })
-      .populate({
-        path: 'phases.groups.teams',
-        select: 'teamName teamTag logo'
-      })
-      .populate({
-        path: 'phases.groups.standings.team',
-        select: 'teamName teamTag logo'
-      });
+    // Base query - always needed
+    let tournamentQuery = Tournament.findById(id);
+
+    // Conditional population based on client type
+    if (mobile === 'true') {
+      // Lighter populate for mobile
+      tournamentQuery = tournamentQuery
+        .populate({
+          path: 'participatingTeams.team',
+          select: 'teamName teamTag logo' // Only essential fields
+        })
+        .populate({
+          path: 'phases.teams',
+          select: 'teamName logo'
+        })
+        .populate({
+          path: 'phases.groups.teams',
+          select: 'teamName teamTag logo'
+        });
+    } else {
+      // Full populate for web (your existing code)
+      tournamentQuery = tournamentQuery
+        .populate({
+          path: 'participatingTeams.team',
+          select: 'teamName teamTag logo primaryGame region establishedDate'
+        })
+        .populate({
+          path: 'phases.teams',
+          select: 'teamName logo'
+        })
+        .populate({
+          path: 'phases.groups.teams',
+          select: 'teamName teamTag logo'
+        })
+        .populate({
+          path: 'phases.groups.standings.team',
+          select: 'teamName teamTag logo'
+        });
+    }
+
+    const tournament = await tournamentQuery;
 
     if (!tournament) {
       return res.status(404).json({ error: 'Tournament not found' });
     }
 
-    // Fetch recent matches for this tournament
-    const recentMatches = await Match.find({ tournament: id })
-      .sort({ scheduledStartTime: -1 })
-      .limit(20)
-      .populate({
-        path: 'participatingTeams.team',
-        select: 'teamName teamTag'
-      })
-      .select(`
-        matchNumber matchType tournamentPhase scheduledStartTime actualStartTime actualEndTime
-        status map participatingTeams matchStats
-      `)
-      .lean();
+    // Fetch matches only if needed (mobile can lazy-load this)
+    let recentMatches = [];
+    if (includeMatches === 'true') {
+      const matchLimit = mobile === 'true' ? 10 : 20; // Less matches for mobile
+      recentMatches = await Match.find({ tournament: id })
+        .sort({ scheduledStartTime: -1 })
+        .limit(matchLimit)
+        .populate({
+          path: 'participatingTeams.team',
+          select: 'teamName teamTag'
+        })
+        .select(`
+          matchNumber matchType tournamentPhase scheduledStartTime actualStartTime actualEndTime
+          status map participatingTeams matchStats
+        `)
+        .lean();
+    }
 
-    // Calculate live statistics from matches
+    // Match stats aggregation
     const matchStatsAgg = await Match.aggregate([
       { $match: { tournament: new mongoose.Types.ObjectId(id), status: 'completed' } },
       {
         $group: {
           _id: null,
           totalMatches: { $sum: 1 },
-          totalKills: { $sum: '$matchStats.totalKills' }
+          totalKills: { $sum: '$matchStats.totalKills' },
+          totalDamage: { $sum: '$matchStats.totalDamage' },
+          avgMatchDuration: { $avg: '$matchStats.matchDuration' }
         }
       }
     ]);
 
     const liveStats = matchStatsAgg[0] || {};
 
-    // Build comprehensive tournament data
+    // Build tournament data (your existing code)
     const tournamentData = {
       _id: tournament._id,
       name: tournament.tournamentName,
@@ -416,6 +507,8 @@ router.get('/:id', async (req, res) => {
         totalMatches: liveStats.totalMatches || 0,
         totalParticipatingTeams: tournament.participatingTeams?.length || 0,
         totalKills: liveStats.totalKills || 0,
+        totalDamage: liveStats.totalDamage || 0,
+        avgMatchDuration: liveStats.avgMatchDuration || 0,
         ...tournament.statistics?.viewership && {
           viewership: tournament.statistics.viewership
         }
@@ -434,7 +527,7 @@ router.get('/:id', async (req, res) => {
       verified: tournament.verified || false
     };
 
-    // Build schedule data from matches
+    // Build schedule data
     const scheduleData = recentMatches.map(match => ({
       _id: match._id,
       phase: match.tournamentPhase || 'Group Stage',
@@ -451,7 +544,7 @@ router.get('/:id', async (req, res) => {
       actualEndTime: match.actualEndTime
     }));
 
-    // Build groups data from tournament phases
+    // Build groups data
     const groupsData = {};
     if (tournament.phases && tournament.phases.length > 0) {
       for (const phase of tournament.phases) {
@@ -487,7 +580,7 @@ router.get('/:id', async (req, res) => {
 
     res.json({
       tournamentData,
-      scheduleData,
+      scheduleData: includeMatches === 'true' ? scheduleData : [],
       groupsData,
       tournamentStats: tournamentData.statistics,
       streamLinks: tournamentData.streamLinks
@@ -498,7 +591,6 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch tournament details' });
   }
 });
-
 // Get tournaments a player has participated in
 router.get('/player/:playerId/recent', async (req, res) => {
   try {
@@ -832,6 +924,86 @@ router.post('/:id/reject', auth, async (req, res) => {
   } catch (error) {
     console.error('Error rejecting tournament:', error);
     res.status(500).json({ error: 'Failed to reject tournament' });
+  }
+});
+
+// NEW ROUTE: Lightweight summary for mobile initial load
+router.get('/:id/summary', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid tournament ID' });
+    }
+
+    const tournament = await Tournament.findById(id)
+      .select(`
+        tournamentName shortName gameTitle region tier status currentCompetitionPhase
+        startDate endDate registrationStartDate registrationEndDate
+        media.logo media.banner media.coverImage
+        prizePool.total prizePool.currency
+        slots.total
+        organizer.name
+        gameSettings.maps gameSettings.gameMode gameSettings.pointsSystem
+        streamLinks
+        socialMedia
+      `)
+      .lean();
+
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    // Get team count
+    const teamCount = await Tournament.findById(id)
+      .select('participatingTeams')
+      .lean()
+      .then(t => t?.participatingTeams?.length || 0);
+
+    // Get basic stats
+    const stats = await Match.aggregate([
+      { $match: { tournament: new mongoose.Types.ObjectId(id), status: 'completed' } },
+      {
+        $group: {
+          _id: null,
+          totalMatches: { $sum: 1 },
+          totalKills: { $sum: '$matchStats.totalKills' }
+        }
+      }
+    ]);
+
+    res.json({
+      tournament: {
+        _id: tournament._id,
+        name: tournament.tournamentName,
+        shortName: tournament.shortName,
+        game: tournament.gameTitle,
+        region: tournament.region,
+        tier: tournament.tier,
+        status: tournament.status,
+        currentPhase: tournament.currentCompetitionPhase,
+        startDate: tournament.startDate,
+        endDate: tournament.endDate,
+        registrationStartDate: tournament.registrationStartDate,
+        registrationEndDate: tournament.registrationEndDate,
+        teams: teamCount,
+        totalSlots: tournament.slots?.total || 0,
+        media: tournament.media,
+        prizePool: tournament.prizePool,
+        organizer: tournament.organizer,
+        gameSettings: tournament.gameSettings,
+        streamLinks: tournament.streamLinks,
+        socialMedia: tournament.socialMedia,
+        statistics: {
+          totalMatches: stats[0]?.totalMatches || 0,
+          totalKills: stats[0]?.totalKills || 0
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching tournament summary:', error);
+    res.status(500).json({ error: 'Failed to fetch tournament summary' });
   }
 });
 

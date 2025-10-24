@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Search, ChevronDown, MapPin, Gamepad2, Trophy, Calendar, Users, Star, TrendingUp, Award, Eye, Check } from 'lucide-react';
 import AegisProfileCardBGMI from './AegisProfileCardBGMI';
 
-const fetchPlayers = async () => {
+const fetchPlayers = async (limit = 20, skip = 0) => {
     try {
-        const response = await fetch('/api/players/all');
+        const response = await fetch(`/api/players/all?limit=${limit}&skip=${skip}`);
         const data = await response.json();
         return data.players || [];
     } catch (error) {
@@ -212,12 +212,16 @@ const AegisPlayers = () => {
     const [filters, setFilters] = useState({ game: '', availability: '', status: '' });
     const [players, setPlayers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [skip, setSkip] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
 
     useEffect(() => {
         const loadPlayers = async () => {
             setLoading(true);
-            const fetchedPlayers = await fetchPlayers();
+            const fetchedPlayers = await fetchPlayers(20, 0);
             setPlayers(fetchedPlayers);
+            setHasMore(fetchedPlayers.length === 20);
             setLoading(false);
         };
         loadPlayers();
@@ -225,6 +229,21 @@ const AegisPlayers = () => {
 
     const handleFilterChange = (filterName, value) => {
         setFilters(prev => ({ ...prev, [filterName]: prev[filterName] === value ? '' : value }));
+    };
+
+    const loadMorePlayers = async () => {
+        if (loadingMore || !hasMore) return;
+        setLoadingMore(true);
+        const newSkip = skip + 20;
+        const newPlayers = await fetchPlayers(20, newSkip);
+        if (newPlayers.length > 0) {
+            setPlayers(prev => [...prev, ...newPlayers]);
+            setSkip(newSkip);
+            setHasMore(newPlayers.length === 20);
+        } else {
+            setHasMore(false);
+        }
+        setLoadingMore(false);
     };
 
     const filteredPlayers = useMemo(() => {
@@ -333,8 +352,12 @@ const AegisPlayers = () => {
                 {/* Load More Section */}
                 {filteredPlayers.length > 0 && (
                     <div className="text-center mt-12">
-                        <button className="bg-[#FF4500] hover:bg-[#FF4500]/90 text-white font-semibold px-8 py-3 rounded-lg transition-all">
-                            Load More Players
+                        <button
+                            onClick={loadMorePlayers}
+                            disabled={loadingMore}
+                            className="bg-[#FF4500] hover:bg-[#FF4500]/90 disabled:bg-zinc-600 text-white font-semibold px-8 py-3 rounded-lg transition-all"
+                        >
+                            {loadingMore ? 'Loading...' : 'Load More Players'}
                         </button>
                         <p className="text-zinc-600 text-sm mt-4">Showing {filteredPlayers.length} players</p>
                     </div>

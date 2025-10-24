@@ -8,6 +8,17 @@ import { v2 as cloudinary } from "cloudinary";
 import auth from "../middleware/auth.js";
 const router = express.Router();
 
+// routes in this file 
+// "/signup"
+// "/login"
+// "/logout"
+// "/me"
+// "/all"
+// "/:id"
+// "/username/:username"
+// "/update-profile"
+// "/upload-pfp"
+
 // Configure Multer for memory storage
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -62,7 +73,6 @@ router.post("/signup", async (req, res) => {
     res.status(201).json({
       message: "Signup successful",
       token: token,
-      redirect: "/complete-profile",
       player: {
         id: newPlayer._id,
         email: newPlayer.email,
@@ -150,12 +160,18 @@ router.get("/me", auth, async (req, res) => {
   }
 });
 
-
-
 // --- Get All Players Route ---
 router.get("/all", async (req, res) => {
   try {
-    const players = await Player.find({}).select("-password").sort({ createdAt: -1 });
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = parseInt(req.query.skip) || 0;
+
+    const players = await Player.find({})
+      .select("-password")
+      .sort({ aegisRating: -1 })
+      .limit(limit)
+      .skip(skip);
+
     res.status(200).json({
       message: "Players retrieved successfully",
       players: players
@@ -245,6 +261,20 @@ router.put("/update-profile", auth, async (req, res) => {
   }
 });
 
+router.get("/profile-picture-url", auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await Player.findById(userId).select("profilePicture");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json({ profilePicture: user.profilePicture || null });
+  } catch (error) {
+    console.error("Get profile picture error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // --- Upload Profile Picture Route ---
 router.post("/upload-pfp", auth, upload.single('profilePicture'), async (req, res) => {
   try {
@@ -313,7 +343,7 @@ router.post("/upload-pfp", auth, upload.single('profilePicture'), async (req, re
 //       tags,
 //     });
 
-   
+
 //     await Player.findByIdAndUpdate(userId, { $push: { posts: newPost._id } });
 
 //     res.status(201).json({

@@ -187,23 +187,54 @@ router.delete('/scheduled/:matchId', async (req, res) => {
 router.get('/tournament/:tournamentId', async (req, res) => {
   try {
     const { tournamentId } = req.params;
-    const { status, phase, limit = 50 } = req.query;
+    const { 
+      status, 
+      phase, 
+      limit = 20,  // Reduced from 50
+      offset = 0,  // NEW: For pagination
+      mobile = 'false' // NEW: Mobile flag
+    } = req.query;
 
     const filter = { tournament: tournamentId };
     if (status) filter.status = status;
     if (phase) filter.tournamentPhase = phase;
 
-    const matches = await Match.find(filter)
-      .populate({
-        path: 'participatingTeams.team',
-        select: 'teamName teamTag logo'
-      })
-      .populate('tournament', 'tournamentName shortName')
-      .sort({ scheduledStartTime: -1 })
-      .limit(parseInt(limit))
-      .lean();
+    // Count total matches for pagination
+    const totalMatches = await Match.countDocuments(filter);
 
-    res.json({ matches });
+    let matchQuery = Match.find(filter)
+      .sort({ scheduledStartTime: -1 })
+      .skip(parseInt(offset))
+      .limit(parseInt(limit));
+
+    // Conditional population based on mobile
+    if (mobile === 'true') {
+      matchQuery = matchQuery
+        .populate({
+          path: 'participatingTeams.team',
+          select: 'teamName teamTag logo' // Only essential fields
+        })
+        .populate('tournament', 'tournamentName shortName');
+    } else {
+      matchQuery = matchQuery
+        .populate({
+          path: 'participatingTeams.team',
+          select: 'teamName teamTag logo'
+        })
+        .populate('tournament', 'tournamentName shortName');
+    }
+
+    const matches = await matchQuery.lean();
+
+    res.json({ 
+      matches,
+      pagination: {
+        total: totalMatches,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        hasMore: (parseInt(offset) + parseInt(limit)) < totalMatches
+      }
+    });
   } catch (error) {
     console.error('Error fetching matches:', error);
     res.status(500).json({ error: 'Failed to fetch matches' });

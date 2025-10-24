@@ -8,44 +8,28 @@ const fetchTournaments = async () => {
     const response = await fetch('/api/tournaments/all');
     if (!response.ok) throw new Error('Failed to fetch tournaments');
     const data = await response.json();
-    return data.tournaments || [];
+    return {
+      tournaments: data.tournaments || [],
+      liveTournaments: data.liveTournaments || [],
+      upcomingTournaments: data.upcomingTournaments || []
+    };
   } catch (error) {
     console.error('Error fetching tournaments:', error);
-    return [];
-  }
-};
-
-const fetchLiveTournaments = async () => {
-  try {
-    const response = await fetch('/api/tournaments/live');
-    if (!response.ok) throw new Error('Failed to fetch live tournaments');
-    const data = await response.json();
-    return data.tournaments || [];
-  } catch (error) {
-    console.error('Error fetching live tournaments:', error);
-    return [];
-  }
-};
-
-const fetchUpcomingTournaments = async () => {
-  try {
-    const response = await fetch('/api/tournaments/upcoming');
-    if (!response.ok) throw new Error('Failed to fetch upcoming tournaments');
-    const data = await response.json();
-    return data.tournaments || [];
-  } catch (error) {
-    console.error('Error fetching upcoming tournaments:', error);
-    return [];
+    return {
+      tournaments: [],
+      liveTournaments: [],
+      upcomingTournaments: []
+    };
   }
 };
 
 const FilterDropdown = ({ options, selected, onSelect, placeholder, icon: Icon }) => {
   const [isOpen, setIsOpen] = useState(false);
-  
+
   return (
     <div className="relative">
-      <button 
-        onClick={() => setIsOpen(!isOpen)} 
+      <button
+        onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 text-white transition-colors hover:bg-zinc-700/50 hover:border-orange-500/50"
       >
         <div className="flex items-center gap-2">
@@ -66,9 +50,8 @@ const FilterDropdown = ({ options, selected, onSelect, placeholder, icon: Icon }
             <button
               key={option}
               onClick={() => { onSelect(option); setIsOpen(false); }}
-              className={`w-full text-left px-4 py-2 hover:bg-orange-500/10 transition-colors ${
-                selected === option ? 'bg-orange-500/20 text-orange-400' : 'text-zinc-300 hover:text-white'
-              }`}
+              className={`w-full text-left px-4 py-2 hover:bg-orange-500/10 transition-colors ${selected === option ? 'bg-orange-500/20 text-orange-400' : 'text-zinc-300 hover:text-white'
+                }`}
             >
               {option}
             </button>
@@ -83,7 +66,7 @@ const TournamentCard = ({ tournament, onClick }) => {
   const getStatusIndicator = () => {
     const liveStatuses = ['in_progress', 'qualifiers_in_progress', 'group_stage', 'playoffs', 'finals'];
     const upcomingStatuses = ['announced', 'registration_open', 'registration_closed'];
-    
+
     if (liveStatuses.includes(tournament.status)) {
       return (
         <div className="absolute top-4 right-4 flex items-center gap-2 text-red-400 bg-red-500/10 px-2 py-1 rounded-full border border-red-500/30">
@@ -92,7 +75,7 @@ const TournamentCard = ({ tournament, onClick }) => {
         </div>
       );
     }
-    
+
     if (upcomingStatuses.includes(tournament.status)) {
       return (
         <div className="absolute top-4 right-4 text-cyan-400 bg-cyan-500/10 px-2 py-1 rounded-full border border-cyan-500/30">
@@ -100,7 +83,7 @@ const TournamentCard = ({ tournament, onClick }) => {
         </div>
       );
     }
-    
+
     if (tournament.status === 'completed') {
       return (
         <div className="absolute top-4 right-4 text-gray-400 bg-gray-500/10 px-2 py-1 rounded-full border border-gray-500/30">
@@ -108,17 +91,17 @@ const TournamentCard = ({ tournament, onClick }) => {
         </div>
       );
     }
-    
+
     return null;
   };
 
   const formatPrizePool = (prizePool) => {
     if (!prizePool || !prizePool.total || prizePool.total === 0) return 'TBD';
-    
+
     const amount = prizePool.total;
     const currency = prizePool.currency || 'INR';
     const symbol = currency === 'INR' ? '₹' : currency === 'USD' ? '$' : currency;
-    
+
     if (amount >= 10000000) { // 1 crore
       return `${symbol}${(amount / 10000000).toFixed(1)}Cr`;
     } else if (amount >= 100000) { // 1 lakh
@@ -142,8 +125,8 @@ const TournamentCard = ({ tournament, onClick }) => {
   const formatDate = (dateString) => {
     if (!dateString) return 'TBD';
     try {
-      return new Date(dateString).toLocaleDateString('en-US', { 
-        month: 'short', 
+      return new Date(dateString).toLocaleDateString('en-US', {
+        month: 'short',
         day: 'numeric',
         year: 'numeric'
       });
@@ -164,19 +147,19 @@ const TournamentCard = ({ tournament, onClick }) => {
   };
 
   return (
-    <div 
+    <div
       className="bg-zinc-900/50 border border-zinc-800 rounded-xl overflow-hidden transition-all duration-300 hover:border-orange-500/50 hover:scale-[1.02] hover:shadow-2xl hover:shadow-orange-500/10 group cursor-pointer backdrop-blur-sm"
       onClick={onClick}
     >
       <div className="relative p-6">
         {getStatusIndicator()}
-        
+
         <div className="flex items-start gap-4 mb-6">
           <div className="flex-shrink-0">
             {tournament.media?.logo ? (
-              <img 
-                src={tournament.media.logo} 
-                alt={`${tournament.tournamentName} logo`} 
+              <img
+                src={tournament.media.logo}
+                alt={`${tournament.tournamentName} logo`}
                 className="w-16 h-16 rounded-lg object-cover border border-zinc-700"
                 onError={(e) => {
                   e.target.src = 'https://placehold.co/64x64/1a1a1a/ffffff?text=' + (tournament.gameTitle || 'T');
@@ -188,12 +171,12 @@ const TournamentCard = ({ tournament, onClick }) => {
               </div>
             )}
           </div>
-          
+
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-bold text-white group-hover:text-orange-400 transition-colors line-clamp-2 mb-2">
               {tournament.tournamentName || tournament.shortName || 'Unnamed Tournament'}
             </h3>
-            
+
             <div className="flex items-center gap-2 text-sm text-zinc-400 mb-3">
               <span className="flex items-center gap-1">
                 <Gamepad2 className="w-4 h-4" />
@@ -205,7 +188,7 @@ const TournamentCard = ({ tournament, onClick }) => {
                 {tournament.region || 'Unknown Region'}
               </span>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <span className={`text-xs px-2 py-1 rounded-full border ${getTierColor()}`}>
                 {tournament.tier || 'Community'}-Tier
@@ -230,7 +213,7 @@ const TournamentCard = ({ tournament, onClick }) => {
               {formatPrizePool(tournament.prizePool)}
             </p>
           </div>
-          
+
           <div className="group/stat hover:bg-zinc-800/30 rounded-lg p-2 transition-colors">
             <div className="flex items-center justify-center mb-1">
               <Calendar className="w-4 h-4 text-blue-400 mr-1" />
@@ -240,7 +223,7 @@ const TournamentCard = ({ tournament, onClick }) => {
               {formatDate(tournament.startDate)}
             </p>
           </div>
-          
+
           <div className="group/stat hover:bg-zinc-800/30 rounded-lg p-2 transition-colors">
             <div className="flex items-center justify-center mb-1">
               <Users className="w-4 h-4 text-purple-400 mr-1" />
@@ -252,7 +235,7 @@ const TournamentCard = ({ tournament, onClick }) => {
           </div>
         </div>
       </div>
-      
+
       <div className="bg-gradient-to-r from-orange-500 to-red-500 h-1 w-0 group-hover:w-full transition-all duration-500"></div>
     </div>
   );
@@ -274,13 +257,9 @@ const Tournaments2 = () => {
       try {
         setLoading(true);
         setError(null);
-        
-        const [fetchedTournaments, live, upcoming] = await Promise.all([
-          fetchTournaments(),
-          fetchLiveTournaments(),
-          fetchUpcomingTournaments()
-        ]);
-        
+
+        const { tournaments: fetchedTournaments, liveTournaments: live, upcomingTournaments: upcoming } = await fetchTournaments();
+
         setTournaments(fetchedTournaments);
         setLiveTournaments(live);
         setUpcomingTournaments(upcoming);
@@ -301,21 +280,21 @@ const Tournaments2 = () => {
     const regions = [...new Set(tournaments.map(t => t.region).filter(Boolean))];
     const statuses = [...new Set(tournaments.map(t => t.status).filter(Boolean))];
     const tiers = [...new Set(tournaments.map(t => t.tier).filter(Boolean))];
-    
+
     return { games, regions, statuses, tiers };
   }, [tournaments]);
 
   const handleFilterChange = (filterName, value) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      [filterName]: prev[filterName] === value ? '' : value 
+    setFilters(prev => ({
+      ...prev,
+      [filterName]: prev[filterName] === value ? '' : value
     }));
   };
 
   // Filter tournaments based on search and filters
   const filteredTournaments = useMemo(() => {
     return tournaments.filter(tournament => {
-      const matchesSearch = !searchTerm || 
+      const matchesSearch = !searchTerm ||
         tournament.tournamentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         tournament.shortName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         tournament.organizer?.name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -340,11 +319,11 @@ const Tournaments2 = () => {
   // Format prize pool helper
   const formatPrizePool = (prizePool) => {
     if (!prizePool || !prizePool.total || prizePool.total === 0) return 'TBD';
-    
+
     const amount = prizePool.total;
     const currency = prizePool.currency || 'INR';
     const symbol = currency === 'INR' ? '₹' : "$";
-    
+
     if (amount >= 10000000) {
       return `${symbol}${(amount / 10000000).toFixed(1)}Cr`;
     } else if (amount >= 100000) {
@@ -379,8 +358,8 @@ const Tournaments2 = () => {
             <div className="text-red-400 text-6xl mb-4">⚠️</div>
             <h2 className="text-2xl font-bold text-white mb-4">Oops! Something went wrong</h2>
             <p className="text-zinc-400 text-lg mb-6">{error}</p>
-            <button 
-              onClick={() => window.location.reload()} 
+            <button
+              onClick={() => window.location.reload()}
               className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold px-6 py-3 rounded-lg transition-all duration-200"
             >
               Try Again
@@ -403,7 +382,7 @@ const Tournaments2 = () => {
           <p className="text-xl text-zinc-300 max-w-2xl mx-auto mb-6">
             Discover competitive tournaments from our database. Browse live, upcoming, and past events.
           </p>
-          
+
           {/* Stats */}
           <div className="flex justify-center gap-8 text-sm text-zinc-400">
             <span>
@@ -423,9 +402,9 @@ const Tournaments2 = () => {
           <div className="mb-16 bg-zinc-900/30 border border-orange-500/30 rounded-2xl p-8 flex flex-col md:flex-row items-center gap-8 shadow-2xl shadow-orange-500/10 backdrop-blur-sm">
             <div className="flex-shrink-0">
               {featuredTournament.media?.logo ? (
-                <img 
-                  src={featuredTournament.media.logo} 
-                  alt={`${featuredTournament.tournamentName} logo`} 
+                <img
+                  src={featuredTournament.media.logo}
+                  alt={`${featuredTournament.tournamentName} logo`}
                   className="w-32 h-32 rounded-xl object-cover border border-zinc-700"
                   onError={(e) => {
                     e.target.src = 'https://placehold.co/128x128/1a1a1a/ffffff?text=' + (featuredTournament.gameTitle || 'T');
@@ -437,7 +416,7 @@ const Tournaments2 = () => {
                 </div>
               )}
             </div>
-            
+
             <div className="flex-grow text-center md:text-left">
               <div className="flex items-center gap-2 mb-2 justify-center md:justify-start">
                 <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
@@ -445,36 +424,36 @@ const Tournaments2 = () => {
                   {liveTournaments.includes(featuredTournament) ? 'LIVE NOW' : 'FEATURED'}
                 </span>
               </div>
-              
+
               <h2 className="text-3xl font-bold text-white mb-4">
                 {featuredTournament.tournamentName}
               </h2>
-              
+
               <div className="flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-2 text-zinc-300">
                 <span className="flex items-center gap-2">
-                  <Gamepad2 className="w-5 h-5 text-orange-400"/>
+                  <Gamepad2 className="w-5 h-5 text-orange-400" />
                   {featuredTournament.gameTitle}
                 </span>
                 <span className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-orange-400"/>
+                  <MapPin className="w-5 h-5 text-orange-400" />
                   {featuredTournament.region}
                 </span>
                 <span className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-orange-400"/>
+                  <Trophy className="w-5 h-5 text-orange-400" />
                   {formatPrizePool(featuredTournament.prizePool)}
                 </span>
                 <span className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-orange-400"/>
+                  <Users className="w-5 h-5 text-orange-400" />
                   {featuredTournament.participatingTeams?.length || featuredTournament.statistics?.totalParticipatingTeams || 0} Teams
                 </span>
                 <span className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-orange-400"/>
+                  <Clock className="w-5 h-5 text-orange-400" />
                   {featuredTournament.startDate ? new Date(featuredTournament.startDate).toLocaleDateString() : 'TBD'}
                 </span>
               </div>
             </div>
-            
-            <button 
+
+            <button
               className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold px-8 py-4 rounded-lg transition-all duration-200 transform hover:scale-105 whitespace-nowrap shadow-lg"
               onClick={() => navigate(`/tournament/${featuredTournament._id}`)}
             >
@@ -496,7 +475,7 @@ const Tournaments2 = () => {
                 className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg pl-12 pr-4 py-3 text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
               />
             </div>
-            
+
             <FilterDropdown
               options={filterOptions.games}
               selected={filters.game}
@@ -504,7 +483,7 @@ const Tournaments2 = () => {
               placeholder="All Games"
               icon={Gamepad2}
             />
-            
+
             <FilterDropdown
               options={filterOptions.regions}
               selected={filters.region}
@@ -512,7 +491,7 @@ const Tournaments2 = () => {
               placeholder="All Regions"
               icon={MapPin}
             />
-            
+
             <FilterDropdown
               options={filterOptions.statuses}
               selected={filters.status}
@@ -520,7 +499,7 @@ const Tournaments2 = () => {
               placeholder="All Statuses"
               icon={Calendar}
             />
-            
+
             <FilterDropdown
               options={filterOptions.tiers}
               selected={filters.tier}
@@ -529,7 +508,7 @@ const Tournaments2 = () => {
               icon={Trophy}
             />
           </div>
-          
+
           {/* Active filters display */}
           {(filters.game || filters.region || filters.status || filters.tier || searchTerm) && (
             <div className="mt-4 flex flex-wrap gap-2">
@@ -578,21 +557,21 @@ const Tournaments2 = () => {
             <h3 className="text-2xl font-bold text-white">
               {filteredTournaments.length > 0 ? `${filteredTournaments.length} Tournaments Found` : 'No Tournaments Found'}
             </h3>
-            
+
             {filteredTournaments.length > 0 && (
               <div className="text-sm text-zinc-400">
                 Showing {Math.min(filteredTournaments.length, 50)} of {filteredTournaments.length} results
               </div>
             )}
           </div>
-          
+
           {filteredTournaments.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredTournaments.slice(0, 50).map(tournament => (
-                <TournamentCard 
-                  key={tournament._id} 
-                  tournament={tournament} 
-                  onClick={() => navigate(`/tournament/${tournament._id}`)} 
+                <TournamentCard
+                  key={tournament._id}
+                  tournament={tournament}
+                  onClick={() => navigate(`/tournament/${tournament._id}`)}
                 />
               ))}
             </div>
@@ -601,8 +580,8 @@ const Tournaments2 = () => {
               <div className="text-zinc-600 text-6xl mb-4">🔍</div>
               <h3 className="text-xl font-semibold text-zinc-300 mb-2">No tournaments found</h3>
               <p className="text-zinc-500 mb-6">
-                {searchTerm || Object.values(filters).some(f => f) ? 
-                  'Try adjusting your search criteria or filters.' : 
+                {searchTerm || Object.values(filters).some(f => f) ?
+                  'Try adjusting your search criteria or filters.' :
                   'No tournaments are currently available in our database.'
                 }
               </p>

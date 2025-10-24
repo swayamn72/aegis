@@ -184,7 +184,7 @@ const SettingsComponent = () => {
     };
     fetchProfile();
   }, []);
-  
+
   // Submit updated profile to backend
   const handleSaveProfile = async () => {
     setIsSaving(true);
@@ -244,11 +244,10 @@ const SettingsComponent = () => {
   const SettingsSection = ({ id, title, icon: Icon, isActive, onClick }) => (
     <button
       onClick={() => onClick(id)}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-        isActive 
-          ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg shadow-orange-500/30' 
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${isActive
+          ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg shadow-orange-500/30'
           : 'text-zinc-300 hover:bg-zinc-800/50 hover:text-white'
-      }`}
+        }`}
     >
       <Icon className="w-5 h-5" />
       <span className="font-medium">{title}</span>
@@ -258,18 +257,14 @@ const SettingsComponent = () => {
   const ToggleSwitch = ({ enabled, onChange, size = 'default' }) => (
     <button
       onClick={() => onChange(!enabled)}
-      className={`relative inline-flex items-center ${
-        size === 'small' ? 'h-5 w-9' : 'h-6 w-11'
-      } rounded-full transition-colors duration-200 ${
-        enabled ? 'bg-gradient-to-r from-orange-500 to-red-600' : 'bg-zinc-600'
-      }`}
+      className={`relative inline-flex items-center ${size === 'small' ? 'h-5 w-9' : 'h-6 w-11'
+        } rounded-full transition-colors duration-200 ${enabled ? 'bg-gradient-to-r from-orange-500 to-red-600' : 'bg-zinc-600'
+        }`}
     >
       <span
-        className={`inline-block ${
-          size === 'small' ? 'h-3 w-3' : 'h-4 w-4'
-        } rounded-full bg-white transition-transform duration-200 ${
-          enabled ? (size === 'small' ? 'translate-x-5' : 'translate-x-6') : 'translate-x-1'
-        }`}
+        className={`inline-block ${size === 'small' ? 'h-3 w-3' : 'h-4 w-4'
+          } rounded-full bg-white transition-transform duration-200 ${enabled ? (size === 'small' ? 'translate-x-5' : 'translate-x-6') : 'translate-x-1'
+          }`}
       />
     </button>
   );
@@ -305,13 +300,12 @@ const SettingsComponent = () => {
     <div className={`bg-zinc-800/50 border border-zinc-700 rounded-xl p-4`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 bg-gradient-to-r ${
-            color === 'blue' ? 'from-blue-500 to-blue-600' :
-            color === 'purple' ? 'from-purple-500 to-purple-600' :
-            color === 'red' ? 'from-red-500 to-red-600' :
-            color === 'zinc' ? 'from-zinc-500 to-zinc-600' :
-            'from-orange-500 to-orange-600'
-          } rounded-lg flex items-center justify-center`}>
+          <div className={`w-10 h-10 bg-gradient-to-r ${color === 'blue' ? 'from-blue-500 to-blue-600' :
+              color === 'purple' ? 'from-purple-500 to-purple-600' :
+                color === 'red' ? 'from-red-500 to-red-600' :
+                  color === 'zinc' ? 'from-zinc-500 to-zinc-600' :
+                    'from-orange-500 to-orange-600'
+            } rounded-lg flex items-center justify-center`}>
             <Icon className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -327,11 +321,10 @@ const SettingsComponent = () => {
           )}
           <button
             onClick={() => onToggle(platform)}
-            className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-              account.connected 
+            className={`px-3 py-1 text-sm rounded-lg transition-colors ${account.connected
                 ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30'
                 : 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 border border-orange-500/30'
-            }`}
+              }`}
           >
             {account.connected ? 'Disconnect' : 'Connect'}
           </button>
@@ -343,7 +336,7 @@ const SettingsComponent = () => {
   return (
     <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans mt-[100px]">
       <div className="container mx-auto px-6 py-8">
-        
+
         {/* Header */}
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 mb-8">
           <div className="flex items-center gap-4 mb-4">
@@ -353,7 +346,7 @@ const SettingsComponent = () => {
               <p className="text-zinc-400">Manage your account preferences and privacy settings</p>
             </div>
           </div>
-          
+
           {savedMessage && (
             <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-3 flex items-center gap-2">
               <Check className="w-5 h-5 text-green-400" />
@@ -363,7 +356,7 @@ const SettingsComponent = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          
+
           {/* Sidebar Navigation */}
           <div className="lg:col-span-1">
             <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 sticky top-[calc(5rem+1rem)] z-20">
@@ -423,7 +416,7 @@ const SettingsComponent = () => {
 
           {/* Main Content */}
           <div className="lg:col-span-3">
-            
+
             {/* Edit Profile Section */}
             {activeSection === 'profile' && (
               <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
@@ -431,7 +424,7 @@ const SettingsComponent = () => {
                   <User className="w-6 h-6 text-orange-400" />
                   Edit Profile
                 </h2>
-                
+
                 <div className="space-y-6">
                   {/* Personal Information Section */}
                   <div className="space-y-6">
@@ -443,7 +436,7 @@ const SettingsComponent = () => {
                         <input
                           type="text"
                           value={profileSettings.realName}
-                          onChange={(e) => setProfileSettings({...profileSettings, realName: e.target.value})}
+                          onChange={(e) => setProfileSettings({ ...profileSettings, realName: e.target.value })}
                           placeholder="Enter your real name"
                           className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
                         />
@@ -454,7 +447,7 @@ const SettingsComponent = () => {
                         <input
                           type="number"
                           value={profileSettings.age}
-                          onChange={(e) => setProfileSettings({...profileSettings, age: e.target.value})}
+                          onChange={(e) => setProfileSettings({ ...profileSettings, age: e.target.value })}
                           placeholder="Your age"
                           min="13"
                           max="99"
@@ -469,7 +462,7 @@ const SettingsComponent = () => {
                         <input
                           type="text"
                           value={profileSettings.location}
-                          onChange={(e) => setProfileSettings({...profileSettings, location: e.target.value})}
+                          onChange={(e) => setProfileSettings({ ...profileSettings, location: e.target.value })}
                           placeholder="e.g., Mumbai, Maharashtra"
                           className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
                         />
@@ -479,7 +472,7 @@ const SettingsComponent = () => {
                         <label className="block text-zinc-300 font-medium mb-2">Country *</label>
                         <select
                           value={profileSettings.country}
-                          onChange={(e) => setProfileSettings({...profileSettings, country: e.target.value})}
+                          onChange={(e) => setProfileSettings({ ...profileSettings, country: e.target.value })}
                           className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
                         >
                           <option value="">Select Country</option>
@@ -501,7 +494,7 @@ const SettingsComponent = () => {
                       <label className="block text-zinc-300 font-medium mb-2">Bio</label>
                       <textarea
                         value={profileSettings.bio}
-                        onChange={(e) => setProfileSettings({...profileSettings, bio: e.target.value})}
+                        onChange={(e) => setProfileSettings({ ...profileSettings, bio: e.target.value })}
                         placeholder="Tell us about yourself, your gaming journey, and what makes you unique..."
                         rows={4}
                         className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none resize-none"
@@ -519,13 +512,12 @@ const SettingsComponent = () => {
                               const newLanguages = profileSettings.languages.includes(lang)
                                 ? profileSettings.languages.filter(l => l !== lang)
                                 : [...profileSettings.languages, lang];
-                              setProfileSettings({...profileSettings, languages: newLanguages});
+                              setProfileSettings({ ...profileSettings, languages: newLanguages });
                             }}
-                            className={`px-4 py-2 rounded-lg border transition-all ${
-                              profileSettings.languages.includes(lang)
+                            className={`px-4 py-2 rounded-lg border transition-all ${profileSettings.languages.includes(lang)
                                 ? 'bg-orange-500/20 border-orange-500/50 text-orange-400'
                                 : 'bg-zinc-800/50 border-zinc-600 text-zinc-300 hover:border-zinc-500'
-                            }`}
+                              }`}
                           >
                             {lang}
                           </button>
@@ -584,7 +576,7 @@ const SettingsComponent = () => {
                         <input
                           type="text"
                           value={profileSettings.inGameName}
-                          onChange={(e) => setProfileSettings({...profileSettings, inGameName: e.target.value})}
+                          onChange={(e) => setProfileSettings({ ...profileSettings, inGameName: e.target.value })}
                           placeholder="Your in-game username"
                           className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
                         />
@@ -594,7 +586,7 @@ const SettingsComponent = () => {
                         <label className="block text-zinc-300 font-medium mb-2">Primary Game *</label>
                         <select
                           value={profileSettings.primaryGame}
-                          onChange={(e) => setProfileSettings({...profileSettings, primaryGame: e.target.value})}
+                          onChange={(e) => setProfileSettings({ ...profileSettings, primaryGame: e.target.value })}
                           className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
                         >
                           <option value="">Select Your Main Game</option>
@@ -605,30 +597,16 @@ const SettingsComponent = () => {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-zinc-300 font-medium mb-2">Earnings So Far</label>
+                    <div>
+                      <label className="block text-zinc-300 font-medium mb-2">Qualified for Official Events?</label>
+                      <div className="flex items-center">
                         <input
-                          type="number"
-                          value={profileSettings.earnings}
-                          onChange={(e) => setProfileSettings({...profileSettings, earnings: e.target.value})}
-                          placeholder="Total earnings (in INR or USD)"
-                          min="0"
-                          className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
+                          type="checkbox"
+                          checked={profileSettings.qualifiedEvents}
+                          onChange={(e) => setProfileSettings({ ...profileSettings, qualifiedEvents: e.target.checked })}
+                          className="w-4 h-4 text-orange-600 bg-zinc-800 border-zinc-600 rounded focus:ring-orange-500/20 focus:ring-2"
                         />
-                      </div>
-
-                      <div>
-                        <label className="block text-zinc-300 font-medium mb-2">Qualified for Official Events?</label>
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={profileSettings.qualifiedEvents}
-                            onChange={(e) => setProfileSettings({...profileSettings, qualifiedEvents: e.target.checked})}
-                            className="w-4 h-4 text-orange-600 bg-zinc-800 border-zinc-600 rounded focus:ring-orange-500/20 focus:ring-2"
-                          />
-                          <span className="ml-2 text-zinc-300">Yes, I have qualified for official events</span>
-                        </div>
+                        <span className="ml-2 text-zinc-300">Yes, I have qualified for official events</span>
                       </div>
                     </div>
 
@@ -644,7 +622,7 @@ const SettingsComponent = () => {
                                 onChange={(e) => {
                                   const newDetails = [...profileSettings.qualifiedEventDetails];
                                   newDetails[index] = e.target.value;
-                                  setProfileSettings({...profileSettings, qualifiedEventDetails: newDetails});
+                                  setProfileSettings({ ...profileSettings, qualifiedEventDetails: newDetails });
                                 }}
                                 placeholder="e.g., BGIS 2024"
                                 className="flex-1 bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
@@ -653,7 +631,7 @@ const SettingsComponent = () => {
                                 type="button"
                                 onClick={() => {
                                   const newDetails = profileSettings.qualifiedEventDetails.filter((_, i) => i !== index);
-                                  setProfileSettings({...profileSettings, qualifiedEventDetails: newDetails});
+                                  setProfileSettings({ ...profileSettings, qualifiedEventDetails: newDetails });
                                 }}
                                 className="px-3 py-2 bg-red-500/20 border border-red-500/50 text-red-400 rounded-lg hover:bg-red-500/30 transition-all"
                               >
@@ -663,7 +641,7 @@ const SettingsComponent = () => {
                           ))}
                           <button
                             type="button"
-                            onClick={() => setProfileSettings({...profileSettings, qualifiedEventDetails: [...profileSettings.qualifiedEventDetails, '']})}
+                            onClick={() => setProfileSettings({ ...profileSettings, qualifiedEventDetails: [...profileSettings.qualifiedEventDetails, ''] })}
                             className="px-4 py-2 bg-orange-500/20 border border-orange-500/50 text-orange-400 rounded-lg hover:bg-orange-500/30 transition-all"
                           >
                             Add Event
@@ -683,13 +661,12 @@ const SettingsComponent = () => {
                               const newRoles = profileSettings.inGameRole.includes(role)
                                 ? profileSettings.inGameRole.filter(r => r !== role)
                                 : [...profileSettings.inGameRole, role];
-                              setProfileSettings({...profileSettings, inGameRole: newRoles});
+                              setProfileSettings({ ...profileSettings, inGameRole: newRoles });
                             }}
-                            className={`px-4 py-2 rounded-lg border transition-all ${
-                              profileSettings.inGameRole.includes(role)
+                            className={`px-4 py-2 rounded-lg border transition-all ${profileSettings.inGameRole.includes(role)
                                 ? 'bg-orange-500/20 border-orange-500/50 text-orange-400'
                                 : 'bg-zinc-800/50 border-zinc-600 text-zinc-300 hover:border-zinc-500'
-                            }`}
+                              }`}
                           >
                             {role}
                           </button>
@@ -707,7 +684,7 @@ const SettingsComponent = () => {
                         <label className="block text-zinc-300 font-medium mb-2">Team Status *</label>
                         <select
                           value={profileSettings.teamStatus}
-                          onChange={(e) => setProfileSettings({...profileSettings, teamStatus: e.target.value})}
+                          onChange={(e) => setProfileSettings({ ...profileSettings, teamStatus: e.target.value })}
                           className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
                         >
                           <option value="">Select Status</option>
@@ -721,7 +698,7 @@ const SettingsComponent = () => {
                         <label className="block text-zinc-300 font-medium mb-2">Availability *</label>
                         <select
                           value={profileSettings.availability}
-                          onChange={(e) => setProfileSettings({...profileSettings, availability: e.target.value})}
+                          onChange={(e) => setProfileSettings({ ...profileSettings, availability: e.target.value })}
                           className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
                         >
                           <option value="">Select Availability</option>
@@ -745,7 +722,7 @@ const SettingsComponent = () => {
                         <input
                           type="text"
                           value={profileSettings.discordTag}
-                          onChange={(e) => setProfileSettings({...profileSettings, discordTag: e.target.value})}
+                          onChange={(e) => setProfileSettings({ ...profileSettings, discordTag: e.target.value })}
                           placeholder="username#1234"
                           className="w-full pl-12 pr-4 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-white focus:border-orange-500 focus:outline-none"
                         />
@@ -758,7 +735,7 @@ const SettingsComponent = () => {
                         <input
                           type="text"
                           value={profileSettings.twitch}
-                          onChange={(e) => setProfileSettings({...profileSettings, twitch: e.target.value})}
+                          onChange={(e) => setProfileSettings({ ...profileSettings, twitch: e.target.value })}
                           placeholder="twitch.tv/username"
                           className="w-full px-4 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-white focus:border-orange-500 focus:outline-none"
                         />
@@ -769,7 +746,7 @@ const SettingsComponent = () => {
                         <input
                           type="text"
                           value={profileSettings.YouTube}
-                          onChange={(e) => setProfileSettings({...profileSettings, YouTube: e.target.value})}
+                          onChange={(e) => setProfileSettings({ ...profileSettings, YouTube: e.target.value })}
                           placeholder="youtube.com/@username"
                           className="w-full px-4 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-white focus:border-orange-500 focus:outline-none"
                         />
@@ -787,12 +764,11 @@ const SettingsComponent = () => {
                           <button
                             key={option.value}
                             type="button"
-                            onClick={() => setProfileSettings({...profileSettings, profileVisibility: option.value})}
-                            className={`p-4 rounded-xl border transition-all text-left ${
-                              profileSettings.profileVisibility === option.value
+                            onClick={() => setProfileSettings({ ...profileSettings, profileVisibility: option.value })}
+                            className={`p-4 rounded-xl border transition-all text-left ${profileSettings.profileVisibility === option.value
                                 ? 'bg-orange-500/20 border-orange-500/50 text-orange-400'
                                 : 'bg-zinc-800/50 border-zinc-600 text-zinc-300 hover:border-zinc-500'
-                            }`}
+                              }`}
                           >
                             <div className="font-medium">{option.label}</div>
                             <div className="text-sm text-zinc-400">{option.desc}</div>
@@ -805,7 +781,7 @@ const SettingsComponent = () => {
                       <label className="block text-zinc-300 font-medium mb-2">Card Theme</label>
                       <select
                         value={profileSettings.cardTheme}
-                        onChange={(e) => setProfileSettings({...profileSettings, cardTheme: e.target.value})}
+                        onChange={(e) => setProfileSettings({ ...profileSettings, cardTheme: e.target.value })}
                         className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
                       >
                         <option value="orange">Orange (Default)</option>
@@ -819,25 +795,24 @@ const SettingsComponent = () => {
                   </div>
 
                   <div className="flex gap-4 pt-6 border-t border-zinc-700">
-                      <button
-                        onClick={handleSaveProfile}
-                        disabled={isSaving}
-                        className={`bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-medium px-6 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 ${
-                          isSaving ? 'opacity-75 cursor-not-allowed' : ''
+                    <button
+                      onClick={handleSaveProfile}
+                      disabled={isSaving}
+                      className={`bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-medium px-6 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 ${isSaving ? 'opacity-75 cursor-not-allowed' : ''
                         }`}
-                      >
-                        {isSaving ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            Saving...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="w-4 h-4" />
-                            Save Changes
-                          </>
-                        )}
-                      </button>
+                    >
+                      {isSaving ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          Save Changes
+                        </>
+                      )}
+                    </button>
                     <button className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 hover:text-white font-medium px-6 py-2 rounded-lg transition-colors">
                       Cancel
                     </button>
@@ -853,7 +828,7 @@ const SettingsComponent = () => {
                   <ExternalLink className="w-6 h-6 text-orange-400" />
                   Linked Accounts
                 </h2>
-                
+
                 <p className="text-zinc-400 mb-6">
                   Connect your gaming and social accounts to enhance your Aegis experience
                 </p>
@@ -875,7 +850,7 @@ const SettingsComponent = () => {
                     }}
                     color="blue"
                   />
-                  
+
                   <AccountCard
                     platform="discord"
                     icon={FaDiscord}
@@ -956,7 +931,7 @@ const SettingsComponent = () => {
                 </h2>
 
                 <div className="space-y-8">
-                  
+
                   {/* Email Notifications */}
                   <div>
                     <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
@@ -976,10 +951,10 @@ const SettingsComponent = () => {
                           <div className="text-zinc-300">{label}</div>
                           <ToggleSwitch
                             enabled={notificationSettings.email[key]}
-                            onChange={(enabled) => 
+                            onChange={(enabled) =>
                               setNotificationSettings({
                                 ...notificationSettings,
-                                email: {...notificationSettings.email, [key]: enabled}
+                                email: { ...notificationSettings.email, [key]: enabled }
                               })
                             }
                             size="small"
@@ -1008,10 +983,10 @@ const SettingsComponent = () => {
                           <div className="text-zinc-300">{label}</div>
                           <ToggleSwitch
                             enabled={notificationSettings.push[key]}
-                            onChange={(enabled) => 
+                            onChange={(enabled) =>
                               setNotificationSettings({
                                 ...notificationSettings,
-                                push: {...notificationSettings.push, [key]: enabled}
+                                push: { ...notificationSettings.push, [key]: enabled }
                               })
                             }
                             size="small"
@@ -1038,10 +1013,10 @@ const SettingsComponent = () => {
                           <div className="text-zinc-300">{label}</div>
                           <ToggleSwitch
                             enabled={notificationSettings.inApp[key]}
-                            onChange={(enabled) => 
+                            onChange={(enabled) =>
                               setNotificationSettings({
                                 ...notificationSettings,
-                                inApp: {...notificationSettings.inApp, [key]: enabled}
+                                inApp: { ...notificationSettings.inApp, [key]: enabled }
                               })
                             }
                             size="small"
@@ -1067,10 +1042,10 @@ const SettingsComponent = () => {
                           <div className="text-zinc-300">{label}</div>
                           <ToggleSwitch
                             enabled={notificationSettings.sms[key]}
-                            onChange={(enabled) => 
+                            onChange={(enabled) =>
                               setNotificationSettings({
                                 ...notificationSettings,
-                                sms: {...notificationSettings.sms, [key]: enabled}
+                                sms: { ...notificationSettings.sms, [key]: enabled }
                               })
                             }
                             size="small"
@@ -1094,62 +1069,62 @@ const SettingsComponent = () => {
             )}
 
             {/* Privacy & Security Section */}
-              {activeSection === 'privacy' && (
-                <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
-                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-                    <Shield className="w-6 h-6 text-orange-400" />
-                    Privacy & Security
-                  </h2>
+            {activeSection === 'privacy' && (
+              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                  <Shield className="w-6 h-6 text-orange-400" />
+                  Privacy & Security
+                </h2>
 
-                  <div className="space-y-6">
-                    <div className="bg-zinc-800/50 border border-amber-400/30 rounded-lg p-4">
-                      <h3 className="text-lg font-semibold text-amber-400 mb-3 flex items-center gap-2">
-                        <Key className="w-5 h-5" />
-                        Change Password
-                      </h3>
-                      <div className="space-y-4">
-                        <input
-                          type="password"
-                          placeholder="Current Password"
-                          className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
-                        />
-                        <input
-                          type="password"
-                          placeholder="New Password"
-                          className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
-                        />
-                        <input
-                          type="password"
-                          placeholder="Confirm New Password"
-                          className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
-                        />
-                        <button className="bg-amber-500 hover:bg-amber-600 text-black font-medium px-4 py-2 rounded-lg transition-colors">
-                          Update Password
-                        </button>
-                      </div>
+                <div className="space-y-6">
+                  <div className="bg-zinc-800/50 border border-amber-400/30 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-amber-400 mb-3 flex items-center gap-2">
+                      <Key className="w-5 h-5" />
+                      Change Password
+                    </h3>
+                    <div className="space-y-4">
+                      <input
+                        type="password"
+                        placeholder="Current Password"
+                        className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
+                      />
+                      <input
+                        type="password"
+                        placeholder="New Password"
+                        className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
+                      />
+                      <input
+                        type="password"
+                        placeholder="Confirm New Password"
+                        className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
+                      />
+                      <button className="bg-amber-500 hover:bg-amber-600 text-black font-medium px-4 py-2 rounded-lg transition-colors">
+                        Update Password
+                      </button>
                     </div>
+                  </div>
 
-                    {/*Forgot Passwrod section*/}
-      <div className="bg-zinc-800/50 border border-amber-400/30 rounded-lg p-4">
-        <h3 className="text-lg font-semibold text-amber-400 mb-3 flex items-center gap-2">
-          <Key className="w-5 h-5" />
-          Forgot Password
-        </h3>
-        <div className="space-y-4">
-          <input
-            type="email"
-            placeholder="Enter your registered email"
-            className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
-            id="forgotEmail"
-          />
-          <button
-            onClick={handleForgotPassword}
-            className="bg-amber-500 hover:bg-amber-600 text-black font-medium px-4 py-2 rounded-lg transition-colors"
-          >
-            Send Reset Link
-          </button>
-        </div>
-      </div>
+                  {/*Forgot Passwrod section*/}
+                  <div className="bg-zinc-800/50 border border-amber-400/30 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-amber-400 mb-3 flex items-center gap-2">
+                      <Key className="w-5 h-5" />
+                      Forgot Password
+                    </h3>
+                    <div className="space-y-4">
+                      <input
+                        type="email"
+                        placeholder="Enter your registered email"
+                        className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-4 py-2 text-white focus:border-orange-500 focus:outline-none"
+                        id="forgotEmail"
+                      />
+                      <button
+                        onClick={handleForgotPassword}
+                        className="bg-amber-500 hover:bg-amber-600 text-black font-medium px-4 py-2 rounded-lg transition-colors"
+                      >
+                        Send Reset Link
+                      </button>
+                    </div>
+                  </div>
 
                   <div className="bg-zinc-800/50 border border-blue-400/30 rounded-lg p-4">
                     <h3 className="text-lg font-semibold text-blue-400 mb-3 flex items-center gap-2">
@@ -1178,7 +1153,7 @@ const SettingsComponent = () => {
                           <option value="private">Private</option>
                         </select>
                       </div>
-                      
+
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-white font-medium">Match History</div>
@@ -1275,7 +1250,7 @@ const SettingsComponent = () => {
                 </h2>
 
                 <div className="space-y-6">
-                  
+
                   {/* Contact Support */}
                   <div className="bg-zinc-800/50 border border-blue-400/30 rounded-lg p-4">
                     <h3 className="text-lg font-semibold text-blue-400 mb-3 flex items-center gap-2">
@@ -1351,9 +1326,8 @@ const SettingsComponent = () => {
                           }
                         }}
                         disabled={isSubmittingSupport}
-                        className={`bg-blue-500 hover:bg-blue-600 text-white font-medium px-6 py-2 rounded-lg transition-colors flex items-center gap-2 ${
-                          isSubmittingSupport ? 'opacity-75 cursor-not-allowed' : ''
-                        }`}
+                        className={`bg-blue-500 hover:bg-blue-600 text-white font-medium px-6 py-2 rounded-lg transition-colors flex items-center gap-2 ${isSubmittingSupport ? 'opacity-75 cursor-not-allowed' : ''
+                          }`}
                       >
                         <MessageSquare className="w-4 h-4" />
                         Send Message
@@ -1435,9 +1409,8 @@ const SettingsComponent = () => {
                           }
                         }}
                         disabled={isSubmittingBug}
-                        className={`bg-red-500 hover:bg-red-600 text-white font-medium px-6 py-2 rounded-lg transition-colors flex items-center gap-2 ${
-                          isSubmittingBug ? 'opacity-75 cursor-not-allowed' : ''
-                        }`}
+                        className={`bg-red-500 hover:bg-red-600 text-white font-medium px-6 py-2 rounded-lg transition-colors flex items-center gap-2 ${isSubmittingBug ? 'opacity-75 cursor-not-allowed' : ''
+                          }`}
                       >
                         <Bug className="w-4 h-4" />
                         Submit Bug Report
@@ -1459,7 +1432,7 @@ const SettingsComponent = () => {
                           <div className="text-zinc-400 text-sm">Frequently asked questions</div>
                         </div>
                       </a>
-                      
+
                       <a
                         href="#"
                         className="flex items-center gap-3 p-3 bg-zinc-700/50 hover:bg-zinc-600/50 rounded-lg transition-colors group"
@@ -1512,12 +1485,12 @@ const SettingsComponent = () => {
                       <AlertTriangle className="w-6 h-6 text-red-400" />
                       <h3 className="text-xl font-semibold text-red-400">Delete Account</h3>
                     </div>
-                    
+
                     <div className="space-y-4 mb-6">
                       <p className="text-zinc-300">
                         Once you delete your account, there is no going back. This action cannot be undone.
                       </p>
-                      
+
                       <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
                         <h4 className="text-red-400 font-medium mb-2">This will permanently delete:</h4>
                         <ul className="text-zinc-300 text-sm space-y-1 list-disc list-inside">
