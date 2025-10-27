@@ -84,11 +84,28 @@ const NotificationBar = () => {
           }));
         }
 
+        // Fetch recruitment approaches
+        const recruitmentResponse = await fetch('http://localhost:5000/api/recruitment/my-approaches', {
+          credentials: 'include',
+        });
+        let recruitmentApproaches = [];
+        if (recruitmentResponse.ok) {
+          const data = await recruitmentResponse.json();
+          recruitmentApproaches = (data.approaches || [])
+            .filter(a => a.status === 'pending') // Only pending approaches
+            .map(approach => ({
+              ...approach,
+              type: 'recruitment_approach',
+              createdAt: approach.createdAt || new Date()
+            }));
+        }
+
         // Combine and sort notifications
         const allNotifications = [
           ...teamInvitations.map(inv => ({ ...inv, type: 'team_invitation' })),
           ...connectionRequests,
-          ...systemMessages
+          ...systemMessages,
+          ...recruitmentApproaches // ADD THIS
         ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         setNotifications(allNotifications);
@@ -270,6 +287,26 @@ const NotificationBar = () => {
                       <div className="font-semibold text-white">{notification.player?.username}</div>
                       <div className="text-sm text-zinc-400">
                         Applied to join your team
+                      </div>
+                    </div>
+                  </>
+                ) : notification.type === 'recruitment_approach' ? (
+                  <>
+                    {notification.team?.logo ? (
+                      <img
+                        src={notification.team.logo}
+                        alt={`${notification.team.teamName} logo`}
+                        className="w-10 h-10 rounded-lg object-cover border border-zinc-700"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-zinc-700 rounded-lg flex items-center justify-center text-zinc-400 font-bold text-sm border border-zinc-600">
+                        {notification.team?.teamName ? notification.team.teamName.charAt(0).toUpperCase() : 'T'}
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">{notification.team?.teamName}</div>
+                      <div className="text-sm text-zinc-400">
+                        Recruitment Approach
                       </div>
                     </div>
                   </>

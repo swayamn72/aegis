@@ -1,9 +1,10 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  Send, Search, MoreVertical, Phone, Video, Settings, Users, Hash, ChevronDown, Activity, Crown, Shield, Gamepad2, Bell, Check, X, Eye, UserPlus
+  Send, Search, MoreVertical, Phone, Video, Settings, Users, Hash, ChevronDown, Activity, Crown, Shield, Gamepad2, Bell, Check, X, Eye, UserPlus,
+  AlertCircle, Ban, CheckCircle, XCircle
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -25,8 +26,14 @@ export default function ChatPage() {
   const [tryoutChats, setTryoutChats] = useState([]);
   const [showApplications, setShowApplications] = useState(false);
   const [tournamentDetails, setTournamentDetails] = useState({});
+  const [recruitmentApproaches, setRecruitmentApproaches] = useState([]);
+  const [showEndTryoutModal, setShowEndTryoutModal] = useState(false);
+  const [endReason, setEndReason] = useState('');
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [offerMessage, setOfferMessage] = useState('');
   const messagesEndRef = useRef(null);
   const location = useLocation();
+  const navigate = useNavigate();
   const selectedUserId = location.state?.selectedUserId;
 
   // Fetch all users who have chat messages with the current user
@@ -125,6 +132,19 @@ export default function ChatPage() {
     }
   };
 
+  // Fetch recruitment approaches
+  const fetchRecruitmentApproaches = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/recruitment/my-approaches', {
+        credentials: 'include'
+      });
+      const data = await res.json();
+      setRecruitmentApproaches(data.approaches || []);
+    } catch (error) {
+      console.error('Error fetching recruitment approaches:', error);
+    }
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -138,6 +158,7 @@ export default function ChatPage() {
     const fetchData = async () => {
       await fetchTeamApplications();
       await fetchTryoutChats();
+      await fetchRecruitmentApproaches();
     };
 
     fetchData();
@@ -147,6 +168,16 @@ export default function ChatPage() {
   useEffect(() => {
     if (selectedChat && chatType === 'direct') {
       fetchMessages(selectedChat._id);
+    } else if (selectedChat && chatType === 'tryout') {
+      // JOIN the tryout chat room via socket
+      socket.emit('joinTryoutChat', selectedChat._id);
+      console.log('Joined tryout chat room:', selectedChat._id);
+
+      // Cleanup: leave room when switching chats
+      return () => {
+        socket.emit('leaveTryoutChat', selectedChat._id);
+        console.log('Left tryout chat room:', selectedChat._id);
+      };
     }
   }, [selectedChat, chatType]);
 
@@ -196,13 +227,12 @@ export default function ChatPage() {
 
       // Show notification for tournament invites if not currently viewing the chat
       if (msg.messageType === 'tournament_invite' && msg.receiverId === userId) {
-        const senderName = 'Tournament Organizer'; // Could be enhanced to get actual name
+        const senderName = 'Tournament Organizer';
         showNotification(
           'Tournament Team Invite',
           `Your team has been invited to participate in a tournament`,
-          '/favicon.ico', // Use appropriate icon
+          '/favicon.ico',
           () => {
-            // Redirect to chat page with the sender
             window.location.href = `/chat?user=${msg.senderId}`;
           }
         );
@@ -211,7 +241,26 @@ export default function ChatPage() {
 
     socket.on("tryoutMessage", (data) => {
       if (chatType === 'tryout' && selectedChat && data.chatId === selectedChat._id) {
-        setMessages((prev) => [...prev, data.message]);
+        // REMOVE DUPLICATES: Check if message already exists before adding
+        setMessages((prev) => {
+          // Check if this message already exists by temporary ID or real ID
+          const messageExists = prev.some(m =>
+            m._id === data.message._id ||
+            (m._id.toString().startsWith('temp_') && m.message === data.message.message && m.sender === data.message.sender)
+          );
+
+          if (messageExists) {
+            // Replace temporary message with real one if IDs differ
+            return prev.map(m =>
+              (m._id.toString().startsWith('temp_') && m.message === data.message.message && m.sender === data.message.sender)
+                ? data.message
+                : m
+            );
+          }
+
+          // Add new message if it doesn't exist
+          return [...prev, data.message];
+        });
       }
     });
 
@@ -267,6 +316,15 @@ export default function ChatPage() {
   const sendMessage = () => {
     if (!input.trim() || !selectedChat || !userId) return;
 
+    // NEW: Prevent sending if tryout is ended or offer in progress
+    if (chatType === 'tryout') {
+      const restrictedStatuses = ['ended_by_team', 'ended_by_player', 'offer_sent', 'offer_accepted', 'offer_rejected'];
+      if (restrictedStatuses.includes(selectedChat.tryoutStatus)) {
+        toast.error('This tryout has ended. No new messages can be sent.');
+        return;
+      }
+    }
+
     if (chatType === 'direct') {
       const msg = {
         senderId: userId,
@@ -277,22 +335,26 @@ export default function ChatPage() {
       socket.emit("sendMessage", msg);
       setMessages((prev) => [...prev, msg]);
     } else if (chatType === 'tryout') {
-      // Send tryout chat message
-      fetch(`http://localhost:5000/api/tryout-chats/${selectedChat._id}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ message: input }),
-      })
-        .then(res => res.json())
-        .then(data => {
-          socket.emit("tryoutMessage", {
-            chatId: selectedChat._id,
-            message: data.chatMessage,
-          });
-          setMessages(prev => [...prev, data.chatMessage]);
-        })
-        .catch(error => console.error('Error sending tryout message:', error));
+      // Generate unique temporary ID
+      const tempId = `temp_${Date.now()}_${Math.random()}`;
+
+      // Optimistically add message to UI with temporary ID
+      const optimisticMessage = {
+        _id: tempId,
+        sender: userId,
+        message: input,
+        messageType: 'text',
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, optimisticMessage]);
+
+      // EMIT GROUP MESSAGE via socket
+      socket.emit('tryoutMessage', {
+        chatId: selectedChat._id,
+        senderId: userId,
+        message: input
+      });
     }
 
     setInput("");
@@ -368,6 +430,12 @@ export default function ChatPage() {
         toast.success('Player accepted to team!');
         fetchTeamApplications();
         fetchTryoutChats();
+        // Close the tryout chat after acceptance
+        if (selectedChat && chatType === 'tryout') {
+          setSelectedChat(null);
+          setChatType('direct');
+          setMessages([]);
+        }
       } else {
         const error = await res.json();
         toast.error(error.error || 'Failed to accept player');
@@ -377,7 +445,6 @@ export default function ChatPage() {
       toast.error('Failed to accept player');
     }
   };
-
 
   // Handler to accept tournament team invitation from chat message
   const handleAcceptTournamentInvite = async (msg) => {
@@ -472,6 +539,58 @@ export default function ChatPage() {
     } catch (error) {
       console.error('Error declining invitation:', error);
       toast.error('Network error declining invitation');
+    }
+  };
+
+  // Handle accept approach
+  const handleAcceptApproach = async (approachId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/recruitment/approach/${approachId}/accept`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        toast.success('Approach accepted! Tryout chat created.');
+
+        // Refresh data
+        await fetchRecruitmentApproaches();
+        await fetchTryoutChats();
+
+        // Switch to new tryout chat
+        setSelectedChat(data.tryoutChat);
+        setChatType('tryout');
+        setMessages(data.tryoutChat.messages || []);
+      } else {
+        const error = await res.json();
+        toast.error(error.error || 'Failed to accept approach');
+      }
+    } catch (error) {
+      console.error('Error accepting approach:', error);
+      toast.error('Failed to accept approach');
+    }
+  };
+
+  // Handle reject approach
+  const handleRejectApproach = async (approachId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/recruitment/approach/${approachId}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ reason: 'Not interested at this time' })
+      });
+
+      if (res.ok) {
+        toast.success('Approach rejected');
+        await fetchRecruitmentApproaches();
+      } else {
+        toast.error('Failed to reject approach');
+      }
+    } catch (error) {
+      console.error('Error rejecting approach:', error);
+      toast.error('Failed to reject approach');
     }
   };
 
@@ -619,6 +738,211 @@ export default function ChatPage() {
     </div>
   );
 
+  // Simple debounce function
+  const debounce = (func, delay) => {
+    let timeoutId;
+    return (...args) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => func(...args), delay);
+    };
+  };
+
+  // Debounced typing indicator (prevents spam)
+  const emitTyping = useCallback(
+    debounce(() => {
+      if (selectedChat?._id) {
+        socket.emit('typing', { receiverId: selectedChat._id });
+      }
+    }, 300),
+    [selectedChat]
+  );
+
+  const handleInputChange = (e) => {
+    setInput(e.target.value);
+    emitTyping();
+  };
+
+  // NEW: End tryout handler
+  const handleEndTryout = async () => {
+    if (!selectedChat || !endReason.trim()) {
+      toast.error('Please provide a reason for ending the tryout');
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/tryout-chats/${selectedChat._id}/end-tryout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ reason: endReason })
+      });
+
+      if (res.ok) {
+        toast.success('Tryout ended successfully');
+        setShowEndTryoutModal(false);
+        setEndReason('');
+        await fetchTryoutMessages(selectedChat._id);
+      } else {
+        const error = await res.json();
+        toast.error(error.error || 'Failed to end tryout');
+      }
+    } catch (error) {
+      console.error('Error ending tryout:', error);
+      toast.error('Failed to end tryout');
+    }
+  };
+
+  // NEW: Send team offer handler
+  const handleSendOffer = async () => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/tryout-chats/${selectedChat._id}/send-offer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ message: offerMessage })
+      });
+
+      if (res.ok) {
+        toast.success('Team offer sent!');
+        setShowOfferModal(false);
+        setOfferMessage('');
+        await fetchTryoutMessages(selectedChat._id);
+      } else {
+        const error = await res.json();
+        toast.error(error.error || 'Failed to send offer');
+      }
+    } catch (error) {
+      console.error('Error sending offer:', error);
+      toast.error('Failed to send offer');
+    }
+  };
+
+  // NEW: Accept offer handler
+  const handleAcceptOffer = async () => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/tryout-chats/${selectedChat._id}/accept-offer`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        toast.success('You joined the team!');
+        await fetchTryoutMessages(selectedChat._id);
+        // Optionally redirect to team page
+        setTimeout(() => {
+          navigate(`/team/${data.team._id}`);
+        }, 2000);
+      } else {
+        const error = await res.json();
+        toast.error(error.error || 'Failed to accept offer');
+      }
+    } catch (error) {
+      console.error('Error accepting offer:', error);
+      toast.error('Failed to accept offer');
+    }
+  };
+
+  // NEW: Reject offer handler
+  const handleRejectOffer = async () => {
+    const reason = prompt('Reason for declining (optional):');
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/tryout-chats/${selectedChat._id}/reject-offer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ reason })
+      });
+
+      if (res.ok) {
+        toast.info('Team offer declined');
+        await fetchTryoutMessages(selectedChat._id);
+      } else {
+        const error = await res.json();
+        toast.error(error.error || 'Failed to reject offer');
+      }
+    } catch (error) {
+      console.error('Error rejecting offer:', error);
+      toast.error('Failed to reject offer');
+    }
+  };
+
+  // NEW: Listen for tryout status updates
+  useEffect(() => {
+    socket.on('tryoutEnded', (data) => {
+      if (chatType === 'tryout' && selectedChat && data.chatId === selectedChat._id) {
+        // Update selected chat status
+        setSelectedChat(prev => ({
+          ...prev,
+          tryoutStatus: data.tryoutStatus,
+          endedBy: data.endedBy,
+          endReason: data.reason
+        }));
+
+        // Add system message to UI
+        if (data.message) {
+          setMessages(prev => [...prev, data.message]);
+        }
+
+        toast.info('Tryout has been ended');
+      }
+    });
+
+    socket.on('teamOfferSent', (data) => {
+      if (chatType === 'tryout' && selectedChat && data.chatId === selectedChat._id) {
+        setSelectedChat(prev => ({
+          ...prev,
+          tryoutStatus: 'offer_sent',
+          teamOffer: data.offer
+        }));
+
+        if (data.message) {
+          setMessages(prev => [...prev, data.message]);
+        }
+
+        toast.success('Team offer received!');
+      }
+    });
+
+    socket.on('teamOfferAccepted', (data) => {
+      if (chatType === 'tryout' && selectedChat && data.chatId === selectedChat._id) {
+        setSelectedChat(prev => ({
+          ...prev,
+          tryoutStatus: 'offer_accepted'
+        }));
+
+        if (data.message) {
+          setMessages(prev => [...prev, data.message]);
+        }
+
+        toast.success('Player joined the team!');
+      }
+    });
+
+    socket.on('teamOfferRejected', (data) => {
+      if (chatType === 'tryout' && selectedChat && data.chatId === selectedChat._id) {
+        setSelectedChat(prev => ({
+          ...prev,
+          tryoutStatus: 'offer_rejected'
+        }));
+
+        if (data.message) {
+          setMessages(prev => [...prev, data.message]);
+        }
+
+        toast.info('Player declined the team offer');
+      }
+    });
+
+    return () => {
+      socket.off('tryoutEnded');
+      socket.off('teamOfferSent');
+      socket.off('teamOfferAccepted');
+      socket.off('teamOfferRejected');
+    };
+  }, [chatType, selectedChat?._id]);
+
   return (
     <div className="flex h-screen bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 text-white font-sans">
       {/* Left Sidebar */}
@@ -680,8 +1004,8 @@ export default function ChatPage() {
                     fetchTryoutMessages(chat._id);
                   }}
                   className={`p-3 rounded-xl cursor-pointer transition-all mb-2 ${selectedChat?._id === chat._id && chatType === 'tryout'
-                      ? "bg-gradient-to-r from-orange-500/20 to-red-600/20 border border-orange-500/30"
-                      : "hover:bg-zinc-800/30"
+                    ? "bg-gradient-to-r from-orange-500/20 to-red-600/20 border border-orange-500/30"
+                    : "hover:bg-zinc-800/30"
                     }`}
                 >
                   <div className="flex items-center gap-3">
@@ -729,8 +1053,8 @@ export default function ChatPage() {
                     }
                   }}
                   className={`p-3 rounded-xl cursor-pointer transition-all duration-200 mb-2 group hover:bg-zinc-800/50 ${selectedChat?._id === conn._id && chatType === 'direct'
-                      ? "bg-gradient-to-r from-orange-500/20 to-red-600/20 border border-orange-500/30"
-                      : "hover:bg-zinc-800/30"
+                    ? "bg-gradient-to-r from-orange-500/20 to-red-600/20 border border-orange-500/30"
+                    : "hover:bg-zinc-800/30"
                     }`}
                 >
                   <div className="flex items-center gap-3">
@@ -808,9 +1132,29 @@ export default function ChatPage() {
                           : (selectedChat.realName || selectedChat.username)
                         }
                       </span>
-                      {chatType === 'tryout' && (
+                      {chatType === 'tryout' && selectedChat.tryoutStatus === 'active' && (
                         <span className="px-2 py-0.5 bg-orange-500/20 border border-orange-400/30 text-orange-400 rounded-md text-xs font-medium">
                           Tryout Active
+                        </span>
+                      )}
+                      {chatType === 'tryout' && selectedChat.tryoutStatus === 'offer_sent' && (
+                        <span className="px-2 py-0.5 bg-blue-500/20 border border-blue-400/30 text-blue-400 rounded-md text-xs font-medium">
+                          Offer Pending
+                        </span>
+                      )}
+                      {chatType === 'tryout' && ['ended_by_team', 'ended_by_player'].includes(selectedChat.tryoutStatus) && (
+                        <span className="px-2 py-0.5 bg-red-500/20 border border-red-400/30 text-red-400 rounded-md text-xs font-medium">
+                          Tryout Ended
+                        </span>
+                      )}
+                      {chatType === 'tryout' && selectedChat.tryoutStatus === 'offer_accepted' && (
+                        <span className="px-2 py-0.5 bg-green-500/20 border border-green-400/30 text-green-400 rounded-md text-xs font-medium">
+                          Player Joined
+                        </span>
+                      )}
+                      {chatType === 'tryout' && selectedChat.tryoutStatus === 'offer_rejected' && (
+                        <span className="px-2 py-0.5 bg-gray-500/20 border border-gray-400/30 text-gray-400 rounded-md text-xs font-medium">
+                          Offer Declined
                         </span>
                       )}
                     </div>
@@ -824,277 +1168,483 @@ export default function ChatPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {chatType === 'tryout' && user?.team && (
-                    <div className="flex gap-2 mr-4">
+                  {/* Team Captain Actions - Active Tryout */}
+                  {chatType === 'tryout' && selectedChat.tryoutStatus === 'active' && user?.team?.captain === userId && (
+                    <>
                       <button
-                        onClick={() => {
-                          const app = teamApplications.find(a => a.tryoutChatId?.toString() === selectedChat._id);
-                          if (app) handleAcceptPlayer(app._id);
-                        }}
-                        className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-all flex items-center gap-1"
+                        onClick={() => setShowOfferModal(true)}
+                        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-all text-sm flex items-center gap-2"
                       >
-                        <Check className="w-4 h-4" />
-                        Accept Player
+                        <CheckCircle className="w-4 h-4" />
+                        Send Team Offer
                       </button>
                       <button
-                        onClick={() => {
-                          const app = teamApplications.find(a => a.tryoutChatId?.toString() === selectedChat._id);
-                          if (app) handleRejectApplication(app._id);
-                        }}
-                        className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-all flex items-center gap-1"
+                        onClick={() => setShowEndTryoutModal(true)}
+                        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-all text-sm flex items-center gap-2"
                       >
-                        <X className="w-4 h-4" />
-                        Reject
+                        <Ban className="w-4 h-4" />
+                        End Tryout
                       </button>
-                    </div>
+                    </>
                   )}
+
+                  {/* Applicant Actions - Active Tryout */}
+                  {chatType === 'tryout' && selectedChat.tryoutStatus === 'active' && selectedChat.applicant?._id === userId && (
+                    <button
+                      onClick={() => setShowEndTryoutModal(true)}
+                      className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-all text-sm flex items-center gap-2"
+                    >
+                      <Ban className="w-4 h-4" />
+                      End Tryout
+                    </button>
+                  )}
+
+                  {/* Applicant Actions - Pending Offer */}
+                  {chatType === 'tryout' && selectedChat.tryoutStatus === 'offer_sent' && selectedChat.applicant?._id === userId && (
+                    <>
+                      <button
+                        onClick={handleAcceptOffer}
+                        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-all text-sm flex items-center gap-2"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Accept Offer
+                      </button>
+                      <button
+                        onClick={handleRejectOffer}
+                        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-all text-sm flex items-center gap-2"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Decline Offer
+                      </button>
+                    </>
+                  )}
+
                   <button className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
-                    <MoreVertical className="w-5 h-5 text-zinc-400" />
+                    <MoreVertical className="w-4 h-4 text-zinc-400" />
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-zinc-950/20">
-              {messages.length > 0 ? (
-                messages.map((msg, idx) => {
-                  const isMine = chatType === 'direct'
-                    ? msg.senderId === userId
-                    : msg.sender?._id === userId || msg.sender === userId;
-
-
-                  if (msg.messageType === 'invitation') {
-                    // Player invite message UI (unchanged)
-                    return (
-                      <div key={msg._id || idx} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                        <div className="max-w-xs lg:max-w-md xl:max-w-lg order-1 bg-yellow-100 rounded-2xl p-4 shadow-lg border border-yellow-400 text-yellow-900">
-                          <p className="mb-3 font-semibold">Team Invitation</p>
-                          <p className="mb-4">{msg.message}</p>
-                          {(msg.invitationStatus === 'pending' || !msg.invitationStatus) && (
-                            <div className="flex gap-3">
-                              <button
-                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold"
-                                onClick={() => handleAcceptInvitation(msg.invitationId)}
-                              >
-                                Accept
-                              </button>
-                              <button
-                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold"
-                                onClick={() => handleDeclineInvitation(msg.invitationId)}
-                              >
-                                Decline
-                              </button>
-                            </div>
-                          )}
-                          {msg.invitationStatus === 'accepted' && (
-                            <p className="text-green-700 font-semibold">Invitation Accepted</p>
-                          )}
-                          {msg.invitationStatus === 'declined' && (
-                            <p className="text-red-700 font-semibold">Invitation Declined</p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  if (msg.messageType === 'tournament_invite') {
-                    // Tournament team invite message UI
-                    return (
-                      <div key={msg._id || idx} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                        <div className="max-w-xs lg:max-w-md xl:max-w-lg order-1 bg-orange-100 rounded-2xl p-4 shadow-lg border border-orange-400 text-orange-900">
-                          <p className="mb-3 font-semibold">Tournament Team Invite</p>
-                          <p className="mb-2">Tournament: <span className="font-bold">{msg.tournamentName || 'Tournament'}</span></p>
-                          <p className="mb-4">{msg.message}</p>
-                          {(msg.invitationStatus === 'pending' || !msg.invitationStatus) && (
-                            <div className="flex gap-3">
-                              <button
-                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold"
-                                onClick={() => handleAcceptTournamentInvite(msg.invitationId)}
-                              >
-                                Accept
-                              </button>
-                              <button
-                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold"
-                                onClick={() => handleDeclineTournamentInvite(msg.invitationId)}
-                              >
-                                Decline
-                              </button>
-                            </div>
-                          )}
-                          {msg.invitationStatus === 'accepted' && (
-                            <p className="text-green-700 font-semibold">Tournament Invite Accepted</p>
-                          )}
-                          {msg.invitationStatus === 'declined' && (
-                            <p className="text-red-700 font-semibold">Tournament Invite Declined</p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  if (msg.messageType === 'tournament_reference') {
-                    return (
-                      <div key={msg._id || idx} className={`flex ${msg.senderId === userId ? 'justify-end' : 'justify-start'}`}>
-                        <div className="max-w-xs lg:max-w-md xl:max-w-lg order-1 bg-blue-100 rounded-2xl p-4 shadow-lg border border-blue-400 text-blue-900 cursor-pointer hover:bg-blue-200 transition-colors"
-                          onClick={() => {
-                            // Navigate to tournament page
-                            window.location.href = `/tournament/${msg.tournamentId}`;
-                          }}
-                        >
-                          <p className="mb-2 font-semibold">Tournament Reference</p>
-                          <div className="flex items-center gap-4 mb-2">
-                            {(tournamentDetails[msg.tournamentId]?.tournamentData?.media?.logo || tournamentDetails[msg.tournamentId]?.tournamentData?.organizer?.logo) ? (
-                              <img
-                                src={tournamentDetails[msg.tournamentId]?.tournamentData?.media?.logo || tournamentDetails[msg.tournamentId]?.tournamentData?.organizer?.logo}
-                                alt={tournamentDetails[msg.tournamentId]?.tournamentData?.name}
-                                className="w-16 h-16 rounded-lg object-cover"
-                              />
-                            ) : (
-                              <div className="w-16 h-16 bg-zinc-300 rounded-lg flex items-center justify-center text-zinc-600 text-xs">
-                                No Logo
-                              </div>
-                            )}
-                            <div className="flex-1">
-                              <p className="font-semibold text-blue-900">{tournamentDetails[msg.tournamentId]?.tournamentData?.name || 'Loading...'}</p>
-                              <p className="text-sm text-blue-800">Prize Pool: {tournamentDetails[msg.tournamentId]?.tournamentData?.prizePool?.total || 'N/A'}</p>
-                              <p className="text-sm text-blue-800">Slots Remaining: {tournamentDetails[msg.tournamentId]?.tournamentData?.totalSlots ?? 'N/A'}</p>
-                            </div>
-                          </div>
-                          <p className="mb-2">{msg.message}</p>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  if (msg.messageType === 'system') {
-                    return (
-                      <div key={msg._id || idx} className="flex justify-center">
-                        <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-2 text-sm text-zinc-300 max-w-md">
-                          <div className="flex items-center gap-3 mb-2">
-                            {msg.tournamentLogo ? (
-                              <img
-                                src={msg.tournamentLogo}
-                                alt="Tournament Logo"
-                                className="w-8 h-8 rounded-lg object-cover border border-zinc-600"
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                }}
-                              />
-                            ) : (
-                              <div className="w-8 h-8 bg-zinc-700 rounded-lg flex items-center justify-center text-zinc-400 font-bold text-sm border border-zinc-600">
-                                T
-                              </div>
-                            )}
-                            <span className="text-xs text-zinc-400 font-medium">Tournament Update</span>
-                          </div>
-                          <p>{msg.message}</p>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  if (msg.messageType === 'match_scheduled') {
-                    return (
-                      <div key={msg._id || idx} className="flex justify-center">
-                        <div className="bg-blue-900/50 border border-blue-700 rounded-lg px-4 py-3 text-sm text-blue-300 max-w-md">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Bell className="w-4 h-4 text-blue-400" />
-                            <span className="font-semibold">Match Scheduled</span>
-                          </div>
-                          <p>{msg.message}</p>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // Normal message UI
+            {/* Chat Messages - SIMPLE SCROLLING */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.map((msg, index) => {
+                // System messages - recruitment approach
+                if (msg.messageType === 'system' && msg.metadata?.type === 'recruitment_approach') {
                   return (
-                    <div
-                      key={msg._id || idx}
-                      className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className={`max-w-xs lg:max-w-md xl:max-w-lg ${isMine ? 'order-2' : 'order-1'}`}>
-                        {chatType === 'tryout' && !isMine && (
-                          <div className="text-xs text-zinc-400 mb-1 ml-2">
-                            {msg.sender?.username || 'Unknown'}
+                    <div key={msg._id || index} className="flex justify-center">
+                      <div className="max-w-md w-full bg-gradient-to-br from-purple-900/50 to-indigo-900/50 border border-purple-500/30 rounded-2xl p-4 shadow-lg">
+                        <div className="flex items-center gap-3 mb-3">
+                          {msg.metadata?.teamLogo ? (
+                            <img
+                              src={msg.metadata.teamLogo}
+                              alt={msg.metadata.teamName}
+                              className="w-12 h-12 rounded-lg object-cover border-2 border-purple-400/50"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 bg-purple-700 rounded-lg flex items-center justify-center text-white font-bold text-lg border-2 border-purple-400/50">
+                              {msg.metadata?.teamName?.charAt(0) || 'T'}
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <h4 className="text-white font-bold text-lg">{msg.metadata?.teamName}</h4>
+                            <p className="text-purple-200 text-sm">Recruitment Approach</p>
+                          </div>
+                        </div>
+
+                        <p className="text-purple-100 mb-4">{msg.metadata?.message}</p>
+
+                        {(!msg.metadata?.approachStatus || msg.metadata.approachStatus === 'pending') && (
+                          <div className="flex gap-3">
+                            <button
+                              onClick={() => handleAcceptApproach(msg.metadata?.approachId)}
+                              className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
+                            >
+                              <Check className="w-4 h-4" />
+                              Accept & Start Chat
+                            </button>
+                            <button
+                              onClick={() => handleRejectApproach(msg.metadata?.approachId)}
+                              className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
+                            >
+                              <X className="w-4 h-4" />
+                              Decline
+                            </button>
                           </div>
                         )}
-                        <div className={`p-3 rounded-2xl shadow-lg ${isMine
-                            ? "bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-br-md"
-                            : "bg-zinc-800/80 text-white border border-zinc-700 rounded-bl-md"
-                          }`}>
-                          <p className="break-words">{msg.message}</p>
-                          <div className={`text-xs mt-1 ${isMine ? 'text-orange-100' : 'text-zinc-400'}`}>
-                            {formatTime(msg.timestamp)}
+
+                        {msg.metadata?.approachStatus === 'accepted' && (
+                          <div className="bg-green-500/20 border border-green-400/30 rounded-lg px-4 py-2 text-green-300 font-medium text-center">
+                            ✓ Approach Accepted - Tryout Chat Created
                           </div>
+                        )}
+
+                        {msg.metadata?.approachStatus === 'rejected' && (
+                          <div className="bg-red-500/20 border border-red-400/30 rounded-lg px-4 py-2 text-red-300 font-medium text-center">
+                            ✗ Approach Declined
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Normal messages - WhatsApp style
+                const isMine = chatType === 'direct'
+                  ? msg.senderId === userId
+                  : msg.sender?._id === userId || msg.sender === userId;
+
+                // Get sender info for group chats
+                const getSenderInfo = () => {
+                  if (chatType !== 'tryout' || isMine) return null;
+
+                  const senderId = msg.sender?._id || msg.sender;
+                  const senderData = selectedChat?.participants?.find(p =>
+                    (p._id || p).toString() === senderId?.toString()
+                  );
+
+                  return senderData || { username: 'Unknown', profilePicture: null };
+                };
+
+                const senderInfo = getSenderInfo();
+
+                // Show sender name only if it's a group chat, not mine, and different from previous
+                const showSenderName = chatType === 'tryout' && !isMine && (
+                  index === 0 || messages[index - 1]?.sender !== msg.sender
+                );
+
+                return (
+                  <div key={msg._id || index} className={`flex ${isMine ? 'justify-end' : 'justify-start'} items-end gap-2`}>
+                    {/* Sender Avatar (Group Chats Only, Left Side) */}
+                    {chatType === 'tryout' && !isMine && (
+                      <div className="flex-shrink-0 mb-1">
+                        {showSenderName ? (
+                          <img
+                            src={senderInfo?.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${senderInfo?.username}`}
+                            alt={senderInfo?.username}
+                            className="w-8 h-8 rounded-full object-cover ring-2 ring-zinc-700"
+                          />
+                        ) : (
+                          <div className="w-8 h-8" />
+                        )}
+                      </div>
+                    )}
+
+                    {/* Message Bubble */}
+                    <div className={`max-w-[70%] lg:max-w-[60%]`}>
+                      {/* Sender Name (Group Chats Only) */}
+                      {showSenderName && (
+                        <div className="text-xs text-zinc-400 mb-1 ml-3">
+                          {senderInfo?.username || 'Unknown'}
+                        </div>
+                      )}
+
+                      {/* Message Content */}
+                      <div className={`relative px-4 py-2.5 rounded-2xl shadow-lg break-words ${isMine
+                        ? 'bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-br-sm'
+                        : 'bg-zinc-800/90 text-white border border-zinc-700/50 rounded-bl-sm'
+                        }`}>
+                        {/* Message Text */}
+                        <p className="text-[15px] leading-relaxed whitespace-pre-wrap">
+                          {msg.message}
+                        </p>
+
+                        {/* Timestamp */}
+                        <div className={`text-[11px] mt-1 flex items-center gap-1 ${isMine ? 'text-orange-100/70 justify-end' : 'text-zinc-500'
+                          }`}>
+                          <span>{formatTime(msg.timestamp)}</span>
+
+                          {/* Read Receipt (for sent messages) */}
+                          {isMine && (
+                            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+                              <path d="M15.01 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.666 9.879a.32.32 0 0 1-.484.033l-.358-.325a.319.319 0 0 0-.484.032l-.378.483a.418.418 0 0 0 .036.541l1.32 1.266c.143.14.361.125.484-.033l6.272-8.048a.366.366 0 0 0-.064-.512zm-4.1 0l-.478-.372a.365.365 0 0 0-.51.063L4.566 9.879a.32.32 0 0 1-.484.033L1.891 7.769a.366.366 0 0 0-.515.006l-.423.433a.364.364 0 0 0 .006.514l3.258 3.185c.143.14.361.125.484-.033l6.272-8.048a.365.365 0 0 0-.063-.51z" />
+                            </svg>
+                          )}
                         </div>
                       </div>
 
-                      {chatType === 'tryout' && !isMine && (
-                        <div className="order-0 mr-2">
-                          <img
-                            src={msg.sender?.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${msg.sender?.username}`}
-                            alt={msg.sender?.username}
-                            className="w-8 h-8 rounded-lg object-cover"
-                          />
-                        </div>
-                      )}
+                      {/* Message Tail */}
+                      <svg
+                        className={`absolute bottom-0 ${isMine ? '-right-2 text-red-600' : '-left-2 text-zinc-800'
+                          }`}
+                        width="12"
+                        height="19"
+                        viewBox="0 0 12 19"
+                      >
+                        <path
+                          fill="currentColor"
+                          d={isMine
+                            ? "M0,0 L12,0 L12,19 C12,19 6,15 0,19 Z"
+                            : "M12,0 L0,0 L0,19 C0,19 6,15 12,19 Z"
+                          }
+                        />
+                      </svg>
                     </div>
-                  );
-                })
-              ) : (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center">
-                    <Hash className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
-                    <p className="text-zinc-400">
-                      {chatType === 'tryout'
-                        ? 'Start the tryout conversation'
-                        : `Start chatting with ${selectedChat.username}`
-                      }
-                    </p>
                   </div>
-                </div>
-              )}
+                );
+              })}
+
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
-            <div className="bg-zinc-900/50 border-t border-zinc-800 backdrop-blur-sm p-4">
-              <div className="flex items-end gap-3">
-                <div className="flex-1 bg-zinc-800/50 border border-zinc-700 rounded-xl p-3 focus-within:border-orange-500/50 transition-colors">
-                  <textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder={`Message ${chatType === 'tryout' ? 'the tryout chat' : `@${selectedChat.username}`}...`}
-                    className="w-full bg-transparent text-white placeholder-zinc-400 resize-none outline-none min-h-[20px] max-h-32"
-                    rows={1}
-                  />
+            {/* Chat Input */}
+            <div className="p-4 border-t border-zinc-800">
+              {chatType === 'tryout' && ['ended_by_team', 'ended_by_player', 'offer_sent', 'offer_accepted', 'offer_rejected'].includes(selectedChat.tryoutStatus) ? (
+                <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4 text-center">
+                  <AlertCircle className="w-8 h-8 text-zinc-500 mx-auto mb-2" />
+                  <p className="text-zinc-400 text-sm">
+                    This tryout has ended. No new messages can be sent.
+                  </p>
                 </div>
-
-                <button
-                  onClick={sendMessage}
-                  disabled={!input.trim()}
-                  className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 disabled:from-zinc-700 disabled:to-zinc-600 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-all"
-                >
-                  <Send className="w-5 h-5" />
-                </button>
-              </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    placeholder="Type your message..."
+                    value={input}
+                    onChange={handleInputChange}
+                    onKeyPress={handleKeyPress}
+                    className="flex-1 bg-zinc-800/50 border border-zinc-700 rounded-lg pl-4 pr-10 py-2 text-white placeholder-zinc-400 focus:outline-none focus:border-orange-500/50 focus:bg-zinc-800/70 transition-all"
+                  />
+                  <button
+                    onClick={sendMessage}
+                    className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white rounded-lg font-medium transition-all"
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-zinc-950/20">
-            <div className="text-center">
-              <Hash className="w-16 h-16 text-zinc-600 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-white mb-2">Select a conversation</h3>
-              <p className="text-zinc-400">Choose a connection or tryout chat to start</p>
-            </div>
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-zinc-500">Select a chat to start messaging</p>
           </div>
         )}
       </div>
+
+      {/* End Tryout Modal */}
+      {showEndTryoutModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 rounded-xl max-w-md w-full p-6 border border-zinc-700">
+            <h3 className="text-lg font-semibold text-white mb-4">End Tryout</h3>
+            <p className="text-zinc-400 mb-4 text-sm">
+              Are you sure you want to end this tryout? No further messages can be sent after ending.
+            </p>
+            <textarea
+              value={endReason}
+              onChange={(e) => setEndReason(e.target.value)}
+              placeholder="Reason for ending (required)"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500 mb-4"
+              rows="3"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowEndTryoutModal(false);
+                  setEndReason('');
+                }}
+                className="flex-1 px-4 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEndTryout}
+                disabled={!endReason.trim()}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                End Tryout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send Offer Modal */}
+      {showOfferModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 rounded-xl max-w-md w-full p-6 border border-zinc-700">
+            <h3 className="text-lg font-semibold text-white mb-4">Send Team Join Offer</h3>
+            <p className="text-zinc-400 mb-4 text-sm">
+              Invite {selectedChat?.applicant?.username} to join your team.
+            </p>
+            <textarea
+              value={offerMessage}
+              onChange={(e) => setOfferMessage(e.target.value)}
+              placeholder="Custom message (optional)"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500 mb-4"
+              rows="3"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowOfferModal(false);
+                  setOfferMessage('');
+                }}
+                className="flex-1 px-4 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendOffer}
+                className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+              >
+                Send Offer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showApplications && <ApplicationsPanel />}
     </div>
   );
 }
+
+const ChatMessage = ({ msg, userId, chatType, selectedChat, index, messages }) => {
+  // System messages and special types
+  if (msg.messageType === 'system' && msg.metadata?.type === 'recruitment_approach') {
+    return (
+      <div key={msg._id || index} className="flex justify-center">
+        {/* ...existing recruitment approach card... */}
+      </div>
+    );
+  }
+
+  if (msg.messageType === 'invitation') {
+    return (
+      <div key={msg._id || index} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+        {/* ...existing invitation card... */}
+      </div>
+    );
+  }
+
+  if (msg.messageType === 'tournament_invite') {
+    return (
+      <div key={msg._id || index} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+        {/* ...existing tournament invite card... */}
+      </div>
+    );
+  }
+
+  if (msg.messageType === 'tournament_reference') {
+    return (
+      <div key={msg._id || index} className={`flex ${msg.senderId === userId ? 'justify-end' : 'justify-start'}`}>
+        {/* ...existing tournament reference card... */}
+      </div>
+    );
+  }
+
+  if (msg.messageType === 'system') {
+    return (
+      <div key={msg._id || index} className="flex justify-center">
+        {/* ...existing system message card... */}
+      </div>
+    );
+  }
+
+  if (msg.messageType === 'match_scheduled') {
+    return (
+      <div key={msg._id || index} className="flex justify-center">
+        {/* ...existing match scheduled card... */}
+      </div>
+    );
+  }
+
+  // NORMAL MESSAGES - WhatsApp Style
+  const isMine = chatType === 'direct'
+    ? msg.senderId === userId
+    : msg.sender?._id === userId || msg.sender === userId;
+
+  // Get sender info for group chats
+  const getSenderInfo = () => {
+    if (chatType !== 'tryout' || isMine) return null;
+
+    const senderId = msg.sender?._id || msg.sender;
+    const senderData = selectedChat?.participants?.find(p =>
+      (p._id || p).toString() === senderId?.toString()
+    );
+
+    return senderData || { username: 'Unknown', profilePicture: null };
+  };
+
+  const senderInfo = getSenderInfo();
+
+  // Show sender name only if:
+  // 1. It's a group chat (tryout)
+  // 2. Message is not mine
+  // 3. Either first message OR previous message is from different sender
+  const showSenderName = chatType === 'tryout' && !isMine && (
+    index === 0 ||
+    messages[index - 1]?.sender !== msg.sender
+  );
+
+  return (
+    <div key={msg._id || index} className={`flex ${isMine ? 'justify-end' : 'justify-start'} items-end gap-2`}>
+      {/* Sender Avatar (Group Chats Only, Left Side) */}
+      {chatType === 'tryout' && !isMine && (
+        <div className="flex-shrink-0">
+          {showSenderName ? (
+            <img
+              className="w-8 h-8 rounded-full object-cover ring-2 ring-zinc-700"
+              alt={senderInfo?.username}
+              src={senderInfo?.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${senderInfo?.username}`}
+            />
+          ) : (
+            <div className="w-8 h-8" />
+          )}
+        </div>
+      )}
+
+      <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
+        {/* Message Bubble */}
+        <div className={`relative px-4 py-2.5 rounded-2xl shadow-lg break-words ${isMine
+          ? 'bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-br-sm'
+          : 'bg-zinc-800/90 text-white border border-zinc-700/50 rounded-bl-sm'
+          }`}>
+          {chatType === 'tryout' && !isMine && (
+            <span className="absolute -top-1.5 left-3 text-xs text-zinc-400">
+              {senderInfo?.username || 'Unknown'}
+            </span>
+          )}
+
+          {msg.messageType === 'text' && (
+            <p className="text-[15px] leading-relaxed whitespace-pre-wrap">
+              {msg.message}
+            </p>
+          )}
+
+          {/* Timestamp */}
+          <div className={`text-[11px] mt-1 flex items-center gap-1 ${isMine ? 'text-orange-100/70 justify-end' : 'text-zinc-500'
+            }`}>
+            <span>{formatTime(msg.timestamp)}</span>
+
+            {/* Read Receipt (for sent messages) */}
+            {isMine && (
+              <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M15.01 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.666 9.879a.32.32 0 0 1-.484.033l-.358-.325a.319.319 0 0 0-.484.032l-.378.483a.418.418 0 0 0 .036.541l1.32 1.266c.143.14.361.125.484-.033l6.272-8.048a.366.366 0 0 0-.064-.512zm-4.1 0l-.478-.372a.365.365 0 0 0-.51.063L4.566 9.879a.32.32 0 0 1-.484.033L1.891 7.769a.366.366 0 0 0-.515.006l-.423.433a.364.364 0 0 0 .006.514l3.258 3.185c.143.14.361.125.484-.033l6.272-8.048a.365.365 0 0 0-.063-.51z" />
+              </svg>
+            )}
+          </div>
+        </div>
+
+        {/* Message Tail */}
+        <svg
+          className={`absolute bottom-0 ${isMine ? '-right-2 text-red-600' : '-left-2 text-zinc-800'
+            }`}
+          width="12"
+          height="19"
+          viewBox="0 0 12 19"
+        >
+          <path
+            fill="currentColor"
+            d={isMine
+              ? "M0,0 L12,0 L12,19 C12,19 6,15 0,19 Z"
+              : "M12,0 L0,0 L0,19 C0,19 6,15 12,19 Z"
+            }
+          />
+        </svg>
+      </div>
+    </div>
+  );
+};

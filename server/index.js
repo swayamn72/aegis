@@ -9,6 +9,7 @@ import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import NodeCache from 'node-cache';
 
 // Import Routes
 import playerRoutes from './routes/player.routes.js';
@@ -33,7 +34,7 @@ import tryoutChatRoutes from './routes/tryoutChat.routes.js';
 import forgotPassRoutes from "./routes/forgotpass.routes.js";
 import rewardRoutes from "./routes/reward.routes.js";
 import googleRoutes from "./routes/google.routes.js";
-
+import recruitmentRoutes from './routes/recruitment.routes.js';
 
 // Import Models
 import './models/player.model.js';
@@ -43,7 +44,8 @@ import './models/match.model.js';
 import './models/admin.model.js';
 import './models/organization.model.js';
 import './models/teamApplication.model.js';
-import './models/tryoutChat.model.js'
+import './models/tryoutChat.model.js';
+import './models/recruitmentApproach.model.js';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -56,7 +58,7 @@ cloudinary.config({
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -98,22 +100,21 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/feed', feedRoutes);
 app.use('/api/connections', connectionRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/api/reward',rewardRoutes);
+app.use('/api/reward', rewardRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/organizations', organizationRoutes);
 app.use('/api/communities', communityRoutes);
 app.use('/api/community-posts', communityPostRoutes);
 app.use('/api/org-tournaments', orgTournamentRoutes);
-// Team tournament invitation and registration routes
 app.use('/api/team-tournaments', teamTournamentRoutes);
-// Admin routes for org tournament approval
 app.use('/api/admin/org-tournaments', adminOrgTournamentRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/team-applications', teamApplicationRoutes);
 app.use('/api/tryout-chats', tryoutChatRoutes);
-app.use("/api",forgotPassRoutes);
+app.use("/api", forgotPassRoutes);
 app.use('/api/auth', googleRoutes);
+app.use('/api/recruitment', recruitmentRoutes);
 
 const server = createServer(app);
 
@@ -127,6 +128,8 @@ const io = new Server(server, {
 // Make io globally available
 global.io = io;
 
+const messageCache = new NodeCache({ stdTTL: 300 }); // 5 min cache
+
 io.on('connection', (socket) => {
   console.log('New Client Joined', socket.id);
 
@@ -135,7 +138,7 @@ io.on('connection', (socket) => {
     console.log(`Player ${playerId} joined room`);
   });
 
-  // Direct message handler
+  // Direct message handler with caching
   socket.on('sendMessage', async ({ senderId, receiverId, message }) => {
     console.log(`${senderId} -> ${receiverId}: ${message}`);
 
@@ -153,9 +156,67 @@ io.on('connection', (socket) => {
         ...msgData,
       };
 
+      // Invalidate cache for both users
+      messageCache.del(`chat_${senderId}_${receiverId}`);
+      messageCache.del(`chat_${receiverId}_${senderId}`);
+
       io.to(receiverId).emit('receiveMessage', msgToEmit);
     } catch (error) {
       console.error('Error saving message:', error);
+    }
+  });
+
+  // JOIN TRYOUT/GROUP CHAT ROOM
+  socket.on('joinTryoutChat', (chatId) => {
+    socket.join(`tryout_${chatId}`);
+    console.log(`Socket ${socket.id} joined tryout chat room: tryout_${chatId}`);
+  });
+
+  // LEAVE TRYOUT/GROUP CHAT ROOM
+  socket.on('leaveTryoutChat', (chatId) => {
+    socket.leave(`tryout_${chatId}`);
+    console.log(`Socket ${socket.id} left tryout chat room: tryout_${chatId}`);
+  });
+
+  // GROUP/TRYOUT MESSAGE HANDLER
+  socket.on('tryoutMessage', async ({ chatId, senderId, message }) => {
+    console.log(`Tryout chat ${chatId}: ${senderId} -> ${message}`);
+
+    try {
+      const TryoutChat = (await import('./models/tryoutChat.model.js')).default;
+
+      const chat = await TryoutChat.findById(chatId);
+      if (!chat) {
+        console.error('Tryout chat not found:', chatId);
+        return;
+      }
+
+      const newMessage = {
+        sender: senderId,
+        message: message,
+        messageType: 'text',
+        timestamp: new Date()
+      };
+
+      chat.messages.push(newMessage);
+      await chat.save();
+
+      const savedMessage = chat.messages[chat.messages.length - 1];
+
+      io.to(`tryout_${chatId}`).emit('tryoutMessage', {
+        chatId: chatId,
+        message: {
+          _id: savedMessage._id,
+          sender: savedMessage.sender,
+          message: savedMessage.message,
+          messageType: savedMessage.messageType,
+          timestamp: savedMessage.timestamp
+        }
+      });
+
+      console.log(`Emitted tryout message to room: tryout_${chatId}`);
+    } catch (error) {
+      console.error('Error handling tryout message:', error);
     }
   });
 
@@ -168,4 +229,3 @@ io.on('connection', (socket) => {
 server.listen(port, () => {
   console.log(`✅ Server is running on port: ${port}`);
 });
-

@@ -75,23 +75,33 @@ router.get("/users/with-chats", auth, async (req, res) => {
   }
 });
 
-// Get chat messages between two users
+// Get chat messages between two users - OPTIMIZED
 router.get("/:receiverId", auth, async (req, res) => {
   try {
     const senderId = req.user.id;
     const receiverId = req.params.receiverId;
+    const { limit = 50, before } = req.query; // Add pagination
 
-    const messages = await ChatMessage.find({
+    const query = {
       $or: [
         { senderId: senderId, receiverId: receiverId },
         { senderId: receiverId, receiverId: senderId },
       ],
-    })
-      .sort({ timestamp: 1 })
-      .limit(50)
-      .lean();
+    };
 
-    res.json(messages);
+    // Pagination support
+    if (before) {
+      query.timestamp = { $lt: new Date(before) };
+    }
+
+    const messages = await ChatMessage.find(query)
+      .sort({ timestamp: -1 }) // Latest first for pagination
+      .limit(parseInt(limit))
+      .select('senderId receiverId message messageType metadata timestamp') // Only needed fields
+      .lean(); // Convert to plain JS objects (faster)
+
+    // Reverse to show oldest first in UI
+    res.json(messages.reverse());
   } catch (err) {
     console.error('Error fetching messages:', err);
     res.status(500).json({ message: err.message });
@@ -293,6 +303,33 @@ router.get('/messages/received', auth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching received messages:', error);
     res.status(500).json({ error: 'Failed to fetch received messages' });
+  }
+});
+
+// Get system messages for the current user - OPTIMIZED
+router.get("/system", auth, async (req, res) => {
+  try {
+    const { limit = 50, before } = req.query;
+
+    const query = {
+      senderId: 'system',
+      receiverId: req.user.id
+    };
+
+    if (before) {
+      query.timestamp = { $lt: new Date(before) };
+    }
+
+    const messages = await ChatMessage.find(query)
+      .sort({ timestamp: -1 })
+      .limit(parseInt(limit))
+      .select('senderId receiverId message messageType metadata timestamp')
+      .lean();
+
+    res.json(messages.reverse());
+  } catch (err) {
+    console.error('Error fetching system messages:', err);
+    res.status(500).json({ message: err.message });
   }
 });
 

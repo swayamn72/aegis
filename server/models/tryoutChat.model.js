@@ -1,36 +1,8 @@
 // server/models/tryoutChat.model.js
 import mongoose from 'mongoose';
 
-const tryoutChatMessageSchema = new mongoose.Schema({
-  sender: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Player',
-    required: true,
-  },
-  message: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  timestamp: {
-    type: Date,
-    default: Date.now,
-  },
-  messageType: {
-    type: String,
-    enum: ['text', 'system'],
-    default: 'text',
-  },
-});
-
 const tryoutChatSchema = new mongoose.Schema(
   {
-    application: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'TeamApplication',
-      required: true,
-      unique: true,
-    },
     team: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Team',
@@ -41,34 +13,92 @@ const tryoutChatSchema = new mongoose.Schema(
       ref: 'Player',
       required: true,
     },
-    // All team members + applicant
     participants: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Player',
       },
     ],
-    messages: [tryoutChatMessageSchema],
     status: {
       type: String,
       enum: ['active', 'completed', 'cancelled'],
       default: 'active',
     },
-    startedAt: {
+    chatType: {
+      type: String,
+      enum: ['application', 'recruitment'],
+      default: 'application',
+    },
+    metadata: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    messages: [
+      {
+        sender: {
+          type: String, // Can be 'system' or Player ObjectId as string
+          required: true,
+        },
+        message: {
+          type: String,
+          required: true,
+        },
+        messageType: {
+          type: String,
+          enum: ['text', 'system'],
+          default: 'text',
+        },
+        timestamp: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    expiresAt: {
       type: Date,
-      default: Date.now,
+      default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+    },
+    locked: {
+      type: Boolean,
+      default: false,
+    },
+    // NEW: Tryout status
+    tryoutStatus: {
+      type: String,
+      enum: ['active', 'ended_by_team', 'ended_by_player', 'offer_sent', 'offer_accepted', 'offer_rejected'],
+      default: 'active'
+    },
+    // NEW: Team join offer
+    teamOffer: {
+      status: {
+        type: String,
+        enum: ['none', 'pending', 'accepted', 'rejected'],
+        default: 'none'
+      },
+      sentAt: Date,
+      respondedAt: Date,
+      message: String
     },
     endedAt: Date,
+    endedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      refPath: 'endedByModel'
+    },
+    endedByModel: {
+      type: String,
+      enum: ['Team', 'Player']
+    },
+    endReason: String
   },
   {
     timestamps: true,
   }
 );
 
-// Indexes
-tryoutChatSchema.index({ team: 1, status: 1 });
-tryoutChatSchema.index({ applicant: 1 });
+// Index for faster queries
+tryoutChatSchema.index({ team: 1, applicant: 1 });
 tryoutChatSchema.index({ participants: 1 });
+tryoutChatSchema.index({ status: 1 });
 
 const TryoutChat = mongoose.model('TryoutChat', tryoutChatSchema);
 
