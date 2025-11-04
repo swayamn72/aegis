@@ -97,7 +97,14 @@ router.get("/:receiverId", auth, async (req, res) => {
     const messages = await ChatMessage.find(query)
       .sort({ timestamp: -1 }) // Latest first for pagination
       .limit(parseInt(limit))
-      .select('senderId receiverId message messageType metadata timestamp') // Only needed fields
+      .select('senderId receiverId message messageType metadata timestamp invitationId invitationStatus') // Include invitation fields
+      .populate({
+        path: 'invitationId',
+        populate: {
+          path: 'team',
+          select: 'teamName teamTag logo primaryGame region'
+        }
+      }) // Populate team data for invitations
       .lean(); // Convert to plain JS objects (faster)
 
     // Reverse to show oldest first in UI
@@ -323,7 +330,14 @@ router.get("/system", auth, async (req, res) => {
     const messages = await ChatMessage.find(query)
       .sort({ timestamp: -1 })
       .limit(parseInt(limit))
-      .select('senderId receiverId message messageType metadata timestamp')
+      .select('senderId receiverId message messageType metadata timestamp invitationId invitationStatus')
+      .populate({
+        path: 'invitationId',
+        populate: {
+          path: 'team',
+          select: 'teamName teamTag logo primaryGame region'
+        }
+      })
       .lean();
 
     res.json(messages.reverse());

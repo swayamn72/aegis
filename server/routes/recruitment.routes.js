@@ -4,6 +4,7 @@ import Player from '../models/player.model.js';
 import Team from '../models/team.model.js';
 import RecruitmentApproach from '../models/recruitmentApproach.model.js';
 import TryoutChat from '../models/tryoutChat.model.js';
+import ChatMessage from '../models/chat.model.js';
 import auth from '../middleware/auth.js';
 
 const router = express.Router();
@@ -171,6 +172,11 @@ router.post('/approach-player/:playerId', auth, async (req, res) => {
             return res.status(403).json({ error: 'Only team captains can approach players' });
         }
 
+        // Prevent approaching yourself
+        if (playerId === req.user.id) {
+            return res.status(400).json({ error: 'You cannot approach yourself' });
+        }
+
         // Check if approach already exists
         const existingApproach = await RecruitmentApproach.findOne({
             team: team._id,
@@ -192,37 +198,35 @@ router.post('/approach-player/:playerId', auth, async (req, res) => {
 
         await approach.save();
 
-        // Send system notification to player - SIMPLE SYSTEM MESSAGE
-        const ChatMessage = (await import('../models/chat.model.js')).default;
-        const notification = new ChatMessage({
+        // Create system message for the approached player
+        const systemMessage = new ChatMessage({
             senderId: 'system',
             receiverId: playerId,
-            message: `🔔 ${team.teamName} has sent you a recruitment approach request: "${approach.message}"`,
-            messageType: 'system', // KEEP AS SYSTEM TYPE
+            message: `${team.teamName} would like to discuss recruitment opportunities with you.`,
+            messageType: 'system',
             metadata: {
-                type: 'recruitment_approach', // Store actual type in metadata
-                approachId: approach._id.toString(),
-                teamId: team._id.toString(),
+                type: 'recruitment_approach',
+                approachId: approach._id,
                 teamName: team.teamName,
                 teamLogo: team.logo,
-                message: approach.message,
+                message: message || `${team.teamName} would like to discuss recruitment opportunities with you.`,
                 approachStatus: 'pending'
             },
             timestamp: new Date()
         });
 
-        await notification.save();
+        await systemMessage.save();
 
-        // Emit socket event
+        // Emit the message to the player via socket
         if (global.io) {
             global.io.to(playerId).emit('receiveMessage', {
-                _id: notification._id,
+                _id: systemMessage._id,
                 senderId: 'system',
                 receiverId: playerId,
-                message: notification.message,
+                message: systemMessage.message,
                 messageType: 'system',
-                metadata: notification.metadata,
-                timestamp: notification.timestamp
+                metadata: systemMessage.metadata,
+                timestamp: systemMessage.timestamp
             });
         }
 
@@ -305,34 +309,7 @@ router.post('/approach/:approachId/accept', auth, async (req, res) => {
             { $set: { 'metadata.approachStatus': 'accepted' } }
         );
 
-        // Notify all team members about new tryout chat - SIMPLE SYSTEM MESSAGES
-        for (const memberId of team.players) {
-            const notification = new ChatMessage({
-                senderId: 'system',
-                receiverId: memberId._id.toString(),
-                message: `✅ ${approach.player.username} accepted your recruitment approach! Tryout chat created.`,
-                messageType: 'system',
-                metadata: {
-                    type: 'tryout_chat_created',
-                    tryoutChatId: tryoutChat._id.toString(),
-                    playerName: approach.player.username
-                },
-                timestamp: new Date()
-            });
-            await notification.save();
-
-            if (global.io) {
-                global.io.to(memberId._id.toString()).emit('receiveMessage', {
-                    _id: notification._id,
-                    senderId: 'system',
-                    receiverId: memberId._id.toString(),
-                    message: notification.message,
-                    messageType: 'system',
-                    metadata: notification.metadata,
-                    timestamp: notification.timestamp
-                });
-            }
-        }
+        // Team members will see the tryout chat in their sidebar, no need for additional notifications
 
         // Populate for response
         await tryoutChat.populate('team applicant participants');

@@ -45,7 +45,7 @@ const tryoutChatSchema = new mongoose.Schema(
         },
         messageType: {
           type: String,
-          enum: ['text', 'system'],
+          enum: ['text', 'system', 'team_offer'],
           default: 'text',
         },
         timestamp: {

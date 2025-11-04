@@ -145,11 +145,11 @@ const DetailedTeamInfo = () => {
         setLoading(true);
         setError(null);
         setIsPrivate(false);
-        
+
         const response = await fetch(`/api/teams/${id}`, {
           credentials: 'include',
         });
-        
+
         if (response.status === 403) {
           // Handle private team specifically
           const errorData = await response.json();
@@ -177,11 +177,10 @@ const DetailedTeamInfo = () => {
   const TabButton = ({ id, label, isActive, onClick }) => (
     <button
       onClick={() => onClick(id)}
-      className={`px-6 py-3 font-medium rounded-lg transition-all duration-200 ${
-        isActive
-          ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg shadow-orange-500/30'
-          : 'bg-zinc-800/50 text-zinc-300 hover:bg-zinc-700/50 hover:text-white'
-      }`}
+      className={`px-6 py-3 font-medium rounded-lg transition-all duration-200 ${isActive
+        ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg shadow-orange-500/30'
+        : 'bg-zinc-800/50 text-zinc-300 hover:bg-zinc-700/50 hover:text-white'
+        }`}
     >
       {label}
     </button>
@@ -222,7 +221,7 @@ const DetailedTeamInfo = () => {
           <div className="text-zinc-500 text-xs">{player.aegisRating || 0}</div>
         </div>
       </div>
-      
+
       <div className="space-y-1">
         <div className="text-xs text-zinc-400 flex items-center gap-1">
           <Trophy className="w-3 h-3 text-amber-400" />
@@ -257,15 +256,15 @@ const DetailedTeamInfo = () => {
             </div>
             <div className="absolute inset-0 bg-zinc-500/20 blur-xl rounded-full"></div>
           </div>
-          
+
           <div className="space-y-4">
             <h2 className="text-3xl font-bold text-white">Private Team Profile</h2>
             <p className="text-zinc-400 text-lg leading-relaxed">
               This team profile is set to private and can only be viewed by team members.
             </p>
-            
+
             <div className="flex flex-col gap-4 pt-6">
-              <button 
+              <button
                 onClick={() => window.history.back()}
                 className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-200 transform hover:scale-105 shadow-lg shadow-orange-500/30 flex items-center justify-center space-x-2"
               >
@@ -285,8 +284,8 @@ const DetailedTeamInfo = () => {
         <div className="text-center">
           <div className="text-red-400 text-lg mb-4">Error loading team data</div>
           <p className="text-zinc-400">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="mt-4 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg"
           >
             Retry
@@ -307,12 +306,12 @@ const DetailedTeamInfo = () => {
   }
 
   return (
-    <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans mt-[100px]">
-      <div className="container mx-auto px-6 py-8">
+    <div className="bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 min-h-screen text-white font-sans">
+      <div className="container mx-auto px-6 py-8 pt-20">
 
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
-          <button 
+          <button
             onClick={() => window.history.back()}
             className="p-2 bg-zinc-800/50 hover:bg-zinc-700/50 rounded-lg transition-colors"
           >
@@ -378,12 +377,6 @@ const DetailedTeamInfo = () => {
                         </>
                       )}
                     </div>
-                  </div>
-                  {/* Debug info for user and captain IDs */}
-                  <div className="text-xs text-red-400 mt-2">
-                    <div>User ID: {user?._id || 'N/A'}</div>
-                    <div>Captain ID: {teamData.captain?._id || 'N/A'}</div>
-                    <div>isCaptain: {isCaptain ? 'true' : 'false'}</div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-4 text-zinc-400 mb-4">
@@ -488,29 +481,29 @@ const DetailedTeamInfo = () => {
           </div>
 
           <div className="grid grid-cols-4 gap-4 mb-6 mt-6">
-            <StatCard 
-              icon={Trophy} 
-              label="Total Earnings" 
-              value={`₹${((teamData.totalEarnings || 0) / 100000).toFixed(1)}L`} 
-              color="green" 
+            <StatCard
+              icon={Trophy}
+              label="Total Earnings"
+              value={`₹${((teamData.totalEarnings || 0) / 100000).toFixed(1)}L`}
+              color="green"
             />
-            <StatCard 
-              icon={Target} 
-              label="Aegis Rating" 
-              value={teamData.aegisRating || 0} 
-              color="orange" 
+            <StatCard
+              icon={Target}
+              label="Aegis Rating"
+              value={teamData.aegisRating || 0}
+              color="orange"
             />
-            <StatCard 
-              icon={Users} 
-              label="Active Players" 
-              value={teamData.players?.length || 0} 
-              color="blue" 
+            <StatCard
+              icon={Users}
+              label="Active Players"
+              value={teamData.players?.length || 0}
+              color="blue"
             />
-            <StatCard 
-              icon={Star} 
-              label="Qualified Events" 
-              value={teamData.qualifiedEvents?.length || 0} 
-              color="purple" 
+            <StatCard
+              icon={Star}
+              label="Qualified Events"
+              value={teamData.qualifiedEvents?.length || 0}
+              color="purple"
             />
           </div>
         </div>
@@ -579,7 +572,7 @@ const DetailedTeamInfo = () => {
           {activeTab === 'roster' && (
             <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
               <h2 className="text-2xl font-bold text-white mb-6">Current Roster</h2>
-              
+
               {(!teamData.players || teamData.players.length === 0) ? (
                 <div className="text-center py-16">
                   <Users className="w-24 h-24 text-zinc-600 mx-auto mb-6" />
@@ -599,7 +592,7 @@ const DetailedTeamInfo = () => {
           {activeTab === 'achievements' && (
             <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
               <h2 className="text-2xl font-bold text-white mb-6">Achievements & Awards</h2>
-              
+
               {(!teamData.qualifiedEvents || teamData.qualifiedEvents.length === 0) ? (
                 <div className="text-center py-16">
                   <Award className="w-24 h-24 text-zinc-600 mx-auto mb-6" />
@@ -739,11 +732,10 @@ const DetailedTeamInfo = () => {
                     <div
                       key={player._id}
                       onClick={() => setSelectedPlayer(player)}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedPlayer?._id === player._id
-                          ? 'bg-orange-500/20 border border-orange-500/30'
-                          : 'bg-zinc-800/50 hover:bg-zinc-700/50'
-                      }`}
+                      className={`p-3 rounded-lg cursor-pointer transition-colors ${selectedPlayer?._id === player._id
+                        ? 'bg-orange-500/20 border border-orange-500/30'
+                        : 'bg-zinc-800/50 hover:bg-zinc-700/50'
+                        }`}
                     >
                       <div className="flex items-center gap-3">
                         <img

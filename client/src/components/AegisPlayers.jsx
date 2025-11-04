@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ChevronDown, MapPin, Gamepad2, Trophy, Calendar, Users, Star, TrendingUp, Award, Eye, Check } from 'lucide-react';
 import AegisProfileCardBGMI from './AegisProfileCardBGMI';
+import { useAuth } from '../context/AuthContext';
 
 const fetchPlayers = async (limit = 20, skip = 0) => {
     try {
@@ -208,6 +209,7 @@ const PlayerCard = ({ player }) => {
 };
 
 const AegisPlayers = () => {
+    const { user, userType } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [filters, setFilters] = useState({ game: '', availability: '', status: '' });
     const [players, setPlayers] = useState([]);
@@ -249,6 +251,11 @@ const AegisPlayers = () => {
     const filteredPlayers = useMemo(() => {
         const gameMap = { 'Valorant': 'VALO', 'CS2': 'CS2', 'BGMI': 'BGMI' };
         return players.filter(player => {
+            // Exclude current user if logged in as player
+            if (userType === 'player' && user && player._id === user._id) {
+                return false;
+            }
+
             const matchesSearch = player.inGameName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 player.realName?.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesGame = filters.game && filters.game !== 'All Games' ? player.primaryGame === gameMap[filters.game] : true;
@@ -257,7 +264,7 @@ const AegisPlayers = () => {
 
             return matchesSearch && matchesGame && matchesAvailability && matchesStatus;
         }).sort((a, b) => (b.aegisRating || 0) - (a.aegisRating || 0));
-    }, [searchTerm, filters, players]);
+    }, [searchTerm, filters, players, user, userType]);
 
     if (loading) {
         return (

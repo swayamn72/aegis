@@ -1,11 +1,24 @@
-import React, { memo } from 'react';
-import { formatTime } from '../utils/dateUtils';
+import React from 'react';
 
-const ChatMessage = memo(({ msg, userId, chatType, selectedChat, index, messages }) => {
+const ChatMessage = ({ msg, userId, chatType, selectedChat, index, messages }) => {
+    // Helper function to format timestamp
+    const formatTime = (timestamp) => {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = now - date;
+
+        if (diff < 60000) return 'now';
+        if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
+        if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`;
+        return date.toLocaleDateString();
+    };
+
+    // Normal messages - WhatsApp style
     const isMine = chatType === 'direct'
         ? msg.senderId === userId
         : msg.sender?._id === userId || msg.sender === userId;
 
+    // Get sender info for group chats
     const getSenderInfo = () => {
         if (chatType !== 'tryout' || isMine) return null;
 
@@ -18,18 +31,21 @@ const ChatMessage = memo(({ msg, userId, chatType, selectedChat, index, messages
     };
 
     const senderInfo = getSenderInfo();
+
+    // Show sender name only if it's a group chat, not mine, and different from previous
     const showSenderName = chatType === 'tryout' && !isMine && (
         index === 0 || messages[index - 1]?.sender !== msg.sender
     );
 
     return (
-        <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} items-end gap-2`}>
+        <div className={`flex w-full ${isMine ? 'justify-end' : 'justify-start'} items-end gap-2`}>
+            {/* Sender Avatar (Group Chats Only, Left Side) */}
             {chatType === 'tryout' && !isMine && (
                 <div className="flex-shrink-0 mb-1">
                     {showSenderName ? (
                         <img
-                            src={senderInfo?.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${senderInfo?.username}`}
-                            alt={senderInfo?.username}
+                            src={senderInfo?.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${senderInfo?.username || 'unknown'}`}
+                            alt={senderInfo?.username || 'Unknown'}
                             className="w-8 h-8 rounded-full object-cover ring-2 ring-zinc-700"
                         />
                     ) : (
@@ -38,25 +54,31 @@ const ChatMessage = memo(({ msg, userId, chatType, selectedChat, index, messages
                 </div>
             )}
 
+            {/* Message Bubble */}
             <div className={`max-w-[70%] lg:max-w-[60%]`}>
+                {/* Sender Name (Group Chats Only) */}
                 {showSenderName && (
                     <div className="text-xs text-zinc-400 mb-1 ml-3">
                         {senderInfo?.username || 'Unknown'}
                     </div>
                 )}
 
+                {/* Message Content */}
                 <div className={`relative px-4 py-2.5 rounded-2xl shadow-lg break-words ${isMine
-                        ? 'bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-br-sm'
-                        : 'bg-zinc-800/90 text-white border border-zinc-700/50 rounded-bl-sm'
+                    ? 'bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-br-sm'
+                    : 'bg-zinc-800/90 text-white border border-zinc-700/50 rounded-bl-sm'
                     }`}>
+                    {/* Message Text */}
                     <p className="text-[15px] leading-relaxed whitespace-pre-wrap">
                         {msg.message}
                     </p>
 
+                    {/* Timestamp */}
                     <div className={`text-[11px] mt-1 flex items-center gap-1 ${isMine ? 'text-orange-100/70 justify-end' : 'text-zinc-500'
                         }`}>
                         <span>{formatTime(msg.timestamp)}</span>
 
+                        {/* Read Receipt (for sent messages) */}
                         {isMine && (
                             <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
                                 <path d="M15.01 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.666 9.879a.32.32 0 0 1-.484.033l-.358-.325a.319.319 0 0 0-.484.032l-.378.483a.418.418 0 0 0 .036.541l1.32 1.266c.143.14.361.125.484-.033l6.272-8.048a.366.366 0 0 0-.064-.512zm-4.1 0l-.478-.372a.365.365 0 0 0-.51.063L4.566 9.879a.32.32 0 0 1-.484.033L1.891 7.769a.366.366 0 0 0-.515.006l-.423.433a.364.364 0 0 0 .006.514l3.258 3.185c.143.14.361.125.484-.033l6.272-8.048a.365.365 0 0 0-.063-.51z" />
@@ -65,6 +87,7 @@ const ChatMessage = memo(({ msg, userId, chatType, selectedChat, index, messages
                     </div>
                 </div>
 
+                {/* Message Tail */}
                 <svg
                     className={`absolute bottom-0 ${isMine ? '-right-2 text-red-600' : '-left-2 text-zinc-800'
                         }`}
@@ -83,13 +106,6 @@ const ChatMessage = memo(({ msg, userId, chatType, selectedChat, index, messages
             </div>
         </div>
     );
-}, (prevProps, nextProps) => {
-    // Custom comparison function
-    return (
-        prevProps.msg._id === nextProps.msg._id &&
-        prevProps.msg.message === nextProps.msg.message &&
-        prevProps.index === nextProps.index
-    );
-});
+};
 
 export default ChatMessage;

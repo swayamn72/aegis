@@ -38,12 +38,6 @@ const MyTeams = () => {
   const [kickPlayerData, setKickPlayerData] = useState(null);
   const [kickLoading, setKickLoading] = useState(false);
 
-  useEffect(() => {
-  if (!user) {
-    setLoading(false);
-    return;
-  }
-
   const fetchPlayerAndTeamData = async () => {
     try {
       // Fetch player data
@@ -93,7 +87,13 @@ const MyTeams = () => {
     }
   };
 
-  fetchPlayerAndTeamData();
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    fetchPlayerAndTeamData();
   }, [user]);
 
   const handleCreateTeam = async (e) => {
@@ -130,8 +130,8 @@ const MyTeams = () => {
         toast.success(`Team "${data.team.teamName}" created successfully! 🎉`);
         setShowCreateTeamModal(false);
         setCreateTeamForm({ teamName: '', teamTag: '', primaryGame: 'BGMI', region: 'India', bio: '', logo: '' });
-        // Refresh player data
-        fetchPlayerAndTeamData();
+        // Refresh player data before navigating
+        await fetchPlayerAndTeamData();
         // Navigate to new team page
         navigate(`/team/${data.team._id}`);
       } else {
@@ -245,23 +245,23 @@ const MyTeams = () => {
           <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-yellow-300/30 rounded-full" />
           <div className="absolute top-2 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-orange-200/40 rounded-full" />
         </div>
-        
+
         <div className="absolute inset-1 bg-gradient-to-b from-orange-300/20 to-red-400/20 rounded-t-full rounded-b-lg border border-yellow-400/30" />
-        
+
         <div className="absolute top-3 left-2 w-1 h-1 bg-yellow-300 rounded-full animate-pulse shadow-lg shadow-yellow-400/80" />
         <div className="absolute top-3 right-2 w-1 h-1 bg-yellow-300 rounded-full animate-pulse shadow-lg shadow-yellow-400/80" />
-        
+
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 w-2 h-0.5 bg-yellow-200/90 rounded-full shadow-sm shadow-yellow-300/60" />
       </div>
-      
+
       <div className="absolute top-3 -left-1 w-1.5 h-3 bg-gradient-to-b from-orange-300 to-red-400 rounded-full transform rotate-12 shadow-md shadow-orange-400/50" />
       <div className="absolute top-3 -right-1 w-1.5 h-3 bg-gradient-to-b from-orange-300 to-red-400 rounded-full transform -rotate-12 shadow-md shadow-orange-400/50" />
-      
+
       <div className="absolute inset-0 bg-orange-400/40 rounded-t-full rounded-b-lg blur-md -z-10 animate-pulse" />
     </div>
   );
 
-  
+
 
   const StatCard = ({ icon: Icon, label, value, color = "orange", trend }) => (
     <div className={`bg-zinc-800/40 backdrop-blur-sm border border-${color}-400/30 rounded-xl p-4 hover:bg-zinc-800/60 transition-all duration-300 hover:scale-105 shadow-lg shadow-${color}-500/10`}>
@@ -284,11 +284,10 @@ const MyTeams = () => {
   const TabButton = ({ id, label, isActive, onClick, icon: Icon }) => (
     <button
       onClick={() => onClick(id)}
-      className={`flex items-center space-x-2 px-6 py-3 font-medium rounded-xl transition-all duration-300 ${
-        isActive 
-          ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg shadow-orange-500/30' 
-          : 'bg-zinc-800/50 text-zinc-300 hover:bg-zinc-700/50 hover:text-white border border-zinc-700/50'
-      }`}
+      className={`flex items-center space-x-2 px-6 py-3 font-medium rounded-xl transition-all duration-300 ${isActive
+        ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg shadow-orange-500/30'
+        : 'bg-zinc-800/50 text-zinc-300 hover:bg-zinc-700/50 hover:text-white border border-zinc-700/50'
+        }`}
     >
       <Icon className="w-5 h-5" />
       <span>{label}</span>
@@ -296,12 +295,16 @@ const MyTeams = () => {
   );
 
   const renderTeamCard = (team, isCurrent = false) => (
-    <div key={team._id} className={`group relative bg-gradient-to-br from-zinc-900/80 to-zinc-800/80 backdrop-blur-sm border-2 ${isCurrent ? 'border-orange-500/50 shadow-lg shadow-orange-500/20' : 'border-zinc-700/50'} rounded-2xl overflow-hidden hover:shadow-2xl hover:shadow-orange-500/20 transition-all duration-500 hover:scale-[1.02]`}>
-      
+    <div
+      key={team._id}
+      onClick={() => navigate(`/team/${team._id}`)}
+      className={`group relative bg-gradient-to-br from-zinc-900/80 to-zinc-800/80 backdrop-blur-sm border-2 ${isCurrent ? 'border-orange-500/50 shadow-lg shadow-orange-500/20' : 'border-zinc-700/50'} rounded-2xl overflow-hidden hover:shadow-2xl hover:shadow-orange-500/20 transition-all duration-500 hover:scale-[1.02] cursor-pointer`}
+    >
+
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0" style={{ 
-          backgroundImage: 'radial-gradient(circle at 25% 25%, rgba(255,165,0,0.3) 0%, transparent 50%)', 
+        <div className="absolute inset-0" style={{
+          backgroundImage: 'radial-gradient(circle at 25% 25%, rgba(255,165,0,0.3) 0%, transparent 50%)',
         }} />
       </div>
 
@@ -330,7 +333,7 @@ const MyTeams = () => {
               <AegisMascot size="w-10 h-10" />
             </div>
           )}
-          
+
           <div className="flex-1 min-w-0">
             <h3 className="text-xl font-bold text-white mb-1 truncate">{team.teamName}</h3>
             {team.tag && (
@@ -350,7 +353,7 @@ const MyTeams = () => {
             </div>
             <span className="text-white font-semibold text-sm">{team.primaryGame}</span>
           </div>
-          
+
           <div className="bg-zinc-800/50 rounded-lg p-3 border border-zinc-700/50">
             <div className="flex items-center space-x-2 mb-1">
               <Users className="w-4 h-4 text-green-400" />
@@ -358,7 +361,7 @@ const MyTeams = () => {
             </div>
             <span className="text-white font-semibold text-sm">{team.players?.length || 0}/5</span>
           </div>
-          
+
           <div className="bg-zinc-800/50 rounded-lg p-3 border border-zinc-700/50">
             <div className="flex items-center space-x-2 mb-1">
               <Crown className="w-4 h-4 text-amber-400" />
@@ -366,7 +369,7 @@ const MyTeams = () => {
             </div>
             <span className="text-white font-semibold text-sm truncate">{team.captain?.username || 'TBD'}</span>
           </div>
-          
+
           <div className="bg-zinc-800/50 rounded-lg p-3 border border-zinc-700/50">
             <div className="flex items-center space-x-2 mb-1">
               <MapPin className="w-4 h-4 text-purple-400" />
@@ -460,24 +463,7 @@ const MyTeams = () => {
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex space-x-2 pt-2">
-          <button
-            onClick={() => navigate(`/team/${team._id}`)}
-            className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white py-2 px-4 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg shadow-orange-500/30 flex items-center justify-center space-x-2"
-          >
-            <Eye className="w-4 h-4" />
-            <span>View Details</span>
-          </button>
-          {isCurrent && (
-            <button
-              onClick={() => navigate(`/team/${team._id}/settings`)}
-              className="bg-zinc-700/50 hover:bg-zinc-600/50 text-zinc-300 hover:text-white py-2 px-3 rounded-lg transition-colors border border-zinc-600/50"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+
       </div>
     </div>
   );
@@ -513,7 +499,7 @@ const MyTeams = () => {
             <p className="text-red-400 text-lg">{error}</p>
             <p className="text-zinc-400">Please try refreshing the page or contact support if the issue persists.</p>
           </div>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg shadow-orange-500/30"
           >
@@ -525,16 +511,16 @@ const MyTeams = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 text-white font-sans mt-[100px]">
+    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-stone-950 to-neutral-950 text-white font-sans pt-20">
       {/* Background Effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -left-40 w-80 h-80 bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute top-1/3 -right-40 w-96 h-96 bg-gradient-to-l from-red-500/15 to-amber-500/15 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}} />
-        <div className="absolute -bottom-40 left-1/4 w-72 h-72 bg-gradient-to-t from-amber-500/10 to-orange-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '4s'}} />
+        <div className="absolute top-1/3 -right-40 w-96 h-96 bg-gradient-to-l from-red-500/15 to-amber-500/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute -bottom-40 left-1/4 w-72 h-72 bg-gradient-to-t from-amber-500/10 to-orange-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }} />
       </div>
 
       <div className="relative z-10 container mx-auto px-6 py-8 max-w-7xl">
-        
+
         {/* Header Section */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
@@ -546,7 +532,10 @@ const MyTeams = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            <button className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg shadow-orange-500/30 flex items-center space-x-2">
+            <button
+              onClick={() => navigate('/opportunities')}
+              className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg shadow-orange-500/30 flex items-center space-x-2"
+            >
               <Plus className="w-5 h-5" />
               <span>Join Team</span>
             </button>
@@ -594,7 +583,7 @@ const MyTeams = () => {
                       )}
                       <div className="flex-1">
                         <h3 className="text-lg font-bold text-white">{invitation.team.teamName}</h3>
-<p className="text-zinc-400 text-sm">Invited by {invitation.fromPlayer.username}</p>
+                        <p className="text-zinc-400 text-sm">Invited by {invitation.fromPlayer.username}</p>
                         <p className="text-zinc-500 text-xs">{new Date(invitation.createdAt).toLocaleDateString()}</p>
                       </div>
                     </div>
@@ -657,26 +646,26 @@ const MyTeams = () => {
         {/* Navigation Tabs */}
         {(player?.team || (player?.previousTeams && player.previousTeams.length > 0)) && (
           <div className="flex flex-wrap gap-4 mb-8">
-            <TabButton 
-              id="current" 
-              label="Current Team" 
+            <TabButton
+              id="current"
+              label="Current Team"
               icon={Crown}
-              isActive={activeTab === 'current'} 
-              onClick={setActiveTab} 
+              isActive={activeTab === 'current'}
+              onClick={setActiveTab}
             />
-            <TabButton 
-              id="history" 
-              label="Team History" 
+            <TabButton
+              id="history"
+              label="Team History"
               icon={History}
-              isActive={activeTab === 'history'} 
-              onClick={setActiveTab} 
+              isActive={activeTab === 'history'}
+              onClick={setActiveTab}
             />
-            <TabButton 
-              id="achievements" 
-              label="Achievements" 
+            <TabButton
+              id="achievements"
+              label="Achievements"
               icon={Award}
-              isActive={activeTab === 'achievements'} 
-              onClick={setActiveTab} 
+              isActive={activeTab === 'achievements'}
+              onClick={setActiveTab}
             />
           </div>
         )}
@@ -690,13 +679,13 @@ const MyTeams = () => {
               </div>
               <div className="absolute inset-0 bg-zinc-500/20 blur-xl rounded-full"></div>
             </div>
-            
+
             <div className="space-y-4 max-w-md mx-auto">
               <h2 className="text-3xl font-bold text-white">Ready to Join the Elite?</h2>
               <p className="text-zinc-400 text-lg leading-relaxed">
                 You haven't joined any teams yet. Start your esports journey by joining or creating a team to compete with the best players worldwide.
               </p>
-              
+
               <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
                 <button className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-200 transform hover:scale-105 shadow-lg shadow-orange-500/30 flex items-center justify-center space-x-2">
                   <Users className="w-5 h-5" />
@@ -750,7 +739,7 @@ const MyTeams = () => {
                   <Award size={28} className="text-amber-400" />
                   <h2 className="text-3xl font-bold text-white">Achievements</h2>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {/* Sample achievements */}
                   {[
@@ -782,21 +771,21 @@ const MyTeams = () => {
 
         {/* Create Team Modal */}
         {showCreateTeamModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1050] flex items-center justify-center p-4 pt-[80px]">
-          <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl border border-zinc-700 max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-3">
-                  <AegisMascot size="w-8 h-8" />
-                  <h2 className="text-xl font-bold text-white">Create New Team</h2>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1050] flex items-center justify-center p-4 pt-[80px]">
+            <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl border border-zinc-700 max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-3">
+                    <AegisMascot size="w-8 h-8" />
+                    <h2 className="text-xl font-bold text-white">Create New Team</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowCreateTeamModal(false)}
+                    className="text-zinc-400 hover:text-white transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setShowCreateTeamModal(false)}
-                  className="text-zinc-400 hover:text-white transition-colors"
-                >
-                  <X size={24} />
-                </button>
-              </div>
 
                 <form onSubmit={handleCreateTeam} className="space-y-4">
                   {createTeamError && (

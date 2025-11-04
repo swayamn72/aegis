@@ -148,7 +148,12 @@ router.get("/me", auth, async (req, res) => {
     // req.user.id is set by the auth middleware
     const userId = req.user.id;
 
-    const user = await Player.findById(userId).select("-password");
+    const user = await Player.findById(userId).select("-password").populate({
+      path: 'team',
+      populate: {
+        path: 'captain'
+      }
+    });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }

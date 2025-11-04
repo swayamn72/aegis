@@ -68,11 +68,11 @@ export const AuthProvider = ({ children }) => {
               const rewardData = await rewardResponse.json();
               if (rewardData.available) {
                 // Show notification for available daily check-in
-                setTimeout(() => {
-                  if (window.confirm('🎁 Daily check-in reward available! Click OK to claim your coins.')) {
-                    window.location.href = '/rewards';
-                  }
-                }, 1000);
+                // setTimeout(() => {
+                //   if (window.confirm('🎁 Daily check-in reward available! Click OK to claim your coins.')) {
+                //     window.location.href = '/rewards';
+                //   }
+                // }, 1000);
               }
             }
           } catch (rewardError) {

@@ -70,18 +70,20 @@ const NotificationBar = () => {
           }));
         }
 
-        // Fetch system messages
+        // Fetch system messages (exclude recruitment approaches to avoid duplicates)
         const systemMessagesResponse = await fetch('http://localhost:5000/api/chat/system', {
           credentials: 'include',
         });
         let systemMessages = [];
         if (systemMessagesResponse.ok) {
           const data = await systemMessagesResponse.json();
-          systemMessages = data.map(msg => ({
-            ...msg,
-            type: 'system_message',
-            createdAt: msg.timestamp || new Date()
-          }));
+          systemMessages = data
+            .filter(msg => msg.metadata?.type !== 'recruitment_approach') // Exclude recruitment approach messages
+            .map(msg => ({
+              ...msg,
+              type: 'system_message',
+              createdAt: msg.timestamp || new Date()
+            }));
         }
 
         // Fetch recruitment approaches
@@ -100,13 +102,20 @@ const NotificationBar = () => {
             }));
         }
 
-        // Combine and sort notifications
-        const allNotifications = [
+        // Combine and sort notifications, deduplicating by _id
+        const notificationMap = new Map();
+
+        [
           ...teamInvitations.map(inv => ({ ...inv, type: 'team_invitation' })),
           ...connectionRequests,
           ...systemMessages,
-          ...recruitmentApproaches // ADD THIS
-        ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          ...recruitmentApproaches
+        ].forEach(notification => {
+          notificationMap.set(notification._id, notification);
+        });
+
+        const allNotifications = Array.from(notificationMap.values())
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         setNotifications(allNotifications);
       } catch (error) {
@@ -312,19 +321,19 @@ const NotificationBar = () => {
                   </>
                 ) : notification.type === 'system_message' ? (
                   <>
-                    {notification.tournamentLogo ? (
+                    {notification.metadata?.teamLogo ? (
                       <img
-                        src={notification.tournamentLogo}
-                        alt="Tournament logo"
+                        src={notification.metadata.teamLogo}
+                        alt="Team logo"
                         className="w-10 h-10 rounded-lg object-cover border border-zinc-700"
                       />
                     ) : (
                       <div className="w-10 h-10 bg-zinc-700 rounded-lg flex items-center justify-center text-zinc-400 font-bold text-sm border border-zinc-600">
-                        S
+                        T
                       </div>
                     )}
                     <div className="flex-1">
-                      <div className="font-semibold text-white">Tournament Update</div>
+                      <div className="font-semibold text-white">{notification.metadata?.teamName || 'Team'}</div>
                       <div className="text-sm text-zinc-400">
                         {notification.message}
                       </div>

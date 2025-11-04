@@ -26,17 +26,14 @@ const FilterDropdown = ({ options, selected, onSelect, placeholder, icon: Icon }
 };
 
 const LFTPostForm = ({ onSubmit, onClose }) => {
+    const { user } = useAuth();
     const [formData, setFormData] = useState({
         description: '',
-        game: '',
         roles: [],
-        region: '',
         requirements: ''
     });
 
-    const games = ['VALO', 'CS2', 'BGMI'];
     const roles = ['IGL', 'assaulter', 'support', 'sniper', 'fragger'];
-    const regions = ['India', 'Asia', 'Europe', 'North America', 'Global'];
 
     const handleRoleToggle = (role) => {
         setFormData(prev => ({
@@ -49,11 +46,19 @@ const LFTPostForm = ({ onSubmit, onClose }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!formData.description || !formData.game || formData.roles.length === 0) {
+        if (!formData.description || formData.roles.length === 0) {
             toast.error('Please fill in all required fields');
             return;
         }
-        onSubmit(formData);
+
+        // Include game and region from user profile
+        const postData = {
+            ...formData,
+            game: user?.primaryGame || '',
+            region: user?.country || 'Global'
+        };
+
+        onSubmit(postData);
     };
 
     return (
@@ -68,20 +73,6 @@ const LFTPostForm = ({ onSubmit, onClose }) => {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-zinc-300 mb-2 font-medium">Game *</label>
-                        <select
-                            value={formData.game}
-                            onChange={(e) => setFormData(prev => ({ ...prev, game: e.target.value }))}
-                            className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500"
-                        >
-                            <option value="">Select Game</option>
-                            {games.map(game => (
-                                <option key={game} value={game}>{game}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
                         <label className="block text-zinc-300 mb-2 font-medium">Roles *</label>
                         <div className="flex flex-wrap gap-2">
                             {roles.map(role => (
@@ -90,28 +81,14 @@ const LFTPostForm = ({ onSubmit, onClose }) => {
                                     type="button"
                                     onClick={() => handleRoleToggle(role)}
                                     className={`px-4 py-2 rounded-lg font-medium transition-all ${formData.roles.includes(role)
-                                            ? 'bg-orange-500 text-white'
-                                            : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                                        ? 'bg-orange-500 text-white'
+                                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                                         }`}
                                 >
                                     {role}
                                 </button>
                             ))}
                         </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-zinc-300 mb-2 font-medium">Region</label>
-                        <select
-                            value={formData.region}
-                            onChange={(e) => setFormData(prev => ({ ...prev, region: e.target.value }))}
-                            className="w-full bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500"
-                        >
-                            <option value="">Select Region</option>
-                            {regions.map(region => (
-                                <option key={region} value={region}>{region}</option>
-                            ))}
-                        </select>
                     </div>
 
                     <div>
@@ -332,6 +309,8 @@ const RecruitmentPage = () => {
     const [lftPosts, setLftPosts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showLFTForm, setShowLFTForm] = useState(false);
+    const [showApproachDialog, setShowApproachDialog] = useState(false);
+    const [selectedPost, setSelectedPost] = useState(null);
 
     useEffect(() => {
         if (activeTab === 'find-players') {
@@ -406,9 +385,46 @@ const RecruitmentPage = () => {
         }
     };
 
-    const handleApproachPlayer = async (post) => {
-        // Navigate to chat with the player
-        window.location.href = `/chat?user=${post.player._id}`;
+    const handleApproachPlayer = (post) => {
+        if (!user) {
+            toast.error('Please login to approach players');
+            return;
+        }
+
+        if (!user.team) {
+            toast.error('You must be in a team to approach players');
+            return;
+        }
+
+        setSelectedPost(post);
+        setShowApproachDialog(true);
+    };
+
+    const confirmApproachPlayer = async () => {
+        if (!selectedPost) return;
+
+        try {
+            const response = await fetch(`http://localhost:5000/api/recruitment/approach-player/${selectedPost.player._id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    message: `Hi! We're interested in discussing recruitment opportunities with you.`
+                })
+            });
+
+            if (response.ok) {
+                toast.success('Approach request sent! Player will be notified.');
+                setShowApproachDialog(false);
+                setSelectedPost(null);
+            } else {
+                const error = await response.json();
+                toast.error(error.error || 'Failed to send approach');
+            }
+        } catch (error) {
+            console.error('Error sending approach:', error);
+            toast.error('Failed to send approach');
+        }
     };
 
     const handleApproachTeam = async (team) => {
@@ -457,8 +473,8 @@ const RecruitmentPage = () => {
                         <button
                             onClick={() => setActiveTab('find-players')}
                             className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${activeTab === 'find-players'
-                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'
-                                    : 'text-zinc-400 hover:text-white'
+                                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'
+                                : 'text-zinc-400 hover:text-white'
                                 }`}
                         >
                             <UserPlus className="w-5 h-5" />
@@ -467,8 +483,8 @@ const RecruitmentPage = () => {
                         <button
                             onClick={() => setActiveTab('post-lft')}
                             className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${activeTab === 'post-lft'
-                                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
-                                    : 'text-zinc-400 hover:text-white'
+                                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
+                                : 'text-zinc-400 hover:text-white'
                                 }`}
                         >
                             <Briefcase className="w-5 h-5" />
@@ -477,8 +493,8 @@ const RecruitmentPage = () => {
                         <button
                             onClick={() => setActiveTab('find-teams')}
                             className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${activeTab === 'find-teams'
-                                    ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white'
-                                    : 'text-zinc-400 hover:text-white'
+                                ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white'
+                                : 'text-zinc-400 hover:text-white'
                                 }`}
                         >
                             <Users className="w-5 h-5" />
@@ -599,6 +615,38 @@ const RecruitmentPage = () => {
                     onSubmit={handleCreateLFTPost}
                     onClose={() => setShowLFTForm(false)}
                 />
+            )}
+
+            {showApproachDialog && selectedPost && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-zinc-900 border border-zinc-700 rounded-2xl max-w-md w-full p-6">
+                        <div className="text-center mb-6">
+                            <MessageCircle className="w-16 h-16 text-cyan-400 mx-auto mb-4" />
+                            <h2 className="text-2xl font-bold text-white mb-2">Approach Player</h2>
+                            <p className="text-zinc-300">
+                                Are you sure you want to approach <span className="text-cyan-400 font-semibold">{selectedPost.player.inGameName || selectedPost.player.username}</span>?
+                            </p>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={confirmApproachPlayer}
+                                className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white py-3 rounded-lg font-medium transition-all"
+                            >
+                                Yes, Approach
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowApproachDialog(false);
+                                    setSelectedPost(null);
+                                }}
+                                className="px-6 bg-zinc-700 hover:bg-zinc-600 text-white py-3 rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

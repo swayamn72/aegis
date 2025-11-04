@@ -38,7 +38,7 @@ import ConnectionsPage from './pages/ConnectionsPage';
 import DetailedTournamentInfoPage from './pages/DetailedTournamentInfoPage';
 import ChatPage from './pages/ChatPage';
 import MyTeamsPage from './pages/MyTeamsPage';
-import DetailedTeamInfo from './components/DetailedTeamInfo';
+import TeamDetailsPage from './pages/TeamDetailsPage';
 import DetailedMatchInfoBGMI from './components/DetailedMatchInfoBGMI';
 import OrgDashboard from './pages/OrgDashboard';
 import MyApplications from './pages/MyApplications';
@@ -88,7 +88,7 @@ function App() {
                 <Route path="/reset-password/:token" element={<ResetPassword />} />
                 <Route path='/tournaments' element={<Tournaments2Page />} />
                 <Route path="/tournament/:id" element={<DetailedTournamentInfoPage />} />
-                <Route path="/team/:id" element={<DetailedTeamInfo />} />
+                <Route path="/team/:id" element={<TeamDetailsPage />} />
                 <Route path="/matches/:id" element={<DetailedMatchInfoBGMI />} />
                 {/* Admin Routes */}
                 <Route path="/admin/login" element={<AdminLogin />} />
