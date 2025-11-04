@@ -17,6 +17,11 @@ const communityPostSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    channels: [{
+      type: String,
+      enum: ["General", "News", "Memes", "Tournaments"],
+      default: ["General"]
+    }],
     tags: [
       {
         type: String,

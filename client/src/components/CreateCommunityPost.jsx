@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Image, Video, Send } from 'lucide-react';
+import { X, Image, Video, Send, Hash, Plus, X as XIcon } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -7,6 +7,15 @@ const CreateCommunityPost = ({ communityId, onClose, onPostCreated }) => {
   const [content, setContent] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedChannels, setSelectedChannels] = useState(['General']);
+  const [showChannelSelector, setShowChannelSelector] = useState(false);
+
+  const availableChannels = [
+    { name: 'General', icon: '💬' },
+    { name: 'News', icon: '📰' },
+    { name: 'Memes', icon: '😂' },
+    { name: 'Tournaments', icon: '🏆' },
+  ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,6 +36,9 @@ const CreateCommunityPost = ({ communityId, onClose, onPostCreated }) => {
       // Add tags (extract hashtags from content)
       const hashtags = content.match(/#\w+/g) || [];
       formData.append('tags', JSON.stringify(hashtags));
+
+      // Add selected channels
+      formData.append('channels', JSON.stringify(selectedChannels));
 
       const response = await fetch('/api/community-posts/', {
         method: 'POST',
@@ -88,11 +100,93 @@ const CreateCommunityPost = ({ communityId, onClose, onPostCreated }) => {
 
           {/* Content */}
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            {/* Channel Selector */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
+                  <Hash className="w-4 h-4" />
+                  Post to Channels
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowChannelSelector(!showChannelSelector)}
+                  className="text-xs text-zinc-400 hover:text-zinc-300 flex items-center gap-1"
+                >
+                  {showChannelSelector ? 'Hide' : 'Show'} Options
+                </button>
+              </div>
+
+              {/* Selected Channels Display */}
+              <div className="flex flex-wrap gap-2">
+                {selectedChannels.map((channel) => (
+                  <div
+                    key={channel}
+                    className="flex items-center gap-2 bg-[#FF4500]/20 text-[#FF4500] px-3 py-1 rounded-full text-sm"
+                  >
+                    <span>{availableChannels.find(c => c.name === channel)?.icon}</span>
+                    <span>#{channel}</span>
+                    {selectedChannels.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedChannels(prev => prev.filter(c => c !== channel))}
+                        className="hover:bg-[#FF4500]/30 rounded-full p-0.5"
+                      >
+                        <XIcon className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {selectedChannels.length < availableChannels.length && (
+                  <button
+                    type="button"
+                    onClick={() => setShowChannelSelector(true)}
+                    className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-300 px-3 py-1 rounded-full text-sm transition-colors"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Add Channel
+                  </button>
+                )}
+              </div>
+
+              {/* Channel Selector Dropdown */}
+              {showChannelSelector && (
+                <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-3">
+                  <p className="text-xs text-zinc-400 mb-3">Select channels to post to:</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {availableChannels.map((channel) => {
+                      const isSelected = selectedChannels.includes(channel.name);
+                      return (
+                        <button
+                          key={channel.name}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedChannels(prev => prev.filter(c => c !== channel.name));
+                            } else {
+                              setSelectedChannels(prev => [...prev, channel.name]);
+                            }
+                          }}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
+                            isSelected
+                              ? 'bg-[#FF4500]/20 text-[#FF4500] border border-[#FF4500]/30'
+                              : 'bg-zinc-700/50 text-zinc-300 hover:bg-zinc-700 border border-transparent'
+                          }`}
+                        >
+                          <span>{channel.icon}</span>
+                          <span>{channel.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Text Area */}
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="What's on your mind?"
+              placeholder="What's on your mind? Use #channel to mention channels..."
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-4 text-white placeholder-zinc-400 resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
               rows={4}
             />

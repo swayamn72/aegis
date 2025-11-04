@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import Navbar from "../components/Navbar";
+import { Coins, Trophy, Sparkles, Gift } from "lucide-react";
 
 export default function RewardsPage() {
   const [loading, setLoading] = useState(false);
@@ -84,82 +86,194 @@ export default function RewardsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a0a0a] to-[#111111] text-white font-mono">
-      <header className="text-center py-10">
-        <h1 className="text-5xl font-bold text-yellow-400 drop-shadow-[0_0_10px_rgba(255,255,0,0.9)]">
-          🎁 Rewards Center
-        </h1>
-      </header>
+    <div className="min-h-screen bg-black text-white font-[Inter] relative overflow-hidden">
+      <Navbar />
 
-      <main className="max-w-6xl mx-auto grid grid-cols-12 gap-8 px-8">
-        {/* Left Column: Balance & Daily Check-In */}
-        <div className="col-span-12 md:col-span-5 flex flex-col gap-6">
-          {/* Coin Balance */}
-          <div className="p-6 bg-gray-900/80 border border-yellow-500 rounded-2xl flex flex-col items-center shadow-lg shadow-yellow-500/50">
-            <p className="text-lg font-semibold text-yellow-300">💰 Your Balance</p>
-            <span className="text-4xl font-bold text-yellow-400 drop-shadow-[0_0_8px_rgba(255,255,0,0.9)] animate-pulse">
-              {coins} 🪙
-            </span>
+      {/* Grid Pattern Background */}
+      <div className="absolute inset-0 z-0 opacity-[0.15]">
+        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#27272a" strokeWidth="1" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)" />
+        </svg>
+      </div>
+
+      {/* Gradient Overlay */}
+      <div className="absolute inset-0 z-0 bg-gradient-to-b from-transparent via-black/50 to-black pointer-events-none"></div>
+
+      <div className="relative z-10 pt-[120px] pb-16">
+        <div className="max-w-7xl mx-auto px-6">
+
+          {/* Header */}
+          <div className="text-center mb-12">
+            <h1 className="text-5xl font-bold mb-2">
+              <span className="text-zinc-500">REWARDS</span>{" "}
+              <span className="text-[#FF4500]">CENTER</span>
+            </h1>
+            <p className="text-zinc-600 text-sm uppercase tracking-[0.3em] font-medium">
+              EARN • REDEEM • DOMINATE
+            </p>
           </div>
 
-          {/* Daily Check-In */}
-          <div className="p-6 bg-gray-800 rounded-2xl border border-blue-500 shadow-lg shadow-blue-500/50 flex flex-col items-center text-center transform hover:scale-105 transition-transform duration-300">
-            <h2 className="text-2xl font-bold mb-2 text-blue-400 drop-shadow-[0_0_6px_rgba(0,150,255,0.8)]">
-              Daily Check-In
-            </h2>
-            <p className="text-gray-400 mb-4">Claim your daily reward and build your streak!</p>
-            <button
-              onClick={handleDailyCheckIn}
-              disabled={loading}
-              className="px-6 py-3 rounded-lg bg-blue-500 hover:bg-blue-600 text-black font-bold shadow-md shadow-blue-500/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? "Claiming..." : "Claim Reward"}
-            </button>
-          </div>
+          {/* Main Grid Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-          {/* Reward Result */}
-          {rewardData && (
-            <div className="p-4 bg-gray-900/80 rounded-xl border border-yellow-400 text-gray-300 shadow-md shadow-yellow-400/30">
-              <p className="text-green-400 font-semibold">✅ {rewardData.message}</p>
-              <p className="text-yellow-300 font-bold">💰 New Coin Balance: {rewardData.newCoinBalance}</p>
-              {rewardData.streak && (
-                <p className="text-orange-400 font-semibold">🔥 Streak: {rewardData.streak} days</p>
-              )}
-            </div>
-          )}
-        </div>
+            {/* Left Column - Balance & Daily Check-In */}
+            <div className="lg:col-span-1 space-y-6">
 
-        {/* Right Column: Redeemable Rewards */}
-        <div className="col-span-12 md:col-span-7 p-6 bg-gray-800 rounded-2xl border border-purple-500 shadow-lg shadow-purple-500/40 flex flex-col gap-6">
-          <h2 className="text-3xl font-bold mb-4 text-purple-400 drop-shadow-[0_0_8px_rgba(180,0,255,0.7)] text-center">
-            🎮 Redeem Rewards
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {rewards.map((reward) => (
-              <div
-                key={reward._id}
-                className="flex flex-col justify-between p-4 bg-gray-900/80 rounded-xl border border-purple-400 hover:scale-105 transform transition-transform duration-200 shadow-md shadow-purple-500/30"
-              >
-                <div>
-                  <h3 className="font-semibold text-purple-200">{reward.name}</h3>
-                  <p className="text-sm text-gray-400">Cost: {reward.points} 🪙</p>
+              {/* Coin Balance Card */}
+              <div className="bg-zinc-950 border border-zinc-900 rounded-lg p-6 hover:border-zinc-800 transition-all">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                      <Coins className="w-6 h-6 text-yellow-400" />
+                    </div>
+                    <div>
+                      <p className="text-zinc-600 text-xs uppercase tracking-[0.2em] font-medium">
+                        YOUR BALANCE
+                      </p>
+                      <p className="text-3xl font-bold text-yellow-400">{coins}</p>
+                    </div>
+                  </div>
                 </div>
+                <div className="text-center">
+                  <span className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-sm font-semibold rounded-full">
+                    <Coins className="w-4 h-4" />
+                    COINS
+                  </span>
+                </div>
+              </div>
+
+              {/* Daily Check-In Card */}
+              <div className="bg-zinc-950 border border-zinc-900 rounded-lg p-6 hover:border-zinc-800 transition-all">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
+                    <Sparkles className="w-6 h-6 text-cyan-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-cyan-400">DAILY CHECK-IN</h2>
+                    <p className="text-zinc-600 text-xs uppercase tracking-[0.2em] font-medium">
+                      BUILD YOUR STREAK
+                    </p>
+                  </div>
+                </div>
+                <p className="text-zinc-400 text-sm mb-6">
+                  Claim your daily reward and maintain your winning momentum.
+                </p>
                 <button
-                  onClick={() => handleRedeem(reward)}
-                  disabled={redeemed.includes(reward._id)}
-                  className={`px-4 py-2 rounded-lg font-bold transition-all duration-200 mt-2 ${
-                    redeemed.includes(reward._id)
-                      ? "bg-green-600 text-white shadow-md shadow-green-500/50"
-                      : "bg-purple-500 hover:bg-purple-600 text-black shadow-md shadow-purple-500/40"
-                  }`}
+                  onClick={handleDailyCheckIn}
+                  disabled={loading}
+                  className="w-full bg-[#FF4500] hover:bg-[#FF4500]/90 px-4 py-3 rounded-md font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {redeemed.includes(reward._id) ? "Claimed ✅" : "Redeem"}
+                  {loading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      CLAIMING...
+                    </>
+                  ) : (
+                    <>
+                      <Trophy className="w-4 h-4" />
+                      CLAIM REWARD
+                    </>
+                  )}
                 </button>
               </div>
-            ))}
+
+              {/* Reward Result */}
+              {rewardData && (
+                <div className="bg-zinc-950 border border-zinc-900 rounded-lg p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+                      <Gift className="w-5 h-5 text-green-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-green-400">REWARD CLAIMED</h3>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <p className="text-zinc-300">{rewardData.message}</p>
+                    <p className="text-yellow-400 font-semibold">
+                      New Balance: {rewardData.newCoinBalance} coins
+                    </p>
+                    {rewardData.streak && (
+                      <p className="text-[#FF4500] font-semibold">
+                        🔥 Streak: {rewardData.streak} days
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column - Redeemable Rewards */}
+            <div className="lg:col-span-2">
+              <div className="bg-zinc-950 border border-zinc-900 rounded-lg overflow-hidden">
+                <div className="border-b border-zinc-900 p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                      <Gift className="w-6 h-6 text-purple-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-purple-400">REDEEMABLE REWARDS</h2>
+                      <p className="text-zinc-600 text-xs uppercase tracking-[0.2em] font-medium">
+                        TURN COINS INTO POWER-UPS
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {rewards.map((reward) => (
+                      <div
+                        key={reward._id}
+                        className="bg-zinc-900/50 border border-zinc-900 rounded-lg p-5 hover:border-zinc-800 transition-all group"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <h3 className="font-bold text-white text-lg mb-2">{reward.name}</h3>
+                            <div className="flex items-center gap-2">
+                              <Coins className="w-4 h-4 text-yellow-400" />
+                              <span className="text-zinc-400 text-sm">{reward.points} coins</span>
+                            </div>
+                          </div>
+                          <div className="p-2 bg-zinc-800 rounded-lg group-hover:bg-zinc-700 transition-colors">
+                            <Gift className="w-5 h-5 text-zinc-400" />
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleRedeem(reward)}
+                          disabled={redeemed.includes(reward._id)}
+                          className={`w-full py-3 rounded-md font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+                            redeemed.includes(reward._id)
+                              ? "bg-green-500/10 border border-green-500/20 text-green-400"
+                              : coins >= reward.points
+                              ? "bg-[#FF4500] hover:bg-[#FF4500]/90 text-white"
+                              : "bg-zinc-800 border border-zinc-700 text-zinc-500 cursor-not-allowed"
+                          }`}
+                        >
+                          {redeemed.includes(reward._id) ? (
+                            <>
+                              <Trophy className="w-4 h-4" />
+                              CLAIMED
+                            </>
+                          ) : (
+                            <>
+                              <Gift className="w-4 h-4" />
+                              REDEEM
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

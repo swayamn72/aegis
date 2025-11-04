@@ -157,8 +157,46 @@ const AegisLogin = () => {
 
       toast.success('Login successful! Redirecting...');
 
-      // Redirect to my-profile page
-      setTimeout(() => navigate('/my-profile'), 2000);
+      // Handle redirection based on user role
+      if (user.role === 'organization') {
+        if (user.status === 'approved') {
+          setTimeout(() => navigate('/org/dashboard'), 2000);
+        } else {
+          // Set organization status for pending/rejected screens
+          setOrgStatus(user.status);
+          setOrgData(user);
+          setOrgReason(user.reason || '');
+          setIsLoading(false);
+          return;
+        }
+      } else if (user.role === 'player') {
+        // Check if profile is complete and redirect accordingly
+        const userDataResponse = await fetch('/api/players/me', {
+          credentials: 'include',
+        });
+        if (userDataResponse.ok) {
+          const userData = await userDataResponse.json();
+          const isProfileComplete = (user) => {
+            if (!user) return false;
+            return !!(
+              user.realName &&
+              user.age &&
+              user.location &&
+              user.country &&
+              user.primaryGame &&
+              user.teamStatus &&
+              user.availability
+            );
+          };
+          if (isProfileComplete(userData)) {
+            setTimeout(() => navigate('/my-profile'), 2000);
+          } else {
+            setTimeout(() => navigate('/complete-profile'), 2000);
+          }
+        } else {
+          setTimeout(() => navigate('/complete-profile'), 2000);
+        }
+      }
     } catch (error) {
       console.error('Google login error:', error);
       toast.error('Google authentication failed. Please try again.');

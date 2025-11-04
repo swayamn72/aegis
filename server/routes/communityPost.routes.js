@@ -27,7 +27,7 @@ const upload = multer({
 // Create a new community post
 router.post("/", auth, upload.array("media", 5), async (req, res) => {
   try {
-    const { caption, tags, communityId } = req.body;
+    const { caption, tags, communityId, channels } = req.body;
 
     if (!caption || caption.trim().length === 0) {
       return res.status(400).json({ message: "Caption is required" });
@@ -44,6 +44,25 @@ router.post("/", auth, upload.array("media", 5), async (req, res) => {
     }
     if (!community.members.some(member => member.toString() === req.user.id)) {
       return res.status(403).json({ message: "Only community members can post" });
+    }
+
+    // Parse channels, default to General if none provided
+    let postChannels = ["General"];
+    if (channels) {
+      try {
+        postChannels = JSON.parse(channels);
+        if (!Array.isArray(postChannels) || postChannels.length === 0) {
+          postChannels = ["General"];
+        }
+        // Validate channels are allowed
+        const allowedChannels = ["General", "News", "Memes", "Tournaments"];
+        postChannels = postChannels.filter(channel => allowedChannels.includes(channel));
+        if (postChannels.length === 0) {
+          postChannels = ["General"];
+        }
+      } catch (error) {
+        postChannels = ["General"];
+      }
     }
 
     // Upload files to Cloudinary
@@ -84,6 +103,7 @@ router.post("/", auth, upload.array("media", 5), async (req, res) => {
       community: communityId,
       author: req.user.id,
       caption: caption.trim(),
+      channels: postChannels,
       media: mediaFiles,
       tags: tags ? JSON.parse(tags) : [],
     });
@@ -105,7 +125,7 @@ router.post("/", auth, upload.array("media", 5), async (req, res) => {
 router.get("/community/:communityId", async (req, res) => {
   try {
     const { communityId } = req.params;
-    const { sort = 'new' } = req.query;
+    const { sort = 'new', channel } = req.query;
 
     let sortOption = { createdAt: -1 }; // default new
     if (sort === 'top') {
@@ -114,7 +134,13 @@ router.get("/community/:communityId", async (req, res) => {
       sortOption = { likes: -1 }; // for now, same as top
     }
 
-    const posts = await CommunityPost.find({ community: communityId })
+    // Build query
+    let query = { community: communityId };
+    if (channel && channel !== 'All') {
+      query.channels = channel;
+    }
+
+    const posts = await CommunityPost.find(query)
       .populate("author", "username email profilePic")
       .sort(sortOption);
 

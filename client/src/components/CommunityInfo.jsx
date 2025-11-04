@@ -40,59 +40,94 @@ export default function CommunityInfo({ community, isMember, onLeaveCommunity, o
 
   return (
     <>
-      <aside className="hidden lg:flex flex-col w-72 bg-[#120E0E] border-l border-zinc-800/50 p-6">
-        <h2 className="text-xl font-bold mb-4">About</h2>
-        <p className="text-gray-400 text-sm mb-4">
-          {community?.description || "No description available."}
-        </p>
-
+      <aside className="hidden lg:flex flex-col w-72 bg-zinc-950 border-l border-zinc-800/50 p-6">
+        {/* Community Header */}
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2">Members</h3>
-          <p className="text-gray-300">{community?.membersCount || 0}</p>
+          <div className="flex items-center gap-3 mb-4">
+            {community?.image ? (
+              <img
+                src={community.image}
+                alt={community.name}
+                className="w-12 h-12 rounded-full object-cover border-2 border-zinc-700"
+              />
+            ) : (
+              <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-lg">
+                  {community?.name?.[0]?.toUpperCase() || 'C'}
+                </span>
+              </div>
+            )}
+            <div>
+              <h2 className="text-xl font-bold text-white">{community?.name}</h2>
+              <p className="text-zinc-400 text-sm">Community</p>
+            </div>
+          </div>
         </div>
 
+        {/* Description */}
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2">Created</h3>
-          <p className="text-gray-300 text-sm">
-            {community?.createdAt ? new Date(community.createdAt).toLocaleDateString() : "Unknown"}
+          <h3 className="text-lg font-semibold text-white mb-3">About</h3>
+          <p className="text-zinc-400 text-sm leading-relaxed">
+            {community?.description || "No description available."}
           </p>
         </div>
 
-        {isAdmin && (
-          <div className="space-y-2">
-            <button
-              onClick={handleEdit}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-            >
-              Edit Community
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={loading}
-              className="w-full px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors disabled:opacity-50"
-            >
-              {loading ? "Deleting..." : "Delete Community"}
-            </button>
+        {/* Stats */}
+        <div className="mb-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-zinc-400 text-sm">Members</span>
+            <span className="text-white font-semibold">{community?.membersCount || 0}</span>
           </div>
-        )}
+          <div className="flex items-center justify-between">
+            <span className="text-zinc-400 text-sm">Created</span>
+            <span className="text-white text-sm">
+              {community?.createdAt ? new Date(community.createdAt).toLocaleDateString() : "Unknown"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-zinc-400 text-sm">Admin</span>
+            <span className="text-white text-sm">{community?.admin?.username || "Unknown"}</span>
+          </div>
+        </div>
 
-        {isMember && !isAdmin && (
-          <button
-            onClick={onLeaveCommunity}
-            className="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
-          >
-            Leave Community
-          </button>
-        )}
+        {/* Action Buttons */}
+        <div className="space-y-3">
+          {isAdmin && (
+            <>
+              <button
+                onClick={handleEdit}
+                className="w-full px-4 py-3 bg-[#FF4500] hover:bg-[#FF4500]/90 text-white rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
+              >
+                Edit Community
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={loading}
+                className="w-full px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? "Deleting..." : "Delete Community"}
+              </button>
+            </>
+          )}
 
-        {!isMember && user && (
-          <button
-            onClick={onJoinCommunity}
-            className="w-full px-4 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-700 transition-colors"
-          >
-            Join Community
-          </button>
-        )}
+          {isMember && !isAdmin && (
+            <button
+              onClick={onLeaveCommunity}
+              className="w-full px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg font-semibold transition-all"
+            >
+              Leave Community
+            </button>
+          )}
+
+          {!isMember && user && (
+            <button
+              onClick={onJoinCommunity}
+              className="w-full px-4 py-3 bg-[#FF4500] hover:bg-[#FF4500]/90 text-white rounded-lg font-semibold transition-all"
+            >
+              Join Community
+            </button>
+          )}
+        </div>
       </aside>
 
       {showEditModal && (
