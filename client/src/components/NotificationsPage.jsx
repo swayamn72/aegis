@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 import { useEffect, useState } from "react";
 
 export default function NotificationsPage() {
@@ -5,7 +7,7 @@ export default function NotificationsPage() {
 
   const fetchRequests = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/connections/requests", {
+      const res = await fetch(`${API_BASE_URL}/api/connections/requests`, {
         credentials: "include", // sends JWT cookie
       });
       if (res.ok) {
@@ -19,7 +21,7 @@ export default function NotificationsPage() {
 
   const handleAction = async (playerId, action) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/connections/${action}/${playerId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/connections/${action}/${playerId}`, {
         method: "POST",
         credentials: "include",
       });

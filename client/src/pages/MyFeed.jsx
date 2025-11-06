@@ -6,6 +6,8 @@ import { mockTournaments, mockNews } from "../data/mockData";
 import { mockCommunities } from "../data/mockCommunities";
 import Navbar from "../components/Navbar";
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 export default function MyFeedPage() {
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(1);
@@ -15,7 +17,7 @@ export default function MyFeedPage() {
     setLoading(true);
     try {
       const res = await fetch(
-        `http://localhost:5000/api/feed/myfeed?page=${page}&limit=2`,
+        `${API_BASE_URL}/api/feed/myfeed?page=${page}&limit=2`,
         {
           method: "GET",
           credentials: "include", // important!

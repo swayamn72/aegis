@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 // src/components/FeedCard.js
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
@@ -22,7 +24,7 @@ export default function FeedCard({ post }) {
     if (isLiking) return; // prevent multiple clicks
     setIsLiking(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${post._id}/like`, {
+      const res = await fetch(`${API_BASE_URL}/api/posts/${post._id}/like`, {
         method: "POST",
         credentials: "include",
       });
@@ -52,7 +54,7 @@ export default function FeedCard({ post }) {
     if (isCommenting) return;
     setIsCommenting(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${post._id}/comment`, {
+      const res = await fetch(`${API_BASE_URL}/api/posts/${post._id}/comment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -76,7 +78,7 @@ export default function FeedCard({ post }) {
 
   return (
     <div className="bg-zinc-900/80 backdrop-blur-md rounded-3xl p-6 mb-8 shadow-lg border border-amber-500/30 hover:border-amber-400/50 hover:shadow-[0_0_30px_rgba(251,146,60,0.3)] transition-all duration-300">
-      
+
       {/* Header */}
       <div className="flex items-center mb-4">
         <img
@@ -119,9 +121,8 @@ export default function FeedCard({ post }) {
         <button
           onClick={toggleLike}
           disabled={isLiking}
-          className={`flex items-center gap-2 transition ${
-            userHasLiked ? "text-amber-400" : "hover:text-amber-400"
-          }`}
+          className={`flex items-center gap-2 transition ${userHasLiked ? "text-amber-400" : "hover:text-amber-400"
+            }`}
           aria-label={userHasLiked ? "Unlike post" : "Like post"}
         >
           <Heart size={16} /> {likes.length}

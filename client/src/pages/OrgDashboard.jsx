@@ -5,6 +5,8 @@ import { Plus, Trophy, Users, Calendar, Settings, Upload, Bell, CheckCircle, XCi
 import { toast } from 'react-toastify';
 import ToastConfig from '../components/ToastConfig';
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 const OrgDashboard = () => {
   const [organization, setOrganization] = useState(null);
   const [tournaments, setTournaments] = useState([]);
@@ -24,7 +26,7 @@ const OrgDashboard = () => {
 
   const fetchOrganizationData = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/organizations/profile', {
+      const response = await fetch(`${API_BASE_URL}/api/organizations/profile`, {
         credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to fetch organization profile');
@@ -39,7 +41,7 @@ const OrgDashboard = () => {
 
   const fetchTournaments = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/org-tournaments/my-tournaments', {
+      const response = await fetch(`${API_BASE_URL}/api/org-tournaments/my-tournaments`, {
         credentials: 'include',
       });
       if (response.ok) {
@@ -75,7 +77,7 @@ const OrgDashboard = () => {
     formData.append('logo', file);
 
     try {
-      const response = await fetch('http://localhost:5000/api/organizations/upload-logo', {
+      const response = await fetch(`${API_BASE_URL}/api/organizations/upload-logo`, {
         method: 'POST',
         credentials: 'include',
         body: formData,
@@ -169,8 +171,8 @@ const OrgDashboard = () => {
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`py-4 px-2 border-b-2 transition ${activeTab === tab
-                    ? 'border-orange-500 text-orange-500'
-                    : 'border-transparent text-gray-400 hover:text-white'
+                  ? 'border-orange-500 text-orange-500'
+                  : 'border-transparent text-gray-400 hover:text-white'
                   }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -525,7 +527,7 @@ const CreateTournamentModal = ({ organization, onClose, onSuccess }) => {
       if (files.banner) formDataToSend.append('banner', files.banner);
       if (files.coverImage) formDataToSend.append('coverImage', files.coverImage);
 
-      const response = await fetch('http://localhost:5000/api/org-tournaments/create-tournament', {
+      const response = await fetch(`${API_BASE_URL}/api/org-tournaments/create-tournament`, {
         method: 'POST',
         credentials: 'include',
         body: formDataToSend

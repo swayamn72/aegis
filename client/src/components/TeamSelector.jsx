@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 import React, { useState, useEffect } from 'react';
 import { Search, Users, Loader, Plus } from 'lucide-react';
 
@@ -15,7 +17,7 @@ const TeamSelector = ({ onSelect, selectedPhase, tournament }) => {
   const fetchTeams = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/teams/available', {
+      const res = await fetch(`${API_BASE_URL}/api/teams/available`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Lock, Key } from "lucide-react";
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 const ResetPassword = () => {
   const { token } = useParams();
   const navigate = useNavigate();
@@ -24,7 +26,7 @@ const ResetPassword = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/reset-password/${token}`,
+        `${API_BASE_URL}/api/reset-password/${token}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -80,11 +82,10 @@ const ResetPassword = () => {
 
           {message && (
             <p
-              className={`text-center text-sm mt-3 ${
-                message.includes("successful")
+              className={`text-center text-sm mt-3 ${message.includes("successful")
                   ? "text-green-400"
                   : "text-red-400"
-              }`}
+                }`}
             >
               {message}
             </p>

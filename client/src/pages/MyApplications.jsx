@@ -3,6 +3,8 @@ import { Clock, CheckCircle, XCircle, Users, Trash2, Eye } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 const MyApplications = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,7 +16,7 @@ const MyApplications = () => {
 
   const fetchApplications = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/team-applications/my-applications', {
+      const response = await fetch(`${API_BASE_URL}/api/team-applications/my-applications`, {
         credentials: 'include',
       });
       const data = await response.json();
@@ -31,7 +33,7 @@ const MyApplications = () => {
     if (!confirm('Are you sure you want to withdraw this application?')) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/team-applications/${applicationId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/team-applications/${applicationId}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -183,7 +185,7 @@ const MyApplications = () => {
 
                   <div className="flex items-center justify-between text-sm text-zinc-400">
                     <span>Applied {new Date(app.createdAt).toLocaleDateString()}</span>
-                    
+
                     <div className="flex gap-2">
                       {app.status === 'in_tryout' && app.tryoutChatId && (
                         <button
@@ -194,7 +196,7 @@ const MyApplications = () => {
                           Join Tryout Chat
                         </button>
                       )}
-                      
+
                       {app.status === 'pending' && (
                         <button
                           onClick={() => handleWithdraw(app._id)}

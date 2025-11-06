@@ -19,7 +19,7 @@ export default function RewardsPage() {
           return;
         }
 
-        const res = await axios.get(`http://localhost:5000/api/reward/coins`, {
+        const res = await axios.get(`${API_BASE_URL}/api/reward/coins`, {
           headers: { Authorization: `Bearer ${token}` },
           withCredentials: true,
         });
@@ -37,7 +37,7 @@ export default function RewardsPage() {
       const token = localStorage.getItem("token");
 
       const res = await axios.post(
-        "http://localhost:5000/api/reward/daily-checkin",
+        `${API_BASE_URL}/api/reward/daily-checkin`,
         {},
         {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -63,7 +63,7 @@ export default function RewardsPage() {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        const res = await axios.get(`http://localhost:5000/api/reward/rewards`, {
+        const res = await axios.get(`${API_BASE_URL}/api/reward/rewards`, {
           headers: { Authorization: `Bearer ${token}` },
           withCredentials: true,
         });
@@ -245,13 +245,12 @@ export default function RewardsPage() {
                         <button
                           onClick={() => handleRedeem(reward)}
                           disabled={redeemed.includes(reward._id)}
-                          className={`w-full py-3 rounded-md font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
-                            redeemed.includes(reward._id)
+                          className={`w-full py-3 rounded-md font-semibold text-sm transition-all flex items-center justify-center gap-2 ${redeemed.includes(reward._id)
                               ? "bg-green-500/10 border border-green-500/20 text-green-400"
                               : coins >= reward.points
-                              ? "bg-[#FF4500] hover:bg-[#FF4500]/90 text-white"
-                              : "bg-zinc-800 border border-zinc-700 text-zinc-500 cursor-not-allowed"
-                          }`}
+                                ? "bg-[#FF4500] hover:bg-[#FF4500]/90 text-white"
+                                : "bg-zinc-800 border border-zinc-700 text-zinc-500 cursor-not-allowed"
+                            }`}
                         >
                           {redeemed.includes(reward._id) ? (
                             <>

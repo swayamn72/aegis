@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 // Admin context
 const AdminContext = createContext();
 
@@ -75,7 +77,7 @@ export const AdminProvider = ({ children }) => {
       const token = localStorage.getItem('adminToken');
       if (token) {
         try {
-          const response = await fetch('http://localhost:5000/api/admin/verify', {
+          const response = await fetch(`${API_BASE_URL}/api/admin/verify`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -109,7 +111,7 @@ export const AdminProvider = ({ children }) => {
     dispatch({ type: 'LOGIN_START' });
 
     try {
-      const response = await fetch('http://localhost:5000/api/admin/login', {
+      const response = await fetch(`${API_BASE_URL}/api/admin/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

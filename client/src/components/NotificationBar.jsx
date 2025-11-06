@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -5,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { io } from 'socket.io-client';
 
-const socket = io("http://localhost:5000", {
+const socket = io(API_BASE_URL, {
   withCredentials: true,
 });
 
@@ -47,7 +49,7 @@ const NotificationBar = () => {
     const fetchNotifications = async () => {
       try {
         // Fetch team invitations
-        const teamInvitationsResponse = await fetch('http://localhost:5000/api/teams/invitations/received', {
+        const teamInvitationsResponse = await fetch(`${API_BASE_URL}/api/teams/invitations/received`, {
           credentials: 'include',
         });
         let teamInvitations = [];
@@ -57,7 +59,7 @@ const NotificationBar = () => {
         }
 
         // Fetch connection requests
-        const connectionRequestsResponse = await fetch('http://localhost:5000/api/connections/requests', {
+        const connectionRequestsResponse = await fetch(`${API_BASE_URL}/api/connections/requests`, {
           credentials: 'include',
         });
         let connectionRequests = [];
@@ -71,7 +73,7 @@ const NotificationBar = () => {
         }
 
         // Fetch system messages (exclude recruitment approaches to avoid duplicates)
-        const systemMessagesResponse = await fetch('http://localhost:5000/api/chat/system', {
+        const systemMessagesResponse = await fetch(`${API_BASE_URL}/api/chat/system`, {
           credentials: 'include',
         });
         let systemMessages = [];
@@ -87,7 +89,7 @@ const NotificationBar = () => {
         }
 
         // Fetch recruitment approaches
-        const recruitmentResponse = await fetch('http://localhost:5000/api/recruitment/my-approaches', {
+        const recruitmentResponse = await fetch(`${API_BASE_URL}/api/recruitment/my-approaches`, {
           credentials: 'include',
         });
         let recruitmentApproaches = [];

@@ -9,6 +9,8 @@ import TeamGrouping from './TeamGrouping';
 import TeamSelector from './TeamSelector';
 import PrizeDistributionForm from './PrizeDistributionForm';
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [editedTournament, setEditedTournament] = useState(tournament);
@@ -73,7 +75,7 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
         formDataToSend.append('coverImage', coverFile);
       }
 
-      const res = await fetch(`http://localhost:5000/api/tournaments/${tournament._id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/tournaments/${tournament._id}`, {
         method: 'PUT',
         credentials: 'include',
         body: formDataToSend
@@ -98,7 +100,7 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
 
   const handleSavePrizePool = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/tournaments/${tournament._id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/tournaments/${tournament._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -153,7 +155,7 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
         individualAwards
       };
 
-      const res = await fetch(`http://localhost:5000/api/tournaments/${tournament._id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/tournaments/${tournament._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -180,7 +182,7 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
 
   const handleAdminAddTeamToPhase = async (team, phase) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/tournaments/${tournament._id}/phases/${phase}/teams`, {
+      const res = await fetch(`${API_BASE_URL}/api/tournaments/${tournament._id}/phases/${phase}/teams`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -215,7 +217,7 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
 
   const handleAdminRemoveTeamFromPhase = async (team, phase) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/tournaments/${tournament._id}/phases/${phase}/teams/${team._id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/tournaments/${tournament._id}/phases/${phase}/teams/${team._id}`, {
         method: 'DELETE',
         headers: {
           'Accept': 'application/json'
@@ -248,7 +250,7 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
 
   const handleSendInvite = async (team, phase) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/tournaments/${tournament._id}/invites`, {
+      const res = await fetch(`${API_BASE_URL}/api/tournaments/${tournament._id}/invites`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -288,7 +290,7 @@ const TournamentWindow = ({ tournament, isOpen, onClose, onSave, isAdmin = false
 
   const handleSave = async (formData) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/tournaments/${tournament._id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/tournaments/${tournament._id}`, {
         method: 'PUT',
         credentials: 'include',
         body: formData

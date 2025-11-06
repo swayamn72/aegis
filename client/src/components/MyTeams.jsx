@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -41,7 +43,7 @@ const MyTeams = () => {
   const fetchPlayerAndTeamData = async () => {
     try {
       // Fetch player data
-      const playerResponse = await fetch('http://localhost:5000/api/players/me', {
+      const playerResponse = await fetch('${API_BASE_URL}/api/players/me', {
         credentials: 'include',
       });
 
@@ -51,7 +53,7 @@ const MyTeams = () => {
 
         // If player has a team, fetch team details with matches and tournaments
         if (playerData.team) {
-          const teamResponse = await fetch(`http://localhost:5000/api/teams/${playerData.team._id || playerData.team}`, {
+          const teamResponse = await fetch(`${API_BASE_URL}/api/teams/${playerData.team._id || playerData.team}`, {
             credentials: 'include',
           });
 
@@ -65,7 +67,7 @@ const MyTeams = () => {
         }
 
         // Fetch team invitations
-        const invitationsResponse = await fetch('http://localhost:5000/api/teams/invitations/received', {
+        const invitationsResponse = await fetch('${API_BASE_URL}/api/teams/invitations/received', {
           credentials: 'include',
         });
 
@@ -116,7 +118,7 @@ const MyTeams = () => {
       const teamData = {
         ...createTeamForm
       };
-      const response = await fetch('http://localhost:5000/api/teams', {
+      const response = await fetch('${API_BASE_URL}/api/teams', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -146,7 +148,7 @@ const MyTeams = () => {
 
   const handleAcceptInvitation = async (invitationId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/teams/invitations/${invitationId}/accept`, {
+      const response = await fetch(`${API_BASE_URL}/api/teams/invitations/${invitationId}/accept`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -166,7 +168,7 @@ const MyTeams = () => {
 
   const handleDeclineInvitation = async (invitationId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/teams/invitations/${invitationId}/decline`, {
+      const response = await fetch(`${API_BASE_URL}/api/teams/invitations/${invitationId}/decline`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -193,7 +195,7 @@ const MyTeams = () => {
 
     setKickLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/teams/${kickPlayerData.teamId}/kick/${kickPlayerData.playerId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/teams/${kickPlayerData.teamId}/kick/${kickPlayerData.playerId}`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -218,7 +220,7 @@ const MyTeams = () => {
   const handleLeaveTeam = async (teamId) => {
     if (window.confirm('Are you sure you want to leave this team?')) {
       try {
-        const response = await fetch(`http://localhost:5000/api/teams/${teamId}/leave`, {
+        const response = await fetch(`${API_BASE_URL}/api/teams/${teamId}/leave`, {
           method: 'POST',
           credentials: 'include',
         });

@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 import React, { useState, useEffect } from 'react';
 import { Users, Shuffle, Save, AlertCircle, Grid3x3, Plus, X } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -92,7 +94,7 @@ const TeamGrouping = ({ tournament, onUpdate }) => {
     try {
       const phase = tournament.phases?.find(p => p.name === selectedPhase);
       const response = await fetch(
-        `http://localhost:5000/api/tournaments/${tournament._id}/groups`,
+        `${API_BASE_URL}/api/tournaments/${tournament._id}/groups`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },

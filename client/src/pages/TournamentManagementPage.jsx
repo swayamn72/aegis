@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext';
 import AdminLayout from '../components/AdminLayout';
+
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 import {
   Trophy, Users, Calendar, DollarSign, Settings, Target,
   BarChart3, Grid3x3, ArrowLeft, Save, Edit, Eye, Award, Star, Clock
@@ -49,7 +51,7 @@ const TournamentManagementPage = () => {
   const fetchTournament = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:5000/api/tournaments/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/tournaments/${id}`, {
         credentials: 'include',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -74,7 +76,7 @@ const TournamentManagementPage = () => {
 
   const handleSave = async (formData) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/tournaments/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/tournaments/${id}`, {
         method: 'PUT',
         credentials: 'include',
         headers: {
@@ -101,7 +103,7 @@ const TournamentManagementPage = () => {
   const handleAdminAddTeamToPhase = async (team, phase) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/tournaments/${id}/phases/${phase}/teams`,
+        `${API_BASE_URL}/api/tournaments/${id}/phases/${phase}/teams`,
         {
           method: 'POST',
           headers: {
@@ -130,7 +132,7 @@ const TournamentManagementPage = () => {
   const handleAdminRemoveTeamFromPhase = async (team, phase) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/tournaments/${id}/phases/${phase}/teams/${team._id}`,
+        `${API_BASE_URL}/api/tournaments/${id}/phases/${phase}/teams/${team._id}`,
         {
           method: 'DELETE',
           headers: {
@@ -227,11 +229,10 @@ const TournamentManagementPage = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
-                    activeTab === tab.id
+                  className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab.id
                       ? 'text-orange-400 border-b-2 border-orange-400 bg-zinc-800/50'
                       : 'text-zinc-400 hover:text-white hover:bg-zinc-800/30'
-                  }`}
+                    }`}
                 >
                   <Icon className="w-4 h-4" />
                   {tab.name}
@@ -334,13 +335,12 @@ const TournamentManagementPage = () => {
                       <div className="flex justify-between">
                         <span className="text-zinc-400">Status</span>
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            tournament.status === 'upcoming'
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${tournament.status === 'upcoming'
                               ? 'bg-blue-500/20 text-blue-400'
                               : tournament.status === 'in_progress'
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-gray-500/20 text-gray-400'
-                          }`}
+                                ? 'bg-green-500/20 text-green-400'
+                                : 'bg-gray-500/20 text-gray-400'
+                            }`}
                         >
                           {tournament.status}
                         </span>
@@ -383,7 +383,7 @@ const TournamentManagementPage = () => {
                           {Math.ceil(
                             (new Date(tournament.endDate) -
                               new Date(tournament.startDate)) /
-                              (1000 * 60 * 60 * 24)
+                            (1000 * 60 * 60 * 24)
                           )}{' '}
                           days
                         </p>
@@ -404,13 +404,12 @@ const TournamentManagementPage = () => {
                           <div className="flex items-center justify-between mb-2">
                             <h4 className="text-white font-medium">{phase.name}</h4>
                             <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                phase.status === 'upcoming'
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${phase.status === 'upcoming'
                                   ? 'bg-blue-500/20 text-blue-400'
                                   : phase.status === 'in_progress'
-                                  ? 'bg-green-500/20 text-green-400'
-                                  : 'bg-gray-500/20 text-gray-400'
-                              }`}
+                                    ? 'bg-green-500/20 text-green-400'
+                                    : 'bg-gray-500/20 text-gray-400'
+                                }`}
                             >
                               {phase.status}
                             </span>
@@ -473,15 +472,14 @@ const TournamentManagementPage = () => {
                               </div>
                             </div>
                             <span
-                              className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                phase.status === 'upcoming'
+                              className={`px-3 py-1 rounded-full text-sm font-medium ${phase.status === 'upcoming'
                                   ? 'bg-blue-500/20 text-blue-400'
                                   : phase.status === 'in_progress'
-                                  ? 'bg-green-500/20 text-green-400'
-                                  : phase.status === 'completed'
-                                  ? 'bg-gray-500/20 text-gray-400'
-                                  : 'bg-red-500/20 text-red-400'
-                              }`}
+                                    ? 'bg-green-500/20 text-green-400'
+                                    : phase.status === 'completed'
+                                      ? 'bg-gray-500/20 text-gray-400'
+                                      : 'bg-red-500/20 text-red-400'
+                                }`}
                             >
                               {phase.status}
                             </span>
@@ -602,8 +600,8 @@ const TournamentManagementPage = () => {
                   {(() => {
                     const filteredTeams = selectedPhase
                       ? (tournament.participatingTeams || []).filter(
-                          (pt) => pt.currentStage === selectedPhase
-                        )
+                        (pt) => pt.currentStage === selectedPhase
+                      )
                       : tournament.participatingTeams || [];
 
                     if (filteredTeams.length > 0) {
@@ -779,9 +777,9 @@ const TournamentManagementPage = () => {
                                     </div>
                                     <span className="text-white font-medium">
                                       {prize.position === 1 ? '1st Place' :
-                                       prize.position === 2 ? '2nd Place' :
-                                       prize.position === 3 ? '3rd Place' :
-                                       `${prize.position}th Place`}
+                                        prize.position === 2 ? '2nd Place' :
+                                          prize.position === 3 ? '3rd Place' :
+                                            `${prize.position}th Place`}
                                     </span>
                                   </div>
                                 </td>
@@ -846,23 +844,23 @@ const TournamentManagementPage = () => {
 
                 {/* Empty State */}
                 {(!tournament.prizePool?.distribution || tournament.prizePool.distribution.length === 0) &&
-                 (!tournament.prizePool?.individualAwards || tournament.prizePool.individualAwards.length === 0) && (
-                  <div className="text-center py-16">
-                    <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <DollarSign className="w-8 h-8 text-zinc-400" />
+                  (!tournament.prizePool?.individualAwards || tournament.prizePool.individualAwards.length === 0) && (
+                    <div className="text-center py-16">
+                      <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <DollarSign className="w-8 h-8 text-zinc-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-white mb-2">No Prize Distribution Set</h3>
+                      <p className="text-zinc-400 mb-6">
+                        Configure prize distribution to show how the prize pool will be allocated
+                      </p>
+                      <button
+                        onClick={() => setIsPrizeFormOpen(true)}
+                        className="px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                      >
+                        Set Up Prize Distribution
+                      </button>
                     </div>
-                    <h3 className="text-lg font-semibold text-white mb-2">No Prize Distribution Set</h3>
-                    <p className="text-zinc-400 mb-6">
-                      Configure prize distribution to show how the prize pool will be allocated
-                    </p>
-                    <button
-                      onClick={() => setIsPrizeFormOpen(true)}
-                      className="px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-                    >
-                      Set Up Prize Distribution
-                    </button>
-                  </div>
-                )}
+                  )}
               </div>
             )}
 
@@ -902,7 +900,7 @@ const TournamentManagementPage = () => {
             };
 
             const response = await fetch(
-              `http://localhost:5000/api/tournaments/${id}`,
+              `${API_BASE_URL}/api/tournaments/${id}`,
               {
                 method: 'PUT',
                 headers: {
@@ -937,7 +935,7 @@ const TournamentManagementPage = () => {
             formData.append('phases', JSON.stringify(phases));
 
             const response = await fetch(
-              `http://localhost:5000/api/tournaments/${id}`,
+              `${API_BASE_URL}/api/tournaments/${id}`,
               {
                 method: 'PUT',
                 headers: {

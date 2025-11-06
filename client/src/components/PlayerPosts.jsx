@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 import React from "react";
 import axios from "axios";
 import { useState } from "react";
@@ -13,7 +15,7 @@ const [loading, setLoading] = useState(true);
 useEffect(() => {
 const fetchPosts = async () => {
     try {
-        const res = await axios.get(`http://localhost:5000/api/posts/player/${playerId}`);
+        const res = await axios.get(`${API_BASE_URL}/api/posts/player/${playerId}`);
         setPosts(res.data);
     } catch (error) {
         console.error("Error fetching player posts",error);

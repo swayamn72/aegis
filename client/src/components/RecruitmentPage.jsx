@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, MapPin, Gamepad2, Trophy, Award, Eye, Check, Target, Briefcase, UserPlus, User, Send, MessageCircle, Users, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -328,7 +330,7 @@ const RecruitmentPage = () => {
             if (orgFilters.region) params.append('region', orgFilters.region);
             if (orgFilters.role) params.append('role', orgFilters.role);
 
-            const response = await fetch(`http://localhost:5000/api/team-applications/recruiting-teams?${params}`, {
+            const response = await fetch(`${API_BASE_URL}/api/team-applications/recruiting-teams?${params}`, {
                 credentials: 'include',
             });
             const data = await response.json();
@@ -349,7 +351,7 @@ const RecruitmentPage = () => {
             if (playerFilters.region) params.append('region', playerFilters.region);
             if (playerFilters.role) params.append('role', playerFilters.role);
 
-            const response = await fetch(`http://localhost:5000/api/recruitment/lft-posts?${params}`, {
+            const response = await fetch(`${API_BASE_URL}/api/recruitment/lft-posts?${params}`, {
                 credentials: 'include',
             });
             const data = await response.json();
@@ -364,7 +366,7 @@ const RecruitmentPage = () => {
 
     const handleCreateLFTPost = async (postData) => {
         try {
-            const response = await fetch('http://localhost:5000/api/recruitment/lft-posts', {
+            const response = await fetch(`${API_BASE_URL}/api/recruitment/lft-posts`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -404,7 +406,7 @@ const RecruitmentPage = () => {
         if (!selectedPost) return;
 
         try {
-            const response = await fetch(`http://localhost:5000/api/recruitment/approach-player/${selectedPost.player._id}`, {
+            const response = await fetch(`${API_BASE_URL}/api/recruitment/approach-player/${selectedPost.player._id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',

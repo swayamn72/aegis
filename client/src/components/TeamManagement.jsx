@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 import React, { useState, useEffect } from 'react';
 import { Users, Plus, Search, X, ChevronDown, Grid3x3, List } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -18,7 +20,7 @@ const TeamManagement = ({ tournament, onUpdate }) => {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/org-tournaments/${tournament._id}/phases/${selectedPhase}/teams`,
+        `${API_BASE_URL}/api/org-tournaments/${tournament._id}/phases/${selectedPhase}/teams`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -46,7 +48,7 @@ const TeamManagement = ({ tournament, onUpdate }) => {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/org-tournaments/${tournament._id}/phases/${selectedPhase}/teams/${team._id}`,
+        `${API_BASE_URL}/api/org-tournaments/${tournament._id}/phases/${selectedPhase}/teams/${team._id}`,
         {
           method: 'DELETE',
           credentials: 'include'

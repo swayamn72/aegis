@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import {
@@ -18,7 +20,7 @@ const Connections = () => {
 
   const fetchConnections = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/connections", {
+      const res = await fetch(`${API_BASE_URL}/api/connections`, {
         credentials: "include",
       });
       if (res.ok) {
@@ -35,7 +37,7 @@ const Connections = () => {
 
   const handleAction = async (playerId, action) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/connections/${action}/${playerId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/connections/${action}/${playerId}`, {
         method: "POST",
         credentials: "include",
       });

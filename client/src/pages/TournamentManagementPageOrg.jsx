@@ -15,6 +15,8 @@ import TeamSelector from '../components/TeamSelector';
 import PrizeDistributionForm from '../components/PrizeDistributionForm';
 import TournamentForm from '../components/TournamentForm';
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 const TournamentManagementPageOrg = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -36,7 +38,7 @@ const TournamentManagementPageOrg = () => {
   const fetchTournament = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:5000/api/org-tournaments/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/org-tournaments/${id}`, {
         credentials: 'include',
       });
 
@@ -58,7 +60,7 @@ const TournamentManagementPageOrg = () => {
 
   const handleSave = async (formData) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/org-tournaments/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/org-tournaments/${id}`, {
         method: 'PUT',
         credentials: 'include',
         body: formData
@@ -81,7 +83,7 @@ const TournamentManagementPageOrg = () => {
   const handleOrgAddTeamToPhase = async (team, phase) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/org-tournaments/${id}/phases/${phase}/teams`,
+        `${API_BASE_URL}/api/org-tournaments/${id}/phases/${phase}/teams`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -107,7 +109,7 @@ const TournamentManagementPageOrg = () => {
   const handleOrgRemoveTeamFromPhase = async (team, phase) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/org-tournaments/${id}/phases/${phase}/teams/${team._id}`,
+        `${API_BASE_URL}/api/org-tournaments/${id}/phases/${phase}/teams/${team._id}`,
         {
           method: 'DELETE',
           credentials: 'include'
@@ -661,7 +663,7 @@ const TournamentManagementPageOrg = () => {
             formData.append('tournamentData', JSON.stringify({ phases }));
 
             const response = await fetch(
-              `http://localhost:5000/api/org-tournaments/${id}`,
+              `${API_BASE_URL}/api/org-tournaments/${id}`,
               {
                 method: 'PUT',
                 credentials: 'include',
@@ -693,7 +695,7 @@ const TournamentManagementPageOrg = () => {
             };
 
             const response = await fetch(
-              `http://localhost:5000/api/org-tournaments/${id}`,
+              `${API_BASE_URL}/api/org-tournaments/${id}`,
               {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },

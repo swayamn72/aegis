@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 import React, { useState, useEffect } from 'react';
 import { Plus, Clock, MessageSquare, Users, X, Check, AlertCircle, Calendar, Target, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -37,7 +39,7 @@ const MatchScheduler = ({ tournament, onUpdate }) => {
   const fetchScheduledMatches = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:5000/api/matches/scheduled/${tournament._id}`);
+      const response = await fetch(`${API_BASE_URL}/api/matches/scheduled/${tournament._id}`);
       if (response.ok) {
         const data = await response.json();
         setScheduledMatches(data.matches || []);
@@ -124,7 +126,7 @@ const MatchScheduler = ({ tournament, onUpdate }) => {
             timestamp: new Date()
           };
 
-          return fetch('http://localhost:5000/api/chat/send-notification', {
+          return fetch('${API_BASE_URL}/api/chat/send-notification', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -158,7 +160,7 @@ const MatchScheduler = ({ tournament, onUpdate }) => {
         matchType: 'scheduled'
       };
 
-      const response = await fetch('http://localhost:5000/api/matches/schedule', {
+      const response = await fetch(`${API_BASE_URL}/api/matches/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -198,7 +200,7 @@ const MatchScheduler = ({ tournament, onUpdate }) => {
 
   const handleDeleteScheduledMatch = async (matchId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/matches/scheduled/${matchId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/matches/scheduled/${matchId}`, {
         method: 'DELETE',
         credentials: 'include'
       });

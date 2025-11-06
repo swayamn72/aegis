@@ -3,10 +3,12 @@ import AdminLayout from '../components/AdminLayout';
 import { Shield, PlusCircle, Trash2, Edit2 } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 // API functions
 const fetchRewards = async (token) => {
   try {
-    const res = await fetch('http://localhost:5000/api/admin/rewards', {
+    const res = await fetch(`${API_BASE_URL}/api/admin/rewards`, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -22,7 +24,7 @@ const fetchRewards = async (token) => {
 
 const addReward = async (token, reward) => {
   try {
-    const res = await fetch('http://localhost:5000/api/admin/rewards', {
+    const res = await fetch(`${API_BASE_URL}/api/admin/rewards`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -40,7 +42,7 @@ const addReward = async (token, reward) => {
 
 const deleteReward = async (token, rewardId) => {
   try {
-    const res = await fetch(`http://localhost:5000/api/admin/rewards/${rewardId}`, {
+    const res = await fetch(`${API_BASE_URL}/api/admin/rewards/${rewardId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });

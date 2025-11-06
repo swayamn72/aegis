@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Trophy, Medal, Award, Download, AlertCircle, ChevronDown, Image as ImageIcon, CheckCircle, ArrowRight, X } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -133,7 +135,7 @@ const PointsTable = ({ tournament, onUpdate }) => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`http://localhost:5000/api/matches/tournament/${tournament._id}`);
+      const response = await fetch(`${API_BASE_URL}/api/matches/tournament/${tournament._id}`);
       if (response.ok) {
         const matchesData = await response.json();
         setMatches(Array.isArray(matchesData) ? matchesData : (matchesData.matches || []));
@@ -354,7 +356,7 @@ const PointsTable = ({ tournament, onUpdate }) => {
     setAdvancingPhase(true);
     try {
       const response = await fetch(
-        `http://localhost:5000/api/org-tournaments/${tournament._id}/advance-phase`,
+        `${API_BASE_URL}/api/org-tournaments/${tournament._id}/advance-phase`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

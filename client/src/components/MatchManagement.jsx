@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 import React, { useState, useEffect } from 'react';
 import { Calendar, Save, AlertCircle, Trash2, ChevronDown, ChevronUp, Share2, Key, Trophy } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -22,7 +24,7 @@ const MatchManagement = ({ tournament, onUpdate }) => {
   const fetchMatches = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:5000/api/matches/tournament/${tournament._id}`);
+      const response = await fetch(`${API_BASE_URL}/api/matches/tournament/${tournament._id}`);
       if (response.ok) {
         const matchesData = await response.json();
         setMatches(Array.isArray(matchesData) ? matchesData : (matchesData.matches || []));
@@ -100,7 +102,7 @@ const MatchManagement = ({ tournament, onUpdate }) => {
           };
         });
 
-        const response = await fetch(`http://localhost:5000/api/matches/${matchId}/results`, {
+        const response = await fetch(`${API_BASE_URL}/api/matches/${matchId}/results`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ results }),
@@ -157,7 +159,7 @@ const MatchManagement = ({ tournament, onUpdate }) => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/matches/${selectedMatch._id}/share-credentials`, {
+      const response = await fetch(`${API_BASE_URL}/api/matches/${selectedMatch._id}/share-credentials`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -190,7 +192,7 @@ const MatchManagement = ({ tournament, onUpdate }) => {
     if (!window.confirm('Are you sure you want to delete this match?')) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/matches/${matchId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
         method: 'DELETE',
       });
 

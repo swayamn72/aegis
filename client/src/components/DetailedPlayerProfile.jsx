@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -30,7 +32,7 @@ const DetailedPlayerProfile = () => {
     const fetchPlayer = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:5000/api/players/${playerId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/players/${playerId}`, {
           credentials: 'include',
         });
         if (!response.ok) throw new Error('Failed to fetch player data');
@@ -58,7 +60,7 @@ const DetailedPlayerProfile = () => {
     const fetchTeam = async () => {
       if (!playerData?.team) return;
       try {
-        const response = await fetch(`http://localhost:5000/api/teams/${playerData.team}`, {
+        const response = await fetch(`${API_BASE_URL}/api/teams/${playerData.team}`, {
           credentials: 'include',
         });
         if (response.ok) {
@@ -76,7 +78,7 @@ const DetailedPlayerProfile = () => {
   useEffect(() => {
     const fetchMatches = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/matches/player/${playerId}/recent`, {
+        const response = await fetch(`${API_BASE_URL}/api/matches/player/${playerId}/recent`, {
           credentials: 'include',
         });
         if (response.ok) {
@@ -94,7 +96,7 @@ const DetailedPlayerProfile = () => {
   useEffect(() => {
     const fetchTournaments = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/tournaments/player/${playerId}/recent`, {
+        const response = await fetch(`${API_BASE_URL}/api/tournaments/player/${playerId}/recent`, {
           credentials: 'include',
         });
         if (response.ok) {
@@ -112,7 +114,7 @@ const DetailedPlayerProfile = () => {
 
   const handleConnect = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/connections/send/${playerId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/connections/send/${playerId}`, {
         method: 'POST',
         credentials: 'include',
       });

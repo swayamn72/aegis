@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -64,7 +66,7 @@ const DetailedTournamentInfo = () => {
         totalSlots: tournamentData.teams || 0,
       };
 
-      const response = await fetch(`http://localhost:5000/api/chat/tournament-reference/${tournamentData._id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/chat/tournament-reference/${tournamentData._id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -123,7 +125,7 @@ const DetailedTournamentInfo = () => {
         players: allPlayers.map(player => player.name || player), // assuming player objects or strings
       };
 
-      const response = await fetch(`http://localhost:5000/api/team-tournaments/register/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/team-tournaments/register/${id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -167,7 +169,7 @@ const DetailedTournamentInfo = () => {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`http://localhost:5000/api/tournaments/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/api/tournaments/${id}`, {
           credentials: 'include'
         });
         if (!response.ok) {
@@ -190,7 +192,7 @@ const DetailedTournamentInfo = () => {
         }
 
         // Fetch matches data
-        const matchesResponse = await fetch(`http://localhost:5000/api/matches/tournament/${id}`, {
+        const matchesResponse = await fetch(`${API_BASE_URL}/api/matches/tournament/${id}`, {
           credentials: 'include'
         });
         if (matchesResponse.ok) {
@@ -217,7 +219,7 @@ const DetailedTournamentInfo = () => {
       if (!user) return;
 
       try {
-        const response = await fetch('http://localhost:5000/api/teams/user/my-teams', {
+        const response = await fetch('${API_BASE_URL}/api/teams/user/my-teams', {
           credentials: 'include'
         });
 

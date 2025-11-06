@@ -10,7 +10,7 @@ import { toast } from 'react-toastify';
 import ChatMessage from '../components/ChatMessage';
 import chatbotImage from '../assets/chatbot.png';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
 const socket = io(API_BASE_URL, {
   withCredentials: true,
@@ -43,7 +43,7 @@ export default function ChatPage() {
   // Fetch all users who have chat messages with the current user
   const fetchConnections = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/chat/users/with-chats', { credentials: 'include' });
+      const res = await fetch(`${API_BASE_URL}/api/chat/users/with-chats`, { credentials: 'include' });
       const data = await res.json();
       return data.users || [];
     } catch (error) {
@@ -81,7 +81,7 @@ export default function ChatPage() {
   // Fetch messages for direct chat
   const fetchMessages = async (receiverId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/chat/${receiverId}`, { credentials: 'include' });
+      const res = await fetch(`${API_BASE_URL}/api/chat/${receiverId}`, { credentials: 'include' });
       const msgs = await res.json();
       setMessages(msgs);
     } catch (error) {
@@ -92,7 +92,7 @@ export default function ChatPage() {
   // Fetch system messages
   const fetchSystemMessages = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/chat/system`, { credentials: 'include' });
+      const res = await fetch(`${API_BASE_URL}/api/chat/system`, { credentials: 'include' });
       const msgs = await res.json();
       setMessages(msgs);
     } catch (error) {
@@ -103,7 +103,7 @@ export default function ChatPage() {
   // Fetch messages for tryout chat
   const fetchTryoutMessages = async (chatId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/tryout-chats/${chatId}`, { credentials: 'include' });
+      const res = await fetch(`${API_BASE_URL}/api/tryout-chats/${chatId}`, { credentials: 'include' });
       const data = await res.json();
       setMessages(data.chat.messages || []);
       setSelectedChat(data.chat);
@@ -117,7 +117,7 @@ export default function ChatPage() {
     if (!user?.team) return;
 
     try {
-      const res = await fetch(`http://localhost:5000/api/team-applications/team/${user.team._id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/team-applications/team/${user.team._id}`, {
         credentials: 'include'
       });
       const data = await res.json();
@@ -130,7 +130,7 @@ export default function ChatPage() {
   // Fetch tryout chats
   const fetchTryoutChats = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/tryout-chats/my-chats', {
+      const res = await fetch(`${API_BASE_URL}/api/tryout-chats/my-chats`, {
         credentials: 'include'
       });
       const data = await res.json();
@@ -143,7 +143,7 @@ export default function ChatPage() {
   // Fetch recruitment approaches
   const fetchRecruitmentApproaches = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/recruitment/my-approaches', {
+      const res = await fetch(`${API_BASE_URL}/api/recruitment/my-approaches`, {
         credentials: 'include'
       });
       const data = await res.json();
@@ -386,7 +386,7 @@ export default function ChatPage() {
 
   const handleStartTryout = async (applicationId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/team-applications/${applicationId}/start-tryout`, {
+      const res = await fetch(`${API_BASE_URL}/api/team-applications/${applicationId}/start-tryout`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -414,7 +414,7 @@ export default function ChatPage() {
 
   const handleRejectApplication = async (applicationId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/team-applications/${applicationId}/reject`, {
+      const res = await fetch(`${API_BASE_URL}/api/team-applications/${applicationId}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -436,7 +436,7 @@ export default function ChatPage() {
 
   const handleAcceptPlayer = async (applicationId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/team-applications/${applicationId}/accept`, {
+      const res = await fetch(`${API_BASE_URL}/api/team-applications/${applicationId}/accept`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -466,7 +466,7 @@ export default function ChatPage() {
   // Handler to accept tournament team invitation from chat message
   const handleAcceptTournamentInvite = async (msg) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/team-tournaments/accept-invitation/${msg.tournamentId}/${msg.invitationId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/team-tournaments/accept-invitation/${msg.tournamentId}/${msg.invitationId}`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -490,7 +490,7 @@ export default function ChatPage() {
   // Handler to decline tournament team invitation from chat message
   const handleDeclineTournamentInvite = async (msg) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/team-tournaments/decline-invitation/${msg.tournamentId}/${msg.invitationId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/team-tournaments/decline-invitation/${msg.tournamentId}/${msg.invitationId}`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -514,7 +514,7 @@ export default function ChatPage() {
   // Handler to accept team invitation from chat message
   const handleAcceptInvitation = async (invitationId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/teams/invitations/${invitationId}/accept`, {
+      const response = await fetch(`${API_BASE_URL}/api/teams/invitations/${invitationId}/accept`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -538,7 +538,7 @@ export default function ChatPage() {
   // Handler to decline team invitation from chat message
   const handleDeclineInvitation = async (invitationId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/teams/invitations/${invitationId}/decline`, {
+      const response = await fetch(`${API_BASE_URL}/api/teams/invitations/${invitationId}/decline`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -562,7 +562,7 @@ export default function ChatPage() {
   // Handle accept approach
   const handleAcceptApproach = async (approachId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/recruitment/approach/${approachId}/accept`, {
+      const res = await fetch(`${API_BASE_URL}/api/recruitment/approach/${approachId}/accept`, {
         method: 'POST',
         credentials: 'include'
       });
@@ -592,7 +592,7 @@ export default function ChatPage() {
   // Handle reject approach
   const handleRejectApproach = async (approachId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/recruitment/approach/${approachId}/reject`, {
+      const res = await fetch(`${API_BASE_URL}/api/recruitment/approach/${approachId}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -653,7 +653,7 @@ export default function ChatPage() {
     if (tournamentDetails[tournamentId]) return;
 
     try {
-      const res = await fetch(`http://localhost:5000/api/tournaments/${tournamentId}`, { credentials: 'include' });
+      const res = await fetch(`${API_BASE_URL}/api/tournaments/${tournamentId}`, { credentials: 'include' });
       const data = await res.json();
       setTournamentDetails(prev => ({ ...prev, [tournamentId]: data }));
     } catch (error) {
@@ -793,7 +793,7 @@ export default function ChatPage() {
     }
 
     try {
-      const res = await fetch(`http://localhost:5000/api/tryout-chats/${selectedChat._id}/end-tryout`, {
+      const res = await fetch(`${API_BASE_URL}/api/tryout-chats/${selectedChat._id}/end-tryout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -818,7 +818,7 @@ export default function ChatPage() {
   // NEW: Send team offer handler
   const handleSendOffer = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/tryout-chats/${selectedChat._id}/send-offer`, {
+      const res = await fetch(`${API_BASE_URL}/api/tryout-chats/${selectedChat._id}/send-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -843,7 +843,7 @@ export default function ChatPage() {
   // NEW: Accept offer handler
   const handleAcceptOffer = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/tryout-chats/${selectedChat._id}/accept-offer`, {
+      const res = await fetch(`${API_BASE_URL}/api/tryout-chats/${selectedChat._id}/accept-offer`, {
         method: 'POST',
         credentials: 'include'
       });
@@ -871,7 +871,7 @@ export default function ChatPage() {
     const reason = prompt('Reason for declining (optional):');
 
     try {
-      const res = await fetch(`http://localhost:5000/api/tryout-chats/${selectedChat._id}/reject-offer`, {
+      const res = await fetch(`${API_BASE_URL}/api/tryout-chats/${selectedChat._id}/reject-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

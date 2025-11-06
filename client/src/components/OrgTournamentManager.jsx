@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 import React, { useState, useEffect } from 'react';
 import { Search, UserPlus, Users, Trophy, Calendar, Edit, Trash2, CheckCircle, XCircle, Send } from 'lucide-react';
 
@@ -19,7 +21,7 @@ const OrgTournamentManager = ({ tournament, onClose, onUpdate }) => {
     try {
       // Fetch invitations
       const invResponse = await fetch(
-        `http://localhost:5000/api/org-tournaments/${tournament._id}/invitations`,
+        `${API_BASE_URL}/api/org-tournaments/${tournament._id}/invitations`,
         { credentials: 'include' }
       );
       if (invResponse.ok) {
@@ -37,7 +39,7 @@ const OrgTournamentManager = ({ tournament, onClose, onUpdate }) => {
     setLoading(true);
     try {
       const response = await fetch(
-        `http://localhost:5000/api/org-tournaments/search-teams?query=${searchQuery}&game=${tournament.gameTitle}&region=${tournament.region}`,
+        `${API_BASE_URL}/api/org-tournaments/search-teams?query=${searchQuery}&game=${tournament.gameTitle}&region=${tournament.region}`,
         { credentials: 'include' }
       );
       
@@ -55,7 +57,7 @@ const OrgTournamentManager = ({ tournament, onClose, onUpdate }) => {
   const inviteTeam = async (teamId, phaseName) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/org-tournaments/${tournament._id}/invite-team`,
+        `${API_BASE_URL}/api/org-tournaments/${tournament._id}/invite-team`,
         {
           method: 'POST',
           credentials: 'include',
