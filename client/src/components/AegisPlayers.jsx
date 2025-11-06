@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronDown, MapPin, Gamepad2, Trophy, Calendar, Users, Star, TrendingUp, Award, Eye, Check } from 'lucide-react';
+import { Search, ChevronDown, MapPin, Gamepad2, Trophy, Calendar, Users, Star, TrendingUp, Award, Eye, Check, User } from 'lucide-react';
 import AegisProfileCardBGMI from './AegisProfileCardBGMI';
 import { useAuth } from '../context/AuthContext';
 
@@ -199,7 +199,7 @@ const PlayerCard = ({ player }) => {
                         View Profile
                     </button>
                     <button className="px-3 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white py-2 rounded-lg transition-all">
-                        <Eye className="w-4 h-4" />
+                        <User className="w-4 h-4" />
                     </button>
                 </div>
             </div>

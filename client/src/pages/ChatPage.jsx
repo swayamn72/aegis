@@ -3,11 +3,12 @@ import { io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  Send, Search, MoreVertical, Phone, Video, Settings, Users, Hash, ChevronDown, Activity, Crown, Shield, Gamepad2, Bell, Check, X, Eye, UserPlus,
+  Send, Search, MoreVertical, Phone, Video, Settings, Users, User, Hash, ChevronDown, Activity, Crown, Shield, Gamepad2, Bell, Check, X, Eye, UserPlus,
   AlertCircle, Ban, CheckCircle, XCircle
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import ChatMessage from '../components/ChatMessage';
+import chatbotImage from '../assets/chatbot.png';
 
 const socket = io("http://localhost:5000", {
   withCredentials: true,
@@ -62,7 +63,7 @@ export default function ChatPage() {
     });
 
     // Add system user for notifications
-    const systemUser = { _id: 'system', username: 'System', realName: 'System Notifications', profilePicture: null };
+    const systemUser = { _id: 'system', username: 'System', realName: 'System Notifications', profilePicture: chatbotImage };
     combined.unshift(systemUser);
 
     return combined;
@@ -323,6 +324,12 @@ export default function ChatPage() {
 
   const sendMessage = () => {
     if (!input.trim() || !selectedChat || !userId) return;
+
+    // Prevent sending messages to system notifications
+    if (selectedChat._id === 'system') {
+      toast.error('You cannot send messages to system notifications.');
+      return;
+    }
 
     // NEW: Prevent sending if tryout is ended or offer in progress
     if (chatType === 'tryout') {
@@ -675,11 +682,17 @@ export default function ChatPage() {
             teamApplications.map(app => (
               <div key={app._id} className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
                 <div className="flex items-start gap-4">
-                  <img
-                    src={app.player.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${app.player.username || 'unknown'}`}
-                    alt={app.player.username || 'Unknown'}
-                    className="w-16 h-16 rounded-xl object-cover"
-                  />
+                  {app.player.profilePicture ? (
+                    <img
+                      src={app.player.profilePicture}
+                      alt={app.player.username || 'Unknown'}
+                      className="w-16 h-16 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-xl bg-zinc-700 flex items-center justify-center">
+                      <User className="w-8 h-8 text-zinc-400" />
+                    </div>
+                  )}
 
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
@@ -1018,11 +1031,17 @@ export default function ChatPage() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="relative">
-                      <img
-                        src={chat.team.logo}
-                        alt={chat.team.teamName}
-                        className="w-10 h-10 rounded-lg object-cover"
-                      />
+                      {chat.team.logo ? (
+                        <img
+                          src={chat.team.logo}
+                          alt={chat.team.teamName}
+                          className="w-10 h-10 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-zinc-700 flex items-center justify-center">
+                          <Users className="w-5 h-5 text-zinc-400" />
+                        </div>
+                      )}
                       <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-orange-500 rounded-full border-2 border-zinc-900" />
                     </div>
 
@@ -1067,11 +1086,17 @@ export default function ChatPage() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="relative">
-                      <img
-                        src={conn.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${conn.username}`}
-                        alt={conn.username}
-                        className="w-12 h-12 rounded-xl object-cover border-2 border-zinc-700 group-hover:border-orange-400/50 transition-colors"
-                      />
+                      {conn.profilePicture ? (
+                        <img
+                          src={conn.profilePicture}
+                          alt={conn.username}
+                          className="w-12 h-12 rounded-xl object-cover border-2 border-zinc-700 group-hover:border-orange-400/50 transition-colors"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-zinc-700 flex items-center justify-center border-2 border-zinc-700 group-hover:border-orange-400/50 transition-colors">
+                          <User className="w-6 h-6 text-zinc-400" />
+                        </div>
+                      )}
                       {conn._id !== 'system' && (
                         <div className={`absolute -bottom-1 -right-1 w-4 h-4 ${getStatusColor(getUserStatus(conn._id))} rounded-full border-2 border-zinc-900`} />
                       )}
@@ -1118,15 +1143,23 @@ export default function ChatPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <img
-                      src={
-                        chatType === 'tryout'
-                          ? selectedChat.team?.logo
-                          : (selectedChat.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${selectedChat.username}`)
-                      }
-                      alt={chatType === 'tryout' ? selectedChat.team?.teamName : selectedChat.username}
-                      className="w-10 h-10 rounded-lg object-cover border border-zinc-700"
-                    />
+                    {chatType === 'tryout' ? (
+                      <img
+                        src={selectedChat.team?.logo}
+                        alt={selectedChat.team?.teamName}
+                        className="w-10 h-10 rounded-lg object-cover border border-zinc-700"
+                      />
+                    ) : selectedChat.profilePicture ? (
+                      <img
+                        src={selectedChat.profilePicture}
+                        alt={selectedChat.username}
+                        className="w-10 h-10 rounded-lg object-cover border border-zinc-700"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-zinc-700 flex items-center justify-center border border-zinc-700">
+                        <User className="w-5 h-5 text-zinc-400" />
+                      </div>
+                    )}
                     {chatType === 'direct' && (
                       <div className={`absolute -bottom-1 -right-1 w-3 h-3 ${getStatusColor(getUserStatus(selectedChat._id))} rounded-full border border-zinc-900`} />
                     )}
@@ -1403,15 +1436,17 @@ export default function ChatPage() {
                 <div className="flex items-center gap-3">
                   <input
                     type="text"
-                    placeholder="Type your message..."
+                    placeholder={selectedChat && selectedChat._id === 'system' ? "You cannot send messages to system notifications" : "Type your message..."}
                     value={input}
                     onChange={handleInputChange}
                     onKeyPress={handleKeyPress}
-                    className="flex-1 bg-zinc-800/50 border border-zinc-700 rounded-lg pl-4 pr-10 py-2 text-white placeholder-zinc-400 focus:outline-none focus:border-orange-500/50 focus:bg-zinc-800/70 transition-all"
+                    disabled={selectedChat && selectedChat._id === 'system'}
+                    className={`flex-1 bg-zinc-800/50 border border-zinc-700 rounded-lg pl-4 pr-10 py-2 text-white placeholder-zinc-400 focus:outline-none focus:border-orange-500/50 focus:bg-zinc-800/70 transition-all ${selectedChat && selectedChat._id === 'system' ? 'opacity-50 cursor-not-allowed' : ''}`}
                   />
                   <button
                     onClick={sendMessage}
-                    className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white rounded-lg font-medium transition-all"
+                    disabled={selectedChat && selectedChat._id === 'system'}
+                    className={`px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white rounded-lg font-medium transition-all ${selectedChat && selectedChat._id === 'system' ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <Send className="w-5 h-5" />
                   </button>

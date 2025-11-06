@@ -173,7 +173,7 @@ router.get("/all", async (req, res) => {
 
     const players = await Player.find({})
       .select("-password")
-      .sort({ aegisRating: -1 })
+      .sort({ aegisRating: -1, _id: 1 })
       .limit(limit)
       .skip(skip);
 

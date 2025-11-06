@@ -241,7 +241,7 @@ const OrganizationCard = ({ org, onApproach }) => {
             <div className="p-6">
                 <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-4">
-                        <img src={org.logo} alt={org.teamName} className="w-16 h-16 rounded-xl object-cover" />
+                        <img src={org.logo || `https://api.dicebear.com/7.x/avatars/svg?seed=${org.teamName}`} alt={org.teamName} className="w-16 h-16 rounded-xl object-cover" />
                         <div>
                             <h3 className="text-xl font-bold text-white group-hover:text-orange-400 transition-colors">{org.teamName}</h3>
                             <p className="text-gray-300 text-sm">{org.teamTag} • {org.primaryGame} • {org.region}</p>
