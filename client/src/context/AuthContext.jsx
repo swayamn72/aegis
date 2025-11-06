@@ -1,3 +1,5 @@
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
@@ -25,7 +27,7 @@ export const AuthProvider = ({ children }) => {
         const adminToken = localStorage.getItem('adminToken');
         if (adminToken) {
           try {
-            const response = await fetch('/api/admin/verify', {
+            const response = await fetch(`${API_BASE_URL}/api/admin/verify`, {
               headers: {
                 'Authorization': `Bearer ${adminToken}`
               }
@@ -50,7 +52,7 @@ export const AuthProvider = ({ children }) => {
       // Regular user authentication check
       try {
         // First check player auth
-        let response = await fetch('/api/players/me', {
+        let response = await fetch(`${API_BASE_URL}/api/players/me`, {
           credentials: 'include',
         });
         if (response.ok) {
@@ -61,7 +63,7 @@ export const AuthProvider = ({ children }) => {
 
           // Check for daily check-in reward availability
           try {
-            const rewardResponse = await fetch('/api/reward/daily-checkin-status', {
+            const rewardResponse = await fetch(`${API_BASE_URL}/api/reward/daily-checkin-status`, {
               credentials: 'include',
             });
             if (rewardResponse.ok) {
@@ -86,7 +88,7 @@ export const AuthProvider = ({ children }) => {
         }
 
         // If player auth fails, check organization auth
-        response = await fetch('/api/organizations/profile', {
+        response = await fetch(`${API_BASE_URL}/api/organizations/profile`, {
           credentials: 'include',
         });
         if (response.ok) {
@@ -115,7 +117,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
 
       // First try player login
-      let response = await fetch('/api/players/login', {
+      let response = await fetch(`${API_BASE_URL}/api/players/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -128,7 +130,7 @@ export const AuthProvider = ({ children }) => {
 
       if (!response.ok) {
         // If player login fails, try organization login
-        response = await fetch('/api/organizations/login', {
+        response = await fetch(`${API_BASE_URL}/api/organizations/login`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -146,7 +148,7 @@ export const AuthProvider = ({ children }) => {
           // After login, re-fetch user data to ensure fresh state
           const checkAuth = async () => {
             try {
-              const response = await fetch('/api/players/me', {
+              const response = await fetch(`${API_BASE_URL}/api/players/me`, {
                 credentials: 'include',
               });
               if (response.ok) {
@@ -207,8 +209,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const logoutUrl =
         userType === 'organization'
-          ? '/api/organizations/logout'
-          : '/api/players/logout';
+          ? `${API_BASE_URL}/api/organizations/logout`
+          : `${API_BASE_URL}/api/players/logout`;
 
       await fetch(logoutUrl, {
         method: 'POST',
@@ -230,7 +232,7 @@ export const AuthProvider = ({ children }) => {
         return { success: false, message: 'Organization profiles cannot be updated through this method' };
       }
 
-      const response = await fetch('/api/players/update-profile', {
+      const response = await fetch(`${API_BASE_URL}/api/players/update-profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -255,7 +257,7 @@ export const AuthProvider = ({ children }) => {
 
   const refreshUser = async () => {
     try {
-      const endpoint = userType === 'organization' ? '/api/organizations/profile' : '/api/players/me';
+      const endpoint = userType === 'organization' ? `${API_BASE_URL}/api/organizations/profile` : `${API_BASE_URL}/api/players/me`;
       const response = await fetch(endpoint, {
         credentials: 'include',
       });
