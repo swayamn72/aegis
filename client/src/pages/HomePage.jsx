@@ -5,7 +5,7 @@ import Hero from '../components/Hero';
 import Features from '../components/Features';
 import Carousel from '../components/Carousel';
 import Footer from '../components/Footer';
-import LoggedInHomepage from '../components/LoggedInHomepage';
+import LoggedInHomepage from '../components/LoggedInHomePage';
 
 function HomePage() {
   const { isAuthenticated } = useAuth();
