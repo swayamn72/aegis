@@ -120,10 +120,16 @@ const server = createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: 'https://m0p08fdx-5000.inc1.devtunnels.ms',
+    origin: [
+      'https://m0p08fdx-5000.inc1.devtunnels.ms',
+      'https://aegis-chi.vercel.app',
+      'http://localhost:5173'
+    ],
     methods: ['GET', 'POST'],
+    credentials: true,
   },
 });
+
 
 // Make io globally available
 global.io = io;
