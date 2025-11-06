@@ -76,7 +76,7 @@ app.use(
   cors({
     origin: [
       'http://localhost:5173',          // local Vite frontend
-      'https://m0p08fdx-5000.inc1.devtunnels.ms/',   
+      'https://m0p08fdx-5000.inc1.devtunnels.ms',   
       'https://aegis-chi.vercel.app',   // deployed frontend
     ],
     credentials: true,
