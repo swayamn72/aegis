@@ -9,6 +9,8 @@ import axios from 'axios';
 import AegisOrgPendingApproval from './AegisOrgPendingApproval';
 import AegisOrgRejected from './AegisOrgRejected';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const AegisLogin = () => {
   const [formData, setFormData] = useState({
     email: '',
