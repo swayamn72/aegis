@@ -10,7 +10,9 @@ import { toast } from 'react-toastify';
 import ChatMessage from '../components/ChatMessage';
 import chatbotImage from '../assets/chatbot.png';
 
-const socket = io("http://localhost:5000", {
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
+const socket = io(API_BASE_URL, {
   withCredentials: true,
 });
 
