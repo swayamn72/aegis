@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+
 import { AdminProvider } from './context/AdminContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -52,11 +53,46 @@ import AdminRewards from './pages/AdminRewards';
 
 
 
+function UserDataLoader() {
+  const { isAuthenticated, userType, setUserData } = useAuth();
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!isAuthenticated || userType === 'admin') return;
+
+      try {
+        const endpoint = userType === 'organization' ? '/api/organizations/profile' : '/api/players/me';
+        const response = await fetch(endpoint, {
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const userData = userType === 'organization' ? data.organization : data;
+          setUserData(userData);
+        } else {
+          console.error('Failed to load user data:', response.status);
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    };
+
+    loadUserData();
+  }, [isAuthenticated, userType]); // Remove setUserData from dependencies
+
+  return null; // This component doesn't render anything
+}
+
+
 function App() {
+
   return (
     <div>
 
       <AuthProvider>
+        <UserDataLoader />
+
         <AdminProvider>
           <GoogleOAuthProvider clientId="383828387467-q2b8rvh1m7g03dqp9ah218stoh7k187a.apps.googleusercontent.com">
             <div className="bg-slate-900 font-sans min-h-screen">

@@ -142,6 +142,12 @@ router.post("/logout", (req, res) => {
   res.status(200).json({ message: "Logout successful" });
 });
 
+// --- HEAD request for session validation (lightweight) ---
+router.head("/me", auth, (req, res) => {
+  res.status(200).end(); // Just return 200 OK without data
+});
+
+
 // --- Get Current User Route ---
 router.get("/me", auth, async (req, res) => {
   try {

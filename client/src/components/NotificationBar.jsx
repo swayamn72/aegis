@@ -38,97 +38,61 @@ const NotificationBar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
+  const hasFetchedRef = useRef(false);
+  const intervalRef = useRef(null);
+
   useEffect(() => {
     if (!isAuthenticated) {
       setNotifications([]);
+      hasFetchedRef.current = false;
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
       return;
     }
 
-    const fetchNotifications = async () => {
-      try {
-        // Fetch team invitations
-        const teamInvitationsResponse = await fetch('http://localhost:5000/api/teams/invitations/received', {
-          credentials: 'include',
-        });
-        let teamInvitations = [];
-        if (teamInvitationsResponse.ok) {
-          const data = await teamInvitationsResponse.json();
-          teamInvitations = data.invitations || [];
+    // Only fetch if we haven't fetched yet for this authentication session
+    if (!hasFetchedRef.current) {
+      hasFetchedRef.current = true;
+
+      const fetchNotifications = async () => {
+        try {
+          // Single API call to get all notifications
+          const response = await fetch('http://localhost:5000/api/notifications/all', {
+            credentials: 'include',
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              setNotifications(data.notifications);
+            }
+          } else {
+            toast.error('Failed to load notifications');
+          }
+        } catch (error) {
+          toast.error('Network error fetching notifications');
         }
+      };
 
-        // Fetch connection requests
-        const connectionRequestsResponse = await fetch('http://localhost:5000/api/connections/requests', {
-          credentials: 'include',
-        });
-        let connectionRequests = [];
-        if (connectionRequestsResponse.ok) {
-          const data = await connectionRequestsResponse.json();
-          connectionRequests = (data.requests || []).map(req => ({
-            ...req,
-            type: 'connection_request',
-            createdAt: req.createdAt || new Date()
-          }));
-        }
 
-        // Fetch system messages (exclude recruitment approaches to avoid duplicates)
-        const systemMessagesResponse = await fetch('http://localhost:5000/api/chat/system', {
-          credentials: 'include',
-        });
-        let systemMessages = [];
-        if (systemMessagesResponse.ok) {
-          const data = await systemMessagesResponse.json();
-          systemMessages = data
-            .filter(msg => msg.metadata?.type !== 'recruitment_approach') // Exclude recruitment approach messages
-            .map(msg => ({
-              ...msg,
-              type: 'system_message',
-              createdAt: msg.timestamp || new Date()
-            }));
-        }
+      fetchNotifications();
 
-        // Fetch recruitment approaches
-        const recruitmentResponse = await fetch('http://localhost:5000/api/recruitment/my-approaches', {
-          credentials: 'include',
-        });
-        let recruitmentApproaches = [];
-        if (recruitmentResponse.ok) {
-          const data = await recruitmentResponse.json();
-          recruitmentApproaches = (data.approaches || [])
-            .filter(a => a.status === 'pending') // Only pending approaches
-            .map(approach => ({
-              ...approach,
-              type: 'recruitment_approach',
-              createdAt: approach.createdAt || new Date()
-            }));
-        }
+      // Refresh notifications every 5 minutes (300000ms) instead of 60 seconds
+      intervalRef.current = setInterval(fetchNotifications, 300000);
+    }
 
-        // Combine and sort notifications, deduplicating by _id
-        const notificationMap = new Map();
-
-        [
-          ...teamInvitations.map(inv => ({ ...inv, type: 'team_invitation' })),
-          ...connectionRequests,
-          ...systemMessages,
-          ...recruitmentApproaches
-        ].forEach(notification => {
-          notificationMap.set(notification._id, notification);
-        });
-
-        const allNotifications = Array.from(notificationMap.values())
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-        setNotifications(allNotifications);
-      } catch (error) {
-        toast.error('Network error fetching notifications');
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
-
-    fetchNotifications();
-
-    // Optionally, refresh notifications every 60 seconds
-    const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
   }, [isAuthenticated]);
+
+
+
 
   // Close dropdown on outside click
   useEffect(() => {

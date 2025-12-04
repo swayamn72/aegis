@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
 
 const AuthContext = createContext();
 
@@ -34,6 +35,8 @@ export const AuthProvider = ({ children }) => {
             if (response.ok) {
               const data = await response.json();
               console.log('Admin authenticated:', data.admin.username);
+              setUserType('admin');
+              setIsAuthenticated(true);
             } else {
               console.log('Admin token invalid or expired');
               localStorage.removeItem('adminToken');
@@ -47,55 +50,28 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      // Regular user authentication check
+            // Regular user authentication check - only check session validity
       try {
-        // First check player auth
-        let response = await fetch('/api/players/me', {
+        // Check if we have a valid session by making a lightweight request
+        // We'll use a simple endpoint that just validates the token exists
+        const response = await fetch('/api/players/me', {
+          method: 'HEAD', // Use HEAD request to avoid fetching full data
           credentials: 'include',
         });
+        
         if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
           setUserType('player');
           setIsAuthenticated(true);
-
-          // Check for daily check-in reward availability
-          try {
-            const rewardResponse = await fetch('/api/reward/daily-checkin-status', {
-              credentials: 'include',
-            });
-            if (rewardResponse.ok) {
-              const rewardData = await rewardResponse.json();
-              if (rewardData.available) {
-                // Show notification for available daily check-in
-                // setTimeout(() => {
-                //   if (window.confirm('🎁 Daily check-in reward available! Click OK to claim your coins.')) {
-                //     window.location.href = '/rewards';
-                //   }
-                // }, 1000);
-              }
-            }
-          } catch (rewardError) {
-            console.error('Failed to check daily reward status:', rewardError);
+        } else {
+          // Check organization auth
+          const orgResponse = await fetch('/api/organizations/profile', {
+            method: 'HEAD', // Use HEAD request to avoid fetching full data
+            credentials: 'include',
+          });
+          if (orgResponse.ok) {
+            setUserType('organization');
+            setIsAuthenticated(true);
           }
-
-          setLoading(false);
-          return;
-        } else if (response.status !== 401) {
-          console.error('Player auth check failed with status:', response.status);
-        }
-
-        // If player auth fails, check organization auth
-        response = await fetch('/api/organizations/profile', {
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setUser(data.organization);
-          setUserType('organization');
-          setIsAuthenticated(true);
-        } else if (response.status !== 401) {
-          console.error('Organization auth check failed with status:', response.status);
         }
       } catch (error) {
         // Only log actual network errors, not 401s
@@ -105,10 +81,13 @@ export const AuthProvider = ({ children }) => {
       } finally {
         setLoading(false);
       }
+
+
     };
 
     checkAuth();
   }, []);
+
 
   const login = async (email, password) => {
     try {
@@ -143,41 +122,17 @@ export const AuthProvider = ({ children }) => {
         const data = await response.json();
 
         if (isPlayer) {
-          // After login, re-fetch user data to ensure fresh state
-          const checkAuth = async () => {
-            try {
-              const response = await fetch('/api/players/me', {
-                credentials: 'include',
-              });
-              if (response.ok) {
-                const userData = await response.json();
-                setUser(userData);
-                setUserType('player');
-                setIsAuthenticated(true);
-              } else if (response.status === 401) {
-                setUser(null);
-                setUserType(null);
-                setIsAuthenticated(false);
-              } else {
-                console.error('Auth check failed with status:', response.status);
-              }
-            } catch (error) {
-              if (!error.message?.includes('401')) {
-                console.error('Auth check network error:', error);
-              }
-            } finally {
-              setLoading(false);
-            }
-          };
-          await checkAuth();
+          setUserType('player');
+          setIsAuthenticated(true);
+          // User data will be loaded by App.jsx after navigation
         } else {
           // Organization login successful
           setUser(data.organization);
           setUserType('organization');
           setIsAuthenticated(true);
-          setLoading(false);
         }
 
+        setLoading(false);
         return { success: true, userType: isPlayer ? 'player' : 'organization' };
       } else {
         const errorData = await response.json();
@@ -202,6 +157,7 @@ export const AuthProvider = ({ children }) => {
       return { success: false, message: 'Network error' };
     }
   };
+
 
   const logout = async () => {
     try {
@@ -270,6 +226,12 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+   const setUserData = useCallback((userData) => {
+    setUser(userData);
+  }, []);
+
+
+
   const isProfileComplete = (userData) => {
     if (!userData) return false;
     return !!(
@@ -292,8 +254,10 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateProfile,
     refreshUser,
+    setUserData,
     isProfileComplete,
   };
+
 
   return (
     <AuthContext.Provider value={value}>

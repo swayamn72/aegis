@@ -35,6 +35,8 @@ import forgotPassRoutes from "./routes/forgotpass.routes.js";
 import rewardRoutes from "./routes/reward.routes.js";
 import googleRoutes from "./routes/google.routes.js";
 import recruitmentRoutes from './routes/recruitment.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
+
 
 // Import Models
 import './models/player.model.js';
@@ -46,6 +48,9 @@ import './models/organization.model.js';
 import './models/teamApplication.model.js';
 import './models/tryoutChat.model.js';
 import './models/recruitmentApproach.model.js';
+import './models/teamInvitation.model.js';
+import './models/chat.model.js';
+
 
 // Configure Cloudinary
 cloudinary.config({
@@ -115,6 +120,8 @@ app.use('/api/tryout-chats', tryoutChatRoutes);
 app.use("/api", forgotPassRoutes);
 app.use('/api/auth', googleRoutes);
 app.use('/api/recruitment', recruitmentRoutes);
+app.use('/api/notifications', notificationRoutes);
+
 
 const server = createServer(app);
 
